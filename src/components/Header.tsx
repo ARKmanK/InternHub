@@ -24,7 +24,7 @@ const Header: FC = () => {
 						</button>
 					</div>
 					<div className='md:h-full w-[70%] md:pl-12 md:ml-4 md:flex'>
-						<div className='md:mt-5 md:mr-3.5 md:ml-[2px]'>
+						<div className='md:mt-5 md:mr-3 md:ml-[16px]'>
 							<div className='md:flex'>
 								<button className='outline-none'>
 									<img
@@ -39,9 +39,9 @@ const Header: FC = () => {
 							</div>
 						</div>
 						<div className='md:flex md:flex-col md:pt-5'>
-							<div className='md:flex md:ml-3 md:mt-[1px]'>
+							<div className='md:flex md:mt-[1px]'>
 								<input
-									className='bg-[#215281] text-xs md:pt-[7px] md:pb-[7px] md:ml-[5px] md:pr-3 md:pl-2.5 md:w-[167px] text-[#9DBBD5] placeholder-[#99908f] focus:outline-0'
+									className='bg-[#215281] text-xs md:pt-[7px] md:pb-[7px] md:ml-[5px] md:pr-3 md:pl-2.5 md:w-[167px] text-[#9DBBD5] placeholder-[#999999] focus:outline-0'
 									type='text'
 									placeholder='Введите текст для поиска'
 								/>
@@ -49,7 +49,10 @@ const Header: FC = () => {
 									<Search color='white' size={13} strokeWidth={4} />
 								</button>
 							</div>
-							<div className='md:flex text-white text-[13px]'>
+							<div
+								className='md:flex text-white text-[13px]'
+								style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}
+							>
 								<p>{dateString}</p>
 								<p>&nbsp;{weekday}</p>
 								<p>{weekText}</p>

@@ -1,0 +1,17 @@
+{
+	"users": {
+		"admin": {
+			"favoriteTasks": {
+				"id": []
+			},
+			"startedTasks": {
+				"id": []
+			},
+			"finishedTasks": {
+				"id": []
+			}
+		},
+
+		"user1": {}
+	}
+}

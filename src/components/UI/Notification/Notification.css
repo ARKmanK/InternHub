@@ -1,0 +1,72 @@
+.notification-container {
+	position: fixed;
+	bottom: 15px;
+	right: 15px;
+	display: flex;
+	flex-direction: column-reverse;
+	align-items: flex-end;
+	z-index: 30;
+}
+
+.notification {
+	border-radius: 15px;
+	width: 300px;
+	min-height: 50px;
+	color: rgb(209, 209, 209);
+	padding: 10px 15px;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	font-family: Arial, sans-serif;
+	display: flex;
+	flex-direction: column;
+	align-items: start;
+	justify-content: center;
+	animation: fadeIn 0.5s, fadeOut 0.5s 4s forwards;
+	margin-top: 10px;
+}
+
+.notification h5 {
+	font-size: 1.1em;
+}
+
+.notification p {
+	margin-top: 5px;
+	font-size: 0.85em;
+}
+
+.info {
+	border-left: 10px solid rgb(16, 103, 117);
+	background: rgb(24, 162, 184);
+}
+
+.warning {
+	border-left: 10px solid rgb(185, 140, 5);
+	background: rgb(202, 163, 46);
+}
+
+.error {
+	border-left: 10px solid rgb(167, 30, 43);
+	background: rgb(220, 54, 70);
+}
+
+.success {
+	border-left: 10px solid rgb(26, 106, 45);
+	background: rgb(41, 167, 70);
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes fadeOut {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}

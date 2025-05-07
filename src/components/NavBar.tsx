@@ -23,6 +23,7 @@ const NavBar: FC = () => {
 							<a
 								href={url}
 								className='md:px-3 md:py-2 md:border-r-1 border-[#1f537e] font-bold text-white text-xs uppercase focus:border-t-3 focus:border-t-amber-500 focus:bg-[#1b5280] cursor-pointer md:flex md:items-center md:h-full'
+								style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}
 							>
 								{page}
 								<img src={arrow} alt='' className='md:w-2.5 md:h-2.5 md:ml-1 md:mb-0.5' />

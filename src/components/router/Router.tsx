@@ -1,7 +1,7 @@
 import { FC } from 'react'
 
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import Home from '@/src/components/screens/home/TasksPage'
+import Home from '@/src/components/screens/TasksPage'
 
 const Router: FC = () => {
 	const router = createBrowserRouter(
