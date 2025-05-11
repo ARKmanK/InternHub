@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
+import { Button } from '@components/UI/Button/Button'
 
 type TypeFilter = {
 	companies: string[]
@@ -17,7 +18,7 @@ type TypeFilter = {
 	favorites: boolean
 }
 
-const TasksPage = () => {
+const TasksListPage = () => {
 	const [listType, setListType] = useState('list')
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [openAddTaskForm, setOpenAddTaskForm] = useState(false)
@@ -40,6 +41,16 @@ const TasksPage = () => {
 		addToFavoriteJSON('admin', id)
 		addNotification('success', 'Успешно', 'Задача добавлена в избранное')
 	}
+
+	const loadFavoriteTasks = () => {
+		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
+		const taskIds = userData.users?.['admin']?.favoriteTasks?.id || []
+		setFavoriteTasks(taskIds)
+	}
+
+	useEffect(() => {
+		loadFavoriteTasks()
+	}, [])
 
 	const setFilterFavorite = () => {
 		setFilter({
@@ -67,7 +78,6 @@ const TasksPage = () => {
 					title={task.title}
 					description={task.description}
 					difficulty={task.difficulty}
-					taskPath={task.taskPath}
 					companyName={task.companyName}
 					type={listType}
 					addToFavorite={addToFavorite}
@@ -96,12 +106,9 @@ const TasksPage = () => {
 				<div className='md:min-h-[1200px] md:w-[980px]'>
 					<div className='md:flex md:flex-col'>
 						<div className='md:py-4 md:flex md:justify-end items-center'>
-							<button
-								className='md:py-1.5 md:px-2 md:rounded-lg bg-[#0c426f] text-white font-semibold'
-								onClick={() => setOpenAddTaskForm(true)}
-							>
+							<Button onClick={() => setOpenAddTaskForm(true)} className=''>
 								Разместить задачу
-							</button>
+							</Button>
 							<button
 								className='md:ml-7 md:p-1 hover:bg-gray-300'
 								onClick={openProfile}
@@ -142,4 +149,4 @@ const TasksPage = () => {
 	)
 }
 
-export default TasksPage
+export default TasksListPage

@@ -10,24 +10,40 @@ import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import { removeTaskFromFavorite } from '@data/userData'
 import EmptyCard from '@components/EmptyCard'
+import { Button } from '@components/UI/Button/Button'
 
 const UserPage = () => {
 	const [listType, setListType] = useState<'list' | 'card'>('list')
 	const [visibleTasks, setVisibleTasks] = useState<TypeTasksData[]>([])
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const { notifications, addNotification } = useNotification()
+	const [category, setCategory] = useState<'favorite' | 'started' | 'finished'>('favorite')
+	const [activeCategory, setActiveCategory] = useState('favorite')
 
 	const navigate = useNavigate()
 	const goBack = () => {
-		navigate('/')
+		navigate('/tasks')
 	}
 
 	const loadFavoriteTasks = () => {
 		setVisibleTasks([])
 		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-		const favoriteTasksId = userData.users?.['admin']?.favoriteTasks?.id || []
-		setFavoriteTasks(favoriteTasksId)
-		const tasksData = data.filter(task => favoriteTasksId.includes(task.id))
+		let taskIds: number[] = []
+
+		switch (category) {
+			case 'favorite':
+				taskIds = userData.users?.['admin']?.favoriteTasks?.id || []
+				break
+			case 'started':
+				taskIds = userData.users?.['admin']?.startedTasks?.id || []
+				break
+			case 'finished':
+				taskIds = userData.users?.['admin']?.finishedTasks?.id || []
+				break
+		}
+
+		setFavoriteTasks(taskIds)
+		const tasksData = data.filter(task => taskIds.includes(task.id))
 
 		tasksData.forEach((task, index) => {
 			setTimeout(() => {
@@ -38,14 +54,13 @@ const UserPage = () => {
 
 	useEffect(() => {
 		loadFavoriteTasks()
-	}, [listType])
+	}, [listType, category])
 
 	const removeFromFavorite = (id: number) => {
 		if (favoriteTasks.includes(id)) {
 			setFavoriteTasks(favoriteTasks.filter(task => task !== id))
 			removeTaskFromFavorite('admin', id)
 			addNotification('warning', 'Внимание', 'Задача убрана из избранного')
-
 			setVisibleTasks(prev => prev.filter(task => task.id !== id))
 		}
 	}
@@ -64,16 +79,21 @@ const UserPage = () => {
 					title={task.title}
 					description={task.description}
 					difficulty={task.difficulty}
-					taskPath={task.taskPath}
 					companyName={task.companyName}
 					type={listType}
 					addToFavorite={removeFromFavorite}
+					isFavorite={favoriteTasks.includes(task.id)}
 					deadline={task.deadline}
 					tags={task.tags}
 				/>
 			</motion.div>
 		</AnimatePresence>
 	))
+
+	const handleClick = (type: 'favorite' | 'started' | 'finished') => {
+		setCategory(type)
+		setActiveCategory(type)
+	}
 
 	return (
 		<>
@@ -106,8 +126,43 @@ const UserPage = () => {
 						<div className='md:flex mt-7'>
 							<div className='md:w-[80%]'>
 								<h1 className='text-2xl font-bold mb-14'>Страница профиля</h1>
+								<div className='md:flex md:justify-start md:gap-x-3 md:mb-10'>
+									<Button
+										className={`focus:bg-amber-700 ${
+											activeCategory === 'favorite' ? 'bg-amber-700' : ''
+										}`}
+										onClick={() => handleClick('favorite')}
+									>
+										<span>Избранное</span>
+									</Button>
+									<Button
+										className={`focus:bg-amber-700 ${
+											activeCategory === 'started' ? 'bg-amber-700' : ''
+										}`}
+										onClick={() => handleClick('started')}
+									>
+										<span>Начатые задачи</span>
+									</Button>
+									<Button
+										className={`focus:bg-amber-700 ${
+											activeCategory === 'finished' ? 'bg-amber-700' : ''
+										}`}
+										onClick={() => handleClick('finished')}
+									>
+										<span>Завершенные задачи</span>
+									</Button>
+								</div>
+
 								{visibleTasks.length === 0 ? (
-									<EmptyCard />
+									<EmptyCard
+										listType={
+											category === 'favorite'
+												? 'Избранное'
+												: category === 'started'
+												? 'Начатые задачи'
+												: 'Завершенные задачи'
+										}
+									/>
 								) : listType === 'card' ? (
 									<div className='md:grid md:gap-4 md:grid-cols-2'>{taskCard}</div>
 								) : (

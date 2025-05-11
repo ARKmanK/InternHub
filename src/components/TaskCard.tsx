@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Heart, BadgeCheck, Star } from 'lucide-react'
 import { TypeTasksData } from '@data/tasksData'
 import { motion } from 'framer-motion'
+import { Button } from '@components/UI/Button/Button'
 
 type TypeTasksDataProps = TypeTasksData & {
 	type: string
@@ -16,18 +17,17 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 	title,
 	description,
 	difficulty,
-	taskPath,
 	companyName,
 	type,
 	addToFavorite,
-	isFavorite,
+	isFavorite = false,
 	deadline,
 	tags,
 }) => {
 	const navigate = useNavigate()
 
-	const handleClick = (taskPath: string) => {
-		navigate(`${taskPath}#${id}`)
+	const handleClick = (id: string) => {
+		navigate(`/task/${id}`)
 	}
 
 	const renderDifficultyStars = (difficulty: number) => {
@@ -70,7 +70,7 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 								<Heart
 									fill={isFavorite ? 'red' : 'gray'}
 									color={isFavorite ? 'red' : 'red'}
-									className={isFavorite ? '' : 'hover:fill-red-500 hover:text-red-500'} // При наведении становится красным
+									className={isFavorite ? '' : 'hover:fill-red-500 hover:text-red-500'}
 									size={32}
 								/>
 							</button>
@@ -80,16 +80,14 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 						<div className='md:flex md:py-2 md:mt-4'>
 							<p>{`Срок до: ${deadline}`}</p>
 							<div className='md:ml-4 md:flex'>
-								{tags.map(tag => {
-									return (
-										<div
-											key={tag}
-											className='bg-[#6092bb] md:mx-3 md:min-w-[40px] rounded-md md:text-center md:px-2 md:py-0.5'
-										>
-											{tag}
-										</div>
-									)
-								})}
+								{tags.map(tag => (
+									<div
+										key={tag}
+										className='bg-[#6092bb] md:mx-3 md:min-w-[40px] rounded-md md:text-center md:px-2 md:py-0.5'
+									>
+										{tag}
+									</div>
+								))}
 							</div>
 						</div>
 						<div className='md:flex md:flex-col md:mb-4'>
@@ -97,12 +95,7 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 							{renderDifficultyStars(difficulty)}
 						</div>
 						<div className='md:flex md:justify-between'>
-							<button
-								className='md:py-1.5 md:px-2 md:rounded-lg bg-[#0c426f] text-white font-semibold'
-								onClick={() => handleClick(taskPath)}
-							>
-								Привести решение
-							</button>
+							<Button onClick={() => handleClick(id.toString())}>Привести решение</Button>
 							<div className='md:flex'>
 								{companyName}
 								<BadgeCheck className='ml-2' fill='green' />
@@ -121,9 +114,9 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 								onClick={() => addToFavorite && addToFavorite(id)}
 							>
 								<Heart
-									fill={isFavorite ? 'red' : 'gray'} // Красный, если в избранном, иначе серый
-									color={isFavorite ? 'red' : 'red'} // Контур всегда красный
-									className={isFavorite ? '' : 'hover:fill-red-500 hover:text-red-500'} // При наведении становится красным
+									fill={isFavorite ? 'red' : 'gray'}
+									color={isFavorite ? 'red' : 'red'}
+									className={isFavorite ? '' : 'hover:fill-red-500 hover:text-red-500'}
 									size={32}
 								/>
 							</button>
@@ -134,16 +127,14 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 							<div className='md:flex md:mb-0.5'>
 								<p>{`Срок до: ${deadline}`}</p>
 								<div className='md:ml-4 md:flex'>
-									{tags.map(tag => {
-										return (
-											<div
-												key={tag}
-												className='bg-[#6092bb] md:mr-3 md:min-w-[40px] rounded-md md:text-center md:px-2 md:py-0.5'
-											>
-												{tag}
-											</div>
-										)
-									})}
+									{tags.map(tag => (
+										<div
+											key={tag}
+											className='bg-[#6092bb] md:mr-3 md:min-w-[40px] rounded-md md:text-center md:px-2 md:py-0.5'
+										>
+											{tag}
+										</div>
+									))}
 								</div>
 							</div>
 							<div className='md:mb-3'>
@@ -152,12 +143,7 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 							</div>
 						</div>
 						<div className='md:flex md:justify-between'>
-							<button
-								className='md:py-1.5 md:px-2 md:rounded-lg bg-[#0c426f] text-white font-semibold'
-								onClick={() => handleClick(taskPath)}
-							>
-								Привести решение
-							</button>
+							<Button onClick={() => handleClick(id.toString())}>Привести решение</Button>
 							<div className='md:flex'>
 								{companyName}
 								<BadgeCheck className='ml-2' fill='green' />

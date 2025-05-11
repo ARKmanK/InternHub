@@ -24,7 +24,7 @@ const TaskFilter: FC = () => {
 						className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 focus:outline-none'
 						onClick={() => toggleSection('companies')}
 					>
-						<span>Компании</span>
+						<span>Компания</span>
 						<ChevronDown
 							className={`w-5 h-5 transition-transform duration-300 ${
 								openSection.companies ? 'rotate-180' : ''
@@ -55,7 +55,7 @@ const TaskFilter: FC = () => {
 						className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 focus:outline-none'
 						onClick={() => toggleSection('difficulty')}
 					>
-						<span>Сложности</span>
+						<span>Сложность</span>
 						<ChevronDown
 							className={`w-5 h-5 transition-transform duration-300 ${
 								openSection.difficulty ? 'rotate-180' : ''
@@ -90,7 +90,7 @@ const TaskFilter: FC = () => {
 						className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 focus:outline-none'
 						onClick={() => toggleSection('tracking')}
 					>
-						<span>Отслеживать</span>
+						<span>Отслеживают</span>
 						<ChevronDown
 							className={`w-5 h-5 transition-transform duration-300 ${
 								openSection.tracking ? 'rotate-180' : ''

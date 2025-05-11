@@ -15,7 +15,6 @@ type TypeMainPages = {
 	}
 }
 
-// Убираем isExternal из MainPages и ExtraPages
 export const MainPages: TypeMainPages = {
 	Университет: { url: 'https://www.brstu.ru', width: 800 },
 	'Сведения об образовательной организации': { url: 'https://www.brstu.ru/sveden', width: 350 },

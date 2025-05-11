@@ -5,7 +5,6 @@ export type TypeTasksData = {
 	description: string
 	difficulty: number
 	companyName: string
-	taskPath: string
 	deadline: string
 	tags: string[]
 }
@@ -19,7 +18,6 @@ export const tasksData: TypeTasksData[] = [
 			'Разработать админ-панель для сайта компании с использованием современных технологий (фреймворк React + TypeScript с использованием WebPack',
 		difficulty: 1,
 		companyName: 'Ростелеком',
-		taskPath: '/',
 		deadline: '15 March',
 		tags: ['IT', 'Network'],
 	},
@@ -31,7 +29,6 @@ export const tasksData: TypeTasksData[] = [
 			'Разработать админ-панель для сайта компании с использованием современных технологий (фреймворк React + TypeScript с использованием WebPack',
 		difficulty: 3,
 		companyName: 'Ростелеком',
-		taskPath: '/',
 		deadline: '15 March',
 		tags: ['IT', 'Network'],
 	},
@@ -43,7 +40,6 @@ export const tasksData: TypeTasksData[] = [
 			'Разработать админ-панель для сайта компании с использованием современных технологий (фреймворк React + TypeScript с использованием WebPack',
 		difficulty: 2,
 		companyName: 'Ростелеком',
-		taskPath: '/',
 		deadline: '15 March',
 		tags: ['IT', 'Network'],
 	},
@@ -55,7 +51,6 @@ export const tasksData: TypeTasksData[] = [
 			'Разработать админ-панель для сайта компании с использованием современных технологий (фреймворк React + TypeScript с использованием WebPack',
 		difficulty: 1,
 		companyName: 'Ростелеком',
-		taskPath: '/',
 		deadline: '15 March',
 		tags: ['IT', 'Network'],
 	},

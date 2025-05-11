@@ -1,0 +1,48 @@
+{
+	"tasks": {
+		"taskId-2": {
+			"usersActivity": [
+				{
+					"status": "done",
+					"username": "ARKman",
+					"date": "08.05.2025"
+				},
+				{
+					"status": "undone",
+					"username": "TestName",
+					"date": "18.05.2025"
+				},
+				{
+					"status": "done",
+					"username": "ARKman",
+					"date": "08.05.2025"
+				},
+				{
+					"status": "undone",
+					"username": "TestName",
+					"date": "18.05.2025"
+				},
+				{
+					"status": "done",
+					"username": "ARKman",
+					"date": "08.05.2025"
+				},
+				{
+					"status": "undone",
+					"username": "TestName",
+					"date": "18.05.2025"
+				},
+				{
+					"status": "done",
+					"username": "ARKman",
+					"date": "08.05.2025"
+				},
+				{
+					"status": "undone",
+					"username": "TestName",
+					"date": "18.05.2025"
+				}
+			]
+		}
+	}
+}
