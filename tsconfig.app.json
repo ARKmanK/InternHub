@@ -6,7 +6,9 @@
 		"lib": ["ES2024", "DOM", "DOM.Iterable"],
 		"module": "ESNext",
 		"skipLibCheck": true,
+
 		"resolveJsonModule": true,
+
 
 		"paths": {
 			"@/*": ["./*"],
@@ -16,8 +18,10 @@
 			"@img/*": ["./src/img/*"],
 			"@pages/*": ["./src/pages/*"],
 			"@services/*": ["./src/services/*"],
+
 			"@public/*": ["./public/*"],
 			"@screens/*": ["./src/components/screens/*"]
+
 		},
 
 		/* Bundler mode */

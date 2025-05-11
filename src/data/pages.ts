@@ -1,3 +1,4 @@
+
 type PageLink = {
 	label: string
 	url: string
@@ -260,3 +261,4 @@ export const ExtraPages: TypeExtraPages = {
 
 export type TypeMainPagesExport = keyof typeof MainPages
 export type TypeExtraPagesExport = keyof typeof ExtraPages
+

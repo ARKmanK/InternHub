@@ -53,6 +53,7 @@ const Header: FC = () => {
 								className='md:flex text-white text-[13px]'
 								style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}
 							>
+
 								<p>{dateString}</p>
 								<p>&nbsp;{weekday}</p>
 								<p>{weekText}</p>
