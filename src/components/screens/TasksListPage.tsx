@@ -29,6 +29,7 @@ const TasksListPage = () => {
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [visibleTasks, setVisibleTasks] = useState<TypeTasksData[]>([])
 	const [tasks, setTasks] = useState<TypeTasksData[]>(getTasks())
+	const [employerTaskIds, setEmployerTaskIds] = useState<number[]>([])
 	const { notifications, addNotification } = useNotification()
 	const [filter, setFilter] = useState<TypeFilter>({
 		companies: null,
@@ -54,9 +55,16 @@ const TasksListPage = () => {
 		setFavoriteTasks(taskIds)
 	}
 
+	const loadEmployerTasks = () => {
+		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
+		const taskIds = userData.employer?.tasks || []
+		setEmployerTaskIds(taskIds)
+	}
+
 	useEffect(() => {
 		setPage('/tasks')
 		loadFavoriteTasks()
+		loadEmployerTasks()
 		getRole() === 'user' ? setRole('user') : setRole('employer')
 	}, [])
 
@@ -111,7 +119,7 @@ const TasksListPage = () => {
 					isFavorite={favoriteTasks.includes(task.id)}
 					deadline={task.deadline}
 					tags={task.tags}
-					role={role}
+					isMine={role === 'employer' && employerTaskIds.includes(task.id)}
 				/>
 			</motion.div>
 		</AnimatePresence>

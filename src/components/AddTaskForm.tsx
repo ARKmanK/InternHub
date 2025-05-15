@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppWindow } from 'lucide-react'
 import DatePicker from 'react-datepicker'
@@ -8,6 +8,7 @@ import Notification from '@components/UI/Notification/Notification'
 import { addTask, TypeTasksData } from '../data/tasksData'
 import { availableTags } from '../data/tags'
 import { getRole } from '../data/userData'
+import TaskCard from '@components/TaskCard'
 
 const AddTaskForm = () => {
 	const navigate = useNavigate()
@@ -17,6 +18,29 @@ const AddTaskForm = () => {
 	const [deadline, setDeadline] = useState<Date | null>(null)
 	const [tags, setTags] = useState<string[]>([])
 	const { notifications, addNotification } = useNotification()
+
+	const [previewTask, setPreviewTask] = useState<TypeTasksData | null>(null)
+	const role = getRole()
+	let companyName = ''
+	if (role === 'employer') {
+		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
+		companyName = userData.users?.employer?.companyName || 'Неизвестная компания'
+	}
+
+	useEffect(() => {
+		const deadlineStr = formatDate(deadline)
+		const tempTask: TypeTasksData = {
+			id: 0,
+			trackingNumber: 0,
+			title: title || 'Пример заголовка',
+			description: description || 'Пример описания...',
+			difficulty: difficulty || 1,
+			companyName: companyName || 'Пример компании',
+			deadline: deadlineStr || '01.01.2025',
+			tags: tags.length > 0 ? tags : ['Тег 1', 'Тег 2'],
+		}
+		setPreviewTask(tempTask)
+	}, [title, description, difficulty, deadline, tags, companyName])
 
 	const handleTagChange = (tag: string) => {
 		if (tags.includes(tag)) {
@@ -58,14 +82,6 @@ const AddTaskForm = () => {
 			return
 		}
 
-		// Получаем companyName из userData, если роль — employer
-		const role = getRole()
-		let companyName = ''
-		if (role === 'employer') {
-			const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-			companyName = userData.users?.employer?.companyName || 'Неизвестная компания'
-		}
-
 		const deadlineStr = formatDate(deadline)
 		const newTask: Omit<TypeTasksData, 'id'> = {
 			trackingNumber: 0,
@@ -77,17 +93,12 @@ const AddTaskForm = () => {
 			tags,
 		}
 
-		// Используем addTask для добавления задачи (это также обновит userData для employer)
 		addTask(newTask)
-
-		// Очищаем форму
 		setTitle('')
 		setDescription('')
 		setDifficulty(0)
 		setDeadline(null)
 		setTags([])
-
-		// Перенаправляем на страницу задач
 		navigate('/tasks')
 	}
 
@@ -181,6 +192,24 @@ const AddTaskForm = () => {
 						</div>
 					</form>
 				</div>
+			</div>
+			<div className='mt-10 '>
+				<p className='font-medium text-lg mb-4'>Что получится</p>
+				{previewTask && (
+					<TaskCard
+						id={previewTask.id}
+						trackingNumber={previewTask.trackingNumber}
+						title={previewTask.title}
+						description={previewTask.description}
+						difficulty={previewTask.difficulty}
+						companyName={previewTask.companyName}
+						type='list'
+						deadline={previewTask.deadline}
+						tags={previewTask.tags}
+						isFavorite={false}
+						isMine={role === 'employer'}
+					/>
+				)}
 			</div>
 			<Notification notifications={notifications} />
 		</>

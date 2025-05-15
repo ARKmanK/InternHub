@@ -151,14 +151,16 @@ const TaskPage: FC = () => {
 							</div>
 						</div>
 
-						<div className='md:flex md:justify-end md:mb-2'>
-							<button
-								className='md:py-1.5 md:px-2 md:rounded-lg bg-[#0c426f] text-white font-semibold'
-								onClick={handleClick}
-							>
-								Привести решение
-							</button>
-						</div>
+						{role === 'user' && (
+							<div className='md:flex md:justify-end md:mb-2'>
+								<button
+									className='md:py-1.5 md:px-2 md:rounded-lg bg-[#0c426f] text-white font-semibold'
+									onClick={handleClick}
+								>
+									Привести решение
+								</button>
+							</div>
+						)}
 
 						{showAddAnswerForm && (
 							<AddAnswerForm taskId={taskId || ''} onClose={() => setShowAddAnswerForm(false)} />

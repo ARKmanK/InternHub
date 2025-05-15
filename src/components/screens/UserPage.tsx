@@ -4,13 +4,14 @@ import TaskCard from '@components/TaskCard'
 import { useNavigate } from 'react-router-dom'
 import { List, BookCopy, Undo2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { getTasks, TypeTasksData } from '@data/tasksData'
+import { deleteTask, getTasks, TypeTasksData } from '@data/tasksData'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import { getRole, removeTaskFromFavorite, setPage } from '@data/userData'
 import EmptyCard from '@components/EmptyCard'
 import { Button } from '@components/UI/Button/Button'
+import DeleteConfirmation from '@components/DeleteConfirmation'
 
 const UserPage = () => {
 	const [role, setRole] = useState('')
@@ -19,6 +20,8 @@ const UserPage = () => {
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [startedTasks, setStartedTasks] = useState<number[]>([])
 	const [finishedTasks, setFinishedTasks] = useState<number[]>([])
+	const [taskToDelete, setTaskToDelete] = useState<number | null>(null)
+	const [showDeleteForm, setShowDeleteForm] = useState(false)
 	const { notifications, addNotification } = useNotification()
 	const [category, setCategory] = useState<'favorite' | 'started' | 'finished'>('favorite')
 	const [activeCategory, setActiveCategory] = useState('favorite')
@@ -98,6 +101,26 @@ const UserPage = () => {
 		}
 	}
 
+	const handleDelete = (id: number) => {
+		setTaskToDelete(id)
+		setShowDeleteForm(true)
+	}
+
+	const confirmDelete = () => {
+		if (taskToDelete !== null) {
+			deleteTask(taskToDelete)
+			addNotification('success', 'Успешно', 'Задача удалена')
+			loadTasks()
+			setShowDeleteForm(false)
+			setTaskToDelete(null)
+		}
+	}
+
+	const cancelDelete = () => {
+		setShowDeleteForm(false)
+		setTaskToDelete(null)
+	}
+
 	const taskCard = visibleTasks.map(task => (
 		<AnimatePresence key={task.id}>
 			<motion.div
@@ -119,7 +142,7 @@ const UserPage = () => {
 					deadline={task.deadline}
 					tags={task.tags}
 					role={role}
-					onDelete={loadTasks} // Передаём loadTasks как onDelete
+					onDelete={() => handleDelete(task.id)}
 				/>
 			</motion.div>
 		</AnimatePresence>
@@ -134,89 +157,98 @@ const UserPage = () => {
 		<>
 			<Header />
 			<NavBar />
-			<div className='md:flex md:justify-center md:py-[20px] md:px-[10px]'>
-				<div className='md:min-h-[1200px] md:w-[980px]'>
-					<div className='md:flex md:flex-col'>
-						<div className='md:py-4 md:flex md:justify-end items-center'>
-							<button
-								className='md:p-1 hover:bg-gray-300'
-								onClick={goBack}
-								aria-label='Вернуться к задачам'
-							>
-								<Undo2 size={30} />
-							</button>
-						</div>
-						<div className='md:flex md:justify-end'>
-							<button
-								className='md:mr-4 md:p-1 hover:bg-gray-300'
-								onClick={() => setListType('list')}
-							>
-								<List size={30} />
-							</button>
-							<button className='md:p-1 hover:bg-gray-300' onClick={() => setListType('card')}>
-								<BookCopy size={30} />
-							</button>
-						</div>
+			<div className='relative'>
+				<div className='md:flex md:justify-center md:py-[20px] md:px-[10px]'>
+					<div className='md:min-h-[730px] md:w-[980px]'>
+						<div className='md:flex md:flex-col'>
+							<div className='md:py-4 md:flex md:justify-end items-center'>
+								<button
+									className='md:p-1 hover:bg-gray-300'
+									onClick={goBack}
+									aria-label='Вернуться к задачам'
+								>
+									<Undo2 size={30} />
+								</button>
+							</div>
+							<div className='md:flex md:justify-end'>
+								<button
+									className='md:mr-4 md:p-1 hover:bg-gray-300'
+									onClick={() => setListType('list')}
+								>
+									<List size={30} />
+								</button>
+								<button className='md:p-1 hover:bg-gray-300' onClick={() => setListType('card')}>
+									<BookCopy size={30} />
+								</button>
+							</div>
 
-						<div className='md:flex mt-7'>
-							<div className='md:w-[80%]'>
-								<h1 className='text-2xl font-bold mb-14'>Страница профиля</h1>
-								{role === 'user' && (
-									<div className='md:flex md:justify-start md:gap-x-3 md:mb-10'>
-										<Button
-											className={`focus:bg-amber-700 ${
-												activeCategory === 'favorite' ? 'bg-amber-700' : ''
-											}`}
-											onClick={() => handleClick('favorite')}
-										>
-											<span>Избранное</span>
-										</Button>
-										<Button
-											className={`focus:bg-amber-700 ${
-												activeCategory === 'started' ? 'bg-amber-700' : ''
-											}`}
-											onClick={() => handleClick('started')}
-										>
-											<span>Начатые задачи</span>
-										</Button>
-										<Button
-											className={`focus:bg-amber-700 ${
-												activeCategory === 'finished' ? 'bg-amber-700' : ''
-											}`}
-											onClick={() => handleClick('finished')}
-										>
-											<span>Завершенные задачи</span>
-										</Button>
-									</div>
-								)}
-								{role === 'employer' && (
-									<div className='md:mb-10'>
-										<h2 className='text-xl font-semibold'>Мои задачи</h2>
-									</div>
-								)}
+							<div className='md:flex mt-7'>
+								<div className='md:w-[80%]'>
+									<h1 className='text-2xl font-bold mb-14'>Страница профиля</h1>
+									{role === 'user' && (
+										<div className='md:flex md:justify-start md:gap-x-3 md:mb-10'>
+											<Button
+												className={`focus:bg-amber-700 ${
+													activeCategory === 'favorite' ? 'bg-amber-700' : ''
+												}`}
+												onClick={() => handleClick('favorite')}
+											>
+												<span>Избранное</span>
+											</Button>
+											<Button
+												className={`focus:bg-amber-700 ${
+													activeCategory === 'started' ? 'bg-amber-700' : ''
+												}`}
+												onClick={() => handleClick('started')}
+											>
+												<span>Начатые задачи</span>
+											</Button>
+											<Button
+												className={`focus:bg-amber-700 ${
+													activeCategory === 'finished' ? 'bg-amber-700' : ''
+												}`}
+												onClick={() => handleClick('finished')}
+											>
+												<span>Завершенные задачи</span>
+											</Button>
+										</div>
+									)}
+									{role === 'employer' && (
+										<div className='md:mb-10'>
+											<h2 className='text-xl font-semibold'>Мои задачи</h2>
+										</div>
+									)}
 
-								{visibleTasks.length === 0 ? (
-									<EmptyCard
-										role={role}
-										listType={
-											role === 'employer'
-												? 'Мои задачи'
-												: category === 'favorite'
-												? 'Избранное'
-												: category === 'started'
-												? 'Начатые задачи'
-												: 'Завершенные задачи'
-										}
-									/>
-								) : listType === 'card' ? (
-									<div className='md:grid md:gap-4 md:grid-cols-2'>{taskCard}</div>
-								) : (
-									<>{taskCard}</>
-								)}
+									{visibleTasks.length === 0 ? (
+										<EmptyCard
+											role={role}
+											listType={
+												role === 'employer'
+													? 'Мои задачи'
+													: category === 'favorite'
+													? 'Избранное'
+													: category === 'started'
+													? 'Начатые задачи'
+													: 'Завершенные задачи'
+											}
+										/>
+									) : listType === 'card' ? (
+										<div className='md:grid md:gap-4 md:grid-cols-2'>{taskCard}</div>
+									) : (
+										<>{taskCard}</>
+									)}
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
+				{showDeleteForm && (
+					<DeleteConfirmation
+						taskId={taskToDelete || 0}
+						onConfirm={confirmDelete}
+						onCancel={cancelDelete}
+					/>
+				)}
 			</div>
 			<Notification notifications={notifications} />
 		</>

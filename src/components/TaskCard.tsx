@@ -1,18 +1,20 @@
 import { FC } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Heart, BadgeCheck, Star, Delete } from 'lucide-react'
-import { deleteTask, TypeTasksData } from '@data/tasksData'
+import { Heart, BadgeCheck, Star, Delete, BookCheck, Settings } from 'lucide-react'
+import { TypeTasksData } from '@data/tasksData'
 import { motion } from 'framer-motion'
 import { Button } from '@components/UI/Button/Button'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
+import { div } from 'framer-motion/client'
 
 type TypeTasksDataProps = TypeTasksData & {
 	type: string
 	addToFavorite?: (id: number) => void
 	isFavorite?: boolean
-	role: string
-	onDelete?: () => void // Новый проп для вызова после удаления
+	role?: string
+	isMine?: boolean
+	onDelete?: () => void
 }
 
 const TaskCard: FC<TypeTasksDataProps> = ({
@@ -28,21 +30,14 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 	deadline,
 	tags,
 	role,
-	onDelete, // Добавляем проп
+	isMine,
+	onDelete,
 }) => {
 	const { notifications, addNotification } = useNotification()
 	const navigate = useNavigate()
 
 	const handleClick = (id: string) => {
 		navigate(`/task/${id}`)
-	}
-
-	const handleDelete = (id: number) => {
-		deleteTask(id)
-		addNotification('success', 'Выполнено', 'Задача была удалена')
-		if (onDelete) {
-			onDelete() // Вызываем onDelete после удаления
-		}
 	}
 
 	const renderDifficultyStars = (difficulty: number) => {
@@ -92,11 +87,27 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 								</button>
 							)}
 							{role === 'employer' && (
-								<div className='text-xs text-black border-2 border-t-0 border-r-0 rounded-bl-lg rounded-tr-lg p-1 top-0 right-0 absolute'>
-									<button className='flex' onClick={() => handleDelete(id)}>
-										Удалить задачу
-										<Delete size={20} />
-									</button>
+								<>
+									<div className='md:flex'>
+										<div className='text-xs text-black border-2 border-t-0 border-r-0 rounded-bl-lg rounded-tr-lg p-1 top-0 right-30 absolute'>
+											<button className='flex' onClick={() => null}>
+												Редактировать
+												<Settings className='ml-1' size={20} />
+											</button>
+										</div>
+										<div className='text-xs text-black border-2 border-t-0 border-r-0 rounded-tr-lg p-1 top-0 right-0 absolute'>
+											<button className='flex' onClick={onDelete}>
+												Удалить задачу
+												<Delete className='ml-1' size={20} />
+											</button>
+										</div>
+									</div>
+								</>
+							)}
+							{isMine && (
+								<div className='md:flex text-black border-2 border-t-0 border-r-0 rounded-bl-lg rounded-tr-lg p-1 top-0 right-0 absolute'>
+									<span>Моя задача</span>
+									<BookCheck fill='#0e8083' size={20} />
 								</div>
 							)}
 						</div>
