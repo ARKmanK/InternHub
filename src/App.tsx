@@ -6,6 +6,7 @@ import UserPage from '@screens/UserPage'
 import { MantineProvider } from '@mantine/core'
 import RegistryPage from '@screens/RegistryPage'
 import CreateTaskPage from '@screens/CreateTaskPage'
+import EditTaskPage from './components/screens/EditTaskPage'
 
 const RootRedirect = () => {
 	const navigate = useNavigate()
@@ -54,6 +55,11 @@ const App: FC = () => {
 			{
 				path: '/create-task',
 				element: <CreateTaskPage />,
+				errorElement: <>404</>,
+			},
+			{
+				path: '/edit-task/:id',
+				element: <EditTaskPage />,
 				errorElement: <>404</>,
 			},
 		],

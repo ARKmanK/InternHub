@@ -40,6 +40,10 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 		navigate(`/task/${id}`)
 	}
 
+	const handleEdit = () => {
+		navigate(`/edit-task/${id}`)
+	}
+
 	const renderDifficultyStars = (difficulty: number) => {
 		const starsCount = difficulty >= 1 && difficulty <= 3 ? difficulty : 1
 
@@ -90,7 +94,7 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 								<>
 									<div className='md:flex'>
 										<div className='text-xs text-black border-2 border-t-0 border-r-0 rounded-bl-lg rounded-tr-lg p-1 top-0 right-30 absolute'>
-											<button className='flex' onClick={() => null}>
+											<button className='flex' onClick={handleEdit}>
 												Редактировать
 												<Settings className='ml-1' size={20} />
 											</button>
