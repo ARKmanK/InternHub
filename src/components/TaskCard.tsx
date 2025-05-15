@@ -116,7 +116,7 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 							)}
 						</div>
 						<h3 className='text-xl font-semibold md:pt-4'>{title}</h3>
-						<div className='w-[70%] md:pt-4 h-[88px] overflow-hidden text-ellipsis line-clamp-4'>
+						<div className='md:pt-4 h-[88px] overflow-hidden text-ellipsis line-clamp-4 break-words'>
 							{description}
 						</div>
 						<div className='md:flex md:py-2 md:mt-4 flex-wrap'>
@@ -125,7 +125,7 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 								{tags.map(tag => (
 									<div
 										key={tag}
-										className='bg-[#6092bb] md:mx-3 md:min-w-[40px] h-[28px] rounded-md md:text-center md:px-2 md:py-0.5 flex items-center'
+										className='bg-[#6092bb] md:mx-1.5 md:min-w-[40px] h-[28px] rounded-md md:text-center md:px-2 md:py-0.5 flex items-center justify-center'
 									>
 										{tag}
 									</div>
@@ -147,7 +147,7 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 				</div>
 			)}
 			{type === 'card' && (
-				<div className='md:min-w-[310px] md:min-h-[350px] w-[380px] h-[350px] bg-[#96bddd] rounded-xl border-2 border-gray-[#dce3eb] overflow-hidden'>
+				<div className='md:min-w-[310px] md:min-h-[350px] w-[380px] h-[440px] bg-[#96bddd] rounded-xl border-2 border-gray-[#dce3eb] overflow-hidden'>
 					<div className='md:py-2 md:px-3 h-full flex flex-col justify-between'>
 						<div>
 							<div className='md:flex md:justify-between text-gray-500 text-sm'>
@@ -167,32 +167,31 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 								)}
 							</div>
 							<h3 className='text-xl font-semibold md:pt-4'>{title}</h3>
-							<div className='md:pt-4 overflow-hidden text-ellipsis line-clamp-4'>
+							<div className='md:pt-4 overflow-hidden text-ellipsis line-clamp-4 break-words'>
 								{description}
 							</div>
-							<div className='md:flex-col md:mt-6'>
-								<div className='md:flex md:mb-0.5 flex-wrap'>
+							<div className='flex-1 mt-6'>
+								<div className='flex flex-col'>
 									<p>{`Срок до: ${deadline}`}</p>
-									<div className='md:ml-4 md:flex flex-wrap'>
+									<div className='flex flex-wrap mt-1'>
 										{tags.map(tag => (
-											<div
-												key={tag}
-												className='bg-[#6092bb] md:mr-3 md:min-w-[40px] rounded-md md:text-center md:px-2 md:py-0.5 flex items-center'
-											>
-												{tag}
+											<div className='mt-2 flex' key={tag}>
+												<div className='bg-[#6092bb] mr-2.5 min-w-[40px] rounded-md text-center px-2 py-0.5 flex items-center justify-center'>
+													{tag}
+												</div>
 											</div>
 										))}
 									</div>
 								</div>
-								<div className='md:mb-3'>
-									<p className='md:mb-2'>Сложность</p>
+								<div className='mt-3'>
+									<p className='mb-2'>Сложность</p>
 									{renderDifficultyStars(difficulty)}
 								</div>
 							</div>
 						</div>
-						<div className='md:flex md:justify-between'>
+						<div className='flex justify-between items-end'>
 							<Button onClick={() => handleClick(id.toString())}>На страницу задачи</Button>
-							<div className='md:flex items-center'>
+							<div className='flex items-center'>
 								{companyName}
 								<BadgeCheck className='ml-2' fill='green' />
 							</div>

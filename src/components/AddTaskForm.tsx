@@ -24,7 +24,7 @@ const AddTaskForm = () => {
 	let companyName = ''
 	if (role === 'employer') {
 		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-		companyName = userData.users?.employer?.companyName || 'Неизвестная компания'
+		companyName = userData.users?.employer?.companyName || 'хз что'
 	}
 
 	useEffect(() => {

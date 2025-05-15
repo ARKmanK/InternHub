@@ -21,6 +21,7 @@ type TypeFilter = {
 	companies: string | null
 	difficulty: number | null
 	tracking: boolean | null
+	tags: string[] | null
 }
 
 const TasksListPage = () => {
@@ -35,6 +36,7 @@ const TasksListPage = () => {
 		companies: null,
 		difficulty: null,
 		tracking: null,
+		tags: null,
 	})
 
 	const addToFavorite = (id: number) => {
@@ -42,70 +44,66 @@ const TasksListPage = () => {
 			setFavoriteTasks(favoriteTasks.filter(task => task !== id))
 			removeTaskFromFavorite(id)
 			addNotification('warning', '', 'Задача убрана из избранного')
-			return
+		} else {
+			setFavoriteTasks([...favoriteTasks, id])
+			addToFavoriteJSON(id)
+			addNotification('success', 'Успешно', 'Задача добавлена в избранное')
 		}
-		setFavoriteTasks([...favoriteTasks, id])
-		addToFavoriteJSON(id)
-		addNotification('success', 'Успешно', 'Задача добавлена в избранное')
 	}
 
 	const loadFavoriteTasks = () => {
 		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-		const taskIds = userData.user?.favoriteTasks?.id || []
-		setFavoriteTasks(taskIds)
+		setFavoriteTasks(userData.user?.favoriteTasks?.id || [])
 	}
 
 	const loadEmployerTasks = () => {
 		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-		const taskIds = userData.employer?.tasks || []
-		setEmployerTaskIds(taskIds)
+		setEmployerTaskIds(userData.employer?.tasks || [])
 	}
 
 	useEffect(() => {
 		setPage('/tasks')
 		loadFavoriteTasks()
 		loadEmployerTasks()
-		getRole() === 'user' ? setRole('user') : setRole('employer')
+		setRole(getRole() === 'user' ? 'user' : 'employer')
 	}, [])
 
 	useEffect(() => {
 		let filteredTasks = [...tasks]
-
-		if (filter.companies !== null) {
+		if (filter.companies !== null)
 			filteredTasks = filteredTasks.filter(task => task.companyName === filter.companies)
-		}
-		if (filter.difficulty !== null) {
+		if (filter.difficulty !== null)
 			filteredTasks = filteredTasks.filter(task => task.difficulty === filter.difficulty)
-		}
-		if (filter.tracking !== null) {
+		if (filter.tracking !== null)
 			filteredTasks = filteredTasks.filter(task =>
 				filter.tracking ? task.trackingNumber > 0 : task.trackingNumber === 0
 			)
-		}
-
-		setVisibleTasks([])
-		filteredTasks.forEach((task, index) => {
-			setTimeout(() => {
-				setVisibleTasks(prev => {
-					if (!prev.some(t => t.id === task.id)) return [...prev, task]
-					return prev
-				})
-			}, index * 200)
-		})
+		if (filter.tags && filter.tags.length > 0)
+			filteredTasks = filteredTasks.filter(task =>
+				filter.tags!.some(tag => task.tags.includes(tag))
+			)
+		setVisibleTasks(filteredTasks)
 	}, [filter, listType, tasks])
 
 	const navigate = useNavigate()
 	const openProfile = () => navigate('/user')
 	const openCreateTaskPage = () => navigate('/create-task')
 
-	const taskCard = visibleTasks.map(task => (
+	const taskCard = visibleTasks.map((task, index) => (
 		<AnimatePresence key={task.id.toString()}>
 			<motion.div
 				layout
 				initial={{ opacity: 0, y: -20, scale: 0.9 }}
 				animate={{ opacity: 1, y: 0, scale: 1 }}
 				exit={{ opacity: 0, y: -20, scale: 0.9 }}
-				transition={{ duration: 0.5, type: 'spring', stiffness: 100 }}
+				transition={{
+					duration: 0.5,
+					type: 'spring',
+					stiffness: 100,
+					velocity: 4,
+					damping: 20,
+					delay: index * 0.1,
+				}}
 			>
 				<TaskCard
 					id={task.id}
@@ -163,7 +161,7 @@ const TasksListPage = () => {
 								{listType === 'card' ? (
 									<div className='md:grid md:gap-x-18 md:gap-y-4 md:grid-cols-2'>{taskCard}</div>
 								) : (
-									<>{taskCard}</>
+									taskCard
 								)}
 							</div>
 						</div>
