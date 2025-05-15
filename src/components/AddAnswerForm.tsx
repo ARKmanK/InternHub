@@ -2,20 +2,21 @@ import { CircleX, FileArchive, Link, SendHorizontal, FileImage, Check } from 'lu
 import { FC, MouseEventHandler, useState } from 'react'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
-import { saveAnswerData } from '../data/companyData'
+import { saveAnswerData } from '@data/companyData'
+import { addToStarted } from '@data/userData'
 
 type TypeAddAnswerForm = {
 	onClose: MouseEventHandler<HTMLButtonElement>
+	taskId: string
 }
 
-const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose }) => {
+const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 	const [url, setUrl] = useState('')
 	const [zip, setZip] = useState<File[]>([])
 	const [zipAdded, setZipAdded] = useState(false)
 	const [images, setImages] = useState<File[]>([])
 	const [imagesAdded, setImagesAdded] = useState(false)
 	const [comment, setComment] = useState('')
-
 	const { notifications, addNotification } = useNotification()
 
 	const handleSubmit = (e: React.FormEvent) => {
@@ -33,6 +34,7 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose }) => {
 		setComment('')
 		setZipAdded(false)
 		setImagesAdded(false)
+		addToStarted(Number(taskId))
 		addNotification('success', 'Успешно', 'Решение отправлено')
 	}
 

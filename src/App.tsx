@@ -1,17 +1,19 @@
 import { FC, useEffect } from 'react'
 import { createBrowserRouter, RouterProvider, useNavigate } from 'react-router-dom'
-import TasksListPage from '@/src/components/screens/TasksListPage'
-import TaskPage from '@/src/components/screens/TaskPage'
+import TasksListPage from '@screens/TasksListPage'
+import TaskPage from '@screens/TaskPage'
 import UserPage from '@screens/UserPage'
 import { MantineProvider } from '@mantine/core'
-import RegistryPage from './components/screens/RegistryPage'
+import RegistryPage from '@screens/RegistryPage'
+import CreateTaskPage from '@screens/CreateTaskPage'
 
 const RootRedirect = () => {
 	const navigate = useNavigate()
 	useEffect(() => {
 		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
 		const hasRole =
-			userData.users && Object.keys(userData.users).some(key => key === 'admin' || key === 'user')
+			userData.users &&
+			Object.keys(userData.users).some(key => key === 'employer' || key === 'user')
 		if (hasRole) {
 			navigate('/tasks')
 		} else {
@@ -47,6 +49,11 @@ const App: FC = () => {
 			{
 				path: '/user',
 				element: <UserPage />,
+				errorElement: <>404</>,
+			},
+			{
+				path: '/create-task',
+				element: <CreateTaskPage />,
 				errorElement: <>404</>,
 			},
 		],

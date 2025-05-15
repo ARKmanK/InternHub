@@ -14,7 +14,7 @@ export const Button: FC<TypeButtonProps> = ({ onClick, children, className = '' 
 	return (
 		<>
 			<button
-				className={`md:px-2 md:py-1.5 md:rounded-lg font-semibold text-white bg-[#0c426f] ${className}`}
+				className={`md:px-2 md:py-1.5 md:rounded-lg font-medium text-white bg-[#0c426f] ${className}`}
 				onClick={handleClick}
 			>
 				{children}

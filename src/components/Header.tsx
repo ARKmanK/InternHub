@@ -1,6 +1,4 @@
 import { FC } from 'react'
-/* import { Link } from 'react-router-dom'  */
-
 import Logo from '/logo.png'
 import Logo_mobile from '/logo-mobile.png'
 import Eye from '/eye2.png'
@@ -53,7 +51,6 @@ const Header: FC = () => {
 								className='md:flex text-white text-[13px]'
 								style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}
 							>
-
 								<p>{dateString}</p>
 								<p>&nbsp;{weekday}</p>
 								<p>{weekText}</p>

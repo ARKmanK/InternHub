@@ -1,7 +1,19 @@
 import { FC, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { companyNames } from '../data/companyNames'
 
-const TaskFilter: FC = () => {
+type TypeFilter = {
+	companies: string | null
+	difficulty: number | null
+	tracking: boolean | null
+}
+
+interface TaskFilterProps {
+	filter: TypeFilter
+	setFilter: (filter: TypeFilter) => void
+}
+
+const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter }) => {
 	const [openSection, setOpenSection] = useState({
 		companies: false,
 		difficulty: false,
@@ -13,6 +25,37 @@ const TaskFilter: FC = () => {
 			...prev,
 			[section]: !prev[section],
 		}))
+	}
+
+	// Функция для сброса всех фильтров
+	const resetFilters = () => {
+		setFilter({
+			companies: null,
+			difficulty: null,
+			tracking: null,
+		})
+	}
+
+	// Обработчики изменения фильтров
+	const handleCompanyChange = (company: string | null) => {
+		setFilter({
+			...filter,
+			companies: filter.companies === company ? null : company,
+		})
+	}
+
+	const handleDifficultyChange = (difficulty: number | null) => {
+		setFilter({
+			...filter,
+			difficulty: filter.difficulty === difficulty ? null : difficulty,
+		})
+	}
+
+	const handleTrackingChange = (value: boolean | null) => {
+		setFilter({
+			...filter,
+			tracking: filter.tracking === value ? null : value,
+		})
 	}
 
 	return (
@@ -37,14 +80,18 @@ const TaskFilter: FC = () => {
 						}`}
 					>
 						<ul className='space-y-2'>
-							<li className='flex items-center space-x-2'>
-								<span className='w-3 h-3 bg-gray-400 rounded-full'></span>
-								<span>Section 3</span>
-							</li>
-							<li className='flex items-center space-x-2'>
-								<span className='w-3 h-3 bg-gray-400 rounded-full'></span>
-								<span>Section 4</span>
-							</li>
+							{companyNames.map(company => (
+								<li key={company} className='flex items-center space-x-2'>
+									<input
+										type='radio'
+										name='company'
+										checked={filter.companies === company}
+										onChange={() => handleCompanyChange(company)}
+										className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500'
+									/>
+									<span>{company}</span>
+								</li>
+							))}
 						</ul>
 					</div>
 				</div>
@@ -68,23 +115,23 @@ const TaskFilter: FC = () => {
 						}`}
 					>
 						<ul className='space-y-2'>
-							<li className='flex items-center space-x-2'>
-								<span className='w-3 h-3 bg-gray-400 rounded-full'></span>
-								<span>Легкая</span>
-							</li>
-							<li className='flex items-center space-x-2'>
-								<span className='w-3 h-3 bg-gray-400 rounded-full'></span>
-								<span>Средняя</span>
-							</li>
-							<li className='flex items-center space-x-2'>
-								<span className='w-3 h-3 bg-gray-400 rounded-full'></span>
-								<span>Сложная</span>
-							</li>
+							{[1, 2, 3].map(diff => (
+								<li key={diff} className='flex items-center space-x-2'>
+									<input
+										type='radio'
+										name='difficulty'
+										checked={filter.difficulty === diff}
+										onChange={() => handleDifficultyChange(diff)}
+										className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500'
+									/>
+									<span>{diff === 1 ? 'Легкая' : diff === 2 ? 'Средняя' : 'Сложная'}</span>
+								</li>
+							))}
 						</ul>
 					</div>
 				</div>
 
-				{/* Блок "Отслеживать" */}
+				{/* Блок "Отслеживают" */}
 				<div className='border-b border-gray-300'>
 					<button
 						className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 focus:outline-none'
@@ -104,15 +151,37 @@ const TaskFilter: FC = () => {
 					>
 						<ul className='space-y-2'>
 							<li className='flex items-center space-x-2'>
-								<span className='w-3 h-3 bg-gray-400 rounded-full'></span>
+								<input
+									type='radio'
+									name='tracking'
+									checked={filter.tracking === true}
+									onChange={() => handleTrackingChange(true)}
+									className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500'
+								/>
 								<span>Да</span>
 							</li>
 							<li className='flex items-center space-x-2'>
-								<span className='w-3 h-3 bg-gray-400 rounded-full'></span>
+								<input
+									type='radio'
+									name='tracking'
+									checked={filter.tracking === false}
+									onChange={() => handleTrackingChange(false)}
+									className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500'
+								/>
 								<span>Нет</span>
 							</li>
 						</ul>
 					</div>
+				</div>
+
+				{/* Кнопка "Сбросить фильтры" */}
+				<div className='p-4'>
+					<button
+						onClick={resetFilters}
+						className='w-full py-2 text-white font-medium bg-[#0c426f] rounded-lg hover:bg-blue-600 transition-colors'
+					>
+						Сбросить фильтры
+					</button>
 				</div>
 			</div>
 		</>
