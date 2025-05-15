@@ -7,7 +7,7 @@ import { Button } from '@components/UI/Button/Button'
 
 const RegistryPage: FC = () => {
 	const navigate = useNavigate()
-	const handleRole = (role: 'admin' | 'user') => {
+	const handleRole = (role: 'employer' | 'user') => {
 		setRole(role)
 		navigate('/tasks')
 	}
@@ -22,8 +22,8 @@ const RegistryPage: FC = () => {
 						<div className='md:min-w-[650px] md:h-[200px] md:border-2 md:rounded-2xl bg-[#96bddd] md:flex md:flex-col md:items-center'>
 							<p className='md:my-5 md:text-2xl'>Выберите роль</p>
 							<div className='md:flex md:flex-col md:gap-y-3 md:w-[200px]'>
-								<Button onClick={() => handleRole('admin')}>Админ</Button>
-								<Button onClick={() => handleRole('admin')}>Пользователь</Button>
+								<Button onClick={() => handleRole('employer')}>Работодатель</Button>
+								<Button onClick={() => handleRole('user')}>Пользователь</Button>
 							</div>
 						</div>
 					</div>

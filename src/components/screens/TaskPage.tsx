@@ -1,6 +1,6 @@
 import { FC, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { tasksData, TypeTasksData } from '@data/tasksData'
+import { getTasks, TypeTasksData } from '@data/tasksData' // Заменили initialTasks на getTasks
 import { BadgeCheck, Star, CircleCheckBig, CircleEllipsis } from 'lucide-react'
 import useNotification from '@hooks/useNotification'
 import Header from '@components/Header'
@@ -10,8 +10,8 @@ import { useNavigate } from 'react-router-dom'
 import { Undo2 } from 'lucide-react'
 import TaskData from '@data/TaskData.json'
 import AddAnswerForm from '@components/AddAnswerForm'
+import { getRole, setPage, TypePages } from '@/src/data/userData'
 
-// Определение типа данных из TaskData.json
 type UserActivity = {
 	status: string
 	username: string
@@ -29,19 +29,25 @@ type TaskDataJSON = {
 }
 
 const TaskPage: FC = () => {
-	const { taskId } = useParams<{ taskId: string }>()
+	const { taskId } = useParams<{ taskId?: string }>()
 	const [task, setTask] = useState<TypeTasksData | null>(null)
 	const [activityData, setActivityData] = useState<UserActivity[] | null>(null)
 	const { notifications, addNotification } = useNotification()
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [showAddAnswerForm, setShowAddAnswerForm] = useState<boolean>(false)
+	const [role, setRole] = useState('')
 
 	useEffect(() => {
+		getRole() === 'user' ? setRole('user') : setRole('employer')
+	}, [])
+
+	useEffect(() => {
+		setPage(`/task/${taskId}`)
 		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
 		const taskIds = userData.users?.['admin']?.favoriteTasks?.id || []
 		setFavoriteTasks(taskIds)
 
-		const foundTask = tasksData.find(t => t.id === Number(taskId))
+		const foundTask = getTasks().find(t => t.id === Number(taskId))
 		setTask(foundTask || null)
 
 		const taskKey = `taskId-${taskId}`
@@ -51,12 +57,17 @@ const TaskPage: FC = () => {
 
 	const navigate = useNavigate()
 	const goBack = () => {
-		navigate('/tasks')
+		const data = localStorage.getItem('prevPage')
+		let prevPage = '/tasks'
+		if (data) {
+			const parsedData: TypePages = JSON.parse(data)
+			prevPage = parsedData.prevPage || '/tasks'
+		}
+		navigate(prevPage)
 	}
 
 	const renderDifficultyStars = (difficulty: number) => {
 		const starsCount = difficulty >= 1 && difficulty <= 3 ? difficulty : 1
-
 		const starColorClass =
 			{
 				1: 'fill-green-500 stroke-green-500',
@@ -78,11 +89,16 @@ const TaskPage: FC = () => {
 	}
 
 	const handleClick = () => {
-		if (!favoriteTasks.includes(Number(taskId))) {
-			addNotification('warning', 'Нет в избранном', 'Добавьте задачу в избранное')
+		if (role === 'employer') {
+			addNotification('warning', 'Роль', 'Ваша роль не соответствует необходимой')
 			return
+		} else {
+			if (!favoriteTasks.includes(Number(taskId))) {
+				addNotification('warning', 'Нет в избранном', 'Добавьте задачу в избранное')
+				return
+			}
+			setShowAddAnswerForm(true)
 		}
-		setShowAddAnswerForm(true)
 	}
 
 	return (
@@ -135,16 +151,20 @@ const TaskPage: FC = () => {
 							</div>
 						</div>
 
-						<div className='md:flex md:justify-end md:mb-2'>
-							<button
-								className='md:py-1.5 md:px-2 md:rounded-lg bg-[#0c426f] text-white font-semibold'
-								onClick={handleClick}
-							>
-								Привести решение
-							</button>
-						</div>
+						{role === 'user' && (
+							<div className='md:flex md:justify-end md:mb-2'>
+								<button
+									className='md:py-1.5 md:px-2 md:rounded-lg bg-[#0c426f] text-white font-semibold'
+									onClick={handleClick}
+								>
+									Привести решение
+								</button>
+							</div>
+						)}
 
-						{showAddAnswerForm && <AddAnswerForm onClose={() => setShowAddAnswerForm(false)} />}
+						{showAddAnswerForm && (
+							<AddAnswerForm taskId={taskId || ''} onClose={() => setShowAddAnswerForm(false)} />
+						)}
 
 						{!showAddAnswerForm && (
 							<div className='md:min-w-[300px] md:min-h-[250px] md:rounded-xl md:mb-10 border-1 border-gray-[#dce3eb] bg-[#96bddd]'>
