@@ -14,7 +14,7 @@ import { Button } from '@components/UI/Button/Button'
 import DeleteConfirmation from '@components/DeleteConfirmation'
 
 const UserPage = () => {
-	const [role, setRole] = useState('')
+	const [role, setRole] = useState(getRole())
 	const [listType, setListType] = useState<'list' | 'card'>('list')
 	const [visibleTasks, setVisibleTasks] = useState<TypeTasksData[]>([])
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
@@ -27,27 +27,22 @@ const UserPage = () => {
 	const [activeCategory, setActiveCategory] = useState('favorite')
 
 	const navigate = useNavigate()
-	const goBack = () => {
-		navigate('/tasks')
-	}
+
+	useEffect(() => {
+		setPage('/user')
+	}, [])
 
 	const loadTasks = () => {
-		setVisibleTasks([])
 		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
+		let tasksData: TypeTasksData[] = []
 
 		if (role === 'employer') {
 			const employerTaskIds = userData.employer?.tasks || []
-			const tasksData = getTasks().filter(task => employerTaskIds.includes(task.id))
-			tasksData.forEach((task, index) => {
-				setTimeout(() => {
-					setVisibleTasks(prev => [...prev, task])
-				}, index * 200)
-			})
+			tasksData = getTasks().filter(task => employerTaskIds.includes(task.id))
 		} else {
-			const favoriteTaskIds = userData.users?.['user']?.favoriteTasks?.id || []
-			const startedTaskIds = userData.users?.['user']?.startedTasks?.id || []
-			const finishedTaskIds = userData.users?.['user']?.finishedTasks?.id || []
-
+			const favoriteTaskIds = userData.user?.favoriteTasks?.id || []
+			const startedTaskIds = userData.user?.startedTasks?.id || []
+			const finishedTaskIds = userData.user?.finishedTasks?.id || []
 			setFavoriteTasks(favoriteTaskIds)
 			setStartedTasks(startedTaskIds)
 			setFinishedTasks(finishedTaskIds)
@@ -64,33 +59,17 @@ const UserPage = () => {
 					taskIds = finishedTaskIds
 					break
 			}
-			const tasksData = getTasks().filter(task => taskIds.includes(task.id))
-			tasksData.forEach((task, index) => {
-				setTimeout(() => {
-					setVisibleTasks(prev => [...prev, task])
-				}, index * 200)
-			})
+			tasksData = getTasks().filter(task => taskIds.includes(task.id))
 		}
+
+		setVisibleTasks(tasksData)
 	}
 
 	useEffect(() => {
-		setPage('/user')
-		getRole() === 'user' ? setRole('user') : setRole('employer')
-	}, [])
-
-	useEffect(() => {
-		loadTasks()
-	}, [listType, category, role])
-
-	useEffect(() => {
-		const handleStorageChange = (e: StorageEvent) => {
-			if (e.key === 'tasks' || e.key === 'userData') {
-				loadTasks()
-			}
+		if (role) {
+			loadTasks()
 		}
-		window.addEventListener('storage', handleStorageChange)
-		return () => window.removeEventListener('storage', handleStorageChange)
-	}, [listType, category, role])
+	}, [category, role])
 
 	const removeFromFavorite = (id: number) => {
 		if (favoriteTasks.includes(id)) {
@@ -143,6 +122,7 @@ const UserPage = () => {
 					tags={task.tags}
 					role={role}
 					onDelete={() => handleDelete(task.id)}
+					showControls={role === 'employer'}
 				/>
 			</motion.div>
 		</AnimatePresence>
@@ -151,6 +131,10 @@ const UserPage = () => {
 	const handleClick = (type: 'favorite' | 'started' | 'finished') => {
 		setCategory(type)
 		setActiveCategory(type)
+	}
+
+	const goBack = () => {
+		navigate('/tasks')
 	}
 
 	return (

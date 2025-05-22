@@ -13,7 +13,7 @@ import TaskCard from '@components/TaskCard'
 import { availableTags } from '@/src/data/tags'
 
 const EditTaskPage = () => {
-	const { id } = useParams<{ id: string }>() // Извлекаем id из URL
+	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
 	const { notifications, addNotification } = useNotification()
 	const [taskData, setTaskData] = useState<TypeTasksData | null>(null)
@@ -29,7 +29,7 @@ const EditTaskPage = () => {
 	let companyName = ''
 	if (role === 'employer') {
 		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-		companyName = userData.users?.employer?.companyName || 'Неизвестная компания'
+		companyName = userData.users?.employer?.companyName || 'Неизвестная'
 	}
 
 	// Загружаем данные задачи из localStorage

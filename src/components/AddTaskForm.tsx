@@ -24,8 +24,11 @@ const AddTaskForm = () => {
 	let companyName = ''
 	if (role === 'employer') {
 		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-		companyName = userData.users?.employer?.companyName || 'хз что'
+		companyName = userData.user?.companyName || 'Неизвестная компания'
 	}
+
+	const MAX_TITLE_LENGTH = 50
+	const MAX_DESCRIPTION_LENGTH = 250
 
 	useEffect(() => {
 		const deadlineStr = formatDate(deadline)
@@ -56,6 +59,32 @@ const AddTaskForm = () => {
 		const month = String(date.getMonth() + 1).padStart(2, '0')
 		const year = date.getFullYear()
 		return `${day}.${month}.${year}`
+	}
+
+	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value
+		if (value.length <= MAX_TITLE_LENGTH) {
+			setTitle(value)
+		} else {
+			addNotification(
+				'warning',
+				'Ошибка',
+				`Заголовок не может превышать ${MAX_TITLE_LENGTH} символов`
+			)
+		}
+	}
+
+	const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		const value = e.target.value
+		if (value.length <= MAX_DESCRIPTION_LENGTH) {
+			setDescription(value)
+		} else {
+			addNotification(
+				'warning',
+				'Ошибка',
+				`Описание не может превышать ${MAX_DESCRIPTION_LENGTH} символов`
+			)
+		}
 	}
 
 	const handleSubmit = (e: FormEvent) => {
@@ -110,7 +139,7 @@ const AddTaskForm = () => {
 					<form className='px-2 mt-7 flex flex-col justify-between h-full' onSubmit={handleSubmit}>
 						<div className='flex flex-col gap-4'>
 							<div>
-								<p>Заголовок</p>
+								<p>Заголовок (максимум {MAX_TITLE_LENGTH} символов)</p>
 								<div className='md:flex border-1 max-w-[380px] md:rounded-lg'>
 									<AppWindow className='m-1' size={26} />
 									<input
@@ -118,18 +147,20 @@ const AddTaskForm = () => {
 										placeholder='title'
 										value={title}
 										className='outline-0 w-full text-lg'
-										onChange={e => setTitle(e.target.value)}
+										onChange={handleTitleChange}
 										autoFocus
+										maxLength={MAX_TITLE_LENGTH}
 									/>
 								</div>
 							</div>
 							<div>
-								<p>Описание задачи</p>
+								<p>Описание задачи (максимум {MAX_DESCRIPTION_LENGTH} символов)</p>
 								<textarea
 									className='h-[150px] w-[380px] border rounded-xl p-2 resize-none outline-0'
 									placeholder='...'
 									value={description}
-									onChange={e => setDescription(e.target.value)}
+									onChange={handleDescriptionChange}
+									maxLength={MAX_DESCRIPTION_LENGTH}
 								></textarea>
 							</div>
 							<div className='md:flex md:flex-col'>
@@ -193,7 +224,7 @@ const AddTaskForm = () => {
 					</form>
 				</div>
 			</div>
-			<div className='mt-10 '>
+			<div className='mt-10'>
 				<p className='font-medium text-lg mb-4'>Что получится</p>
 				{previewTask && (
 					<TaskCard

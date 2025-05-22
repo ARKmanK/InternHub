@@ -11,7 +11,7 @@ import {
 	setPage,
 } from '@data/userData'
 import { List, BookCopy, CircleUserRound } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
@@ -26,7 +26,7 @@ type TypeFilter = {
 
 const TasksListPage = () => {
 	const [listType, setListType] = useState('list')
-	const [role, setRole] = useState('')
+	const [role, setRole] = useState(getRole())
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [visibleTasks, setVisibleTasks] = useState<TypeTasksData[]>([])
 	const [tasks, setTasks] = useState<TypeTasksData[]>(getTasks())
@@ -89,39 +89,43 @@ const TasksListPage = () => {
 	const openProfile = () => navigate('/user')
 	const openCreateTaskPage = () => navigate('/create-task')
 
-	const taskCard = visibleTasks.map((task, index) => (
-		<AnimatePresence key={task.id.toString()}>
-			<motion.div
-				layout
-				initial={{ opacity: 0, y: -20, scale: 0.9 }}
-				animate={{ opacity: 1, y: 0, scale: 1 }}
-				exit={{ opacity: 0, y: -20, scale: 0.9 }}
-				transition={{
-					duration: 0.5,
-					type: 'spring',
-					stiffness: 100,
-					velocity: 4,
-					damping: 20,
-					delay: index * 0.1,
-				}}
-			>
-				<TaskCard
-					id={task.id}
-					trackingNumber={task.trackingNumber}
-					title={task.title}
-					description={task.description}
-					difficulty={task.difficulty}
-					companyName={task.companyName}
-					type={listType}
-					addToFavorite={addToFavorite}
-					isFavorite={favoriteTasks.includes(task.id)}
-					deadline={task.deadline}
-					tags={task.tags}
-					isMine={role === 'employer' && employerTaskIds.includes(task.id)}
-				/>
-			</motion.div>
-		</AnimatePresence>
-	))
+	const taskCard = useMemo(() => {
+		return visibleTasks.map((task, index) => (
+			<AnimatePresence key={task.id.toString()}>
+				<motion.div
+					layout
+					initial={{ opacity: 0, y: -20, scale: 0.9 }}
+					animate={{ opacity: 1, y: 0, scale: 1 }}
+					exit={{ opacity: 0, y: -20, scale: 0.9 }}
+					transition={{
+						duration: 0.5,
+						type: 'spring',
+						stiffness: 100,
+						velocity: 4,
+						damping: 20,
+						delay: index * 0.1,
+					}}
+				>
+					<TaskCard
+						id={task.id}
+						trackingNumber={task.trackingNumber}
+						title={task.title}
+						description={task.description}
+						difficulty={task.difficulty}
+						companyName={task.companyName}
+						type={listType}
+						addToFavorite={addToFavorite}
+						isFavorite={favoriteTasks.includes(task.id)}
+						deadline={task.deadline}
+						tags={task.tags}
+						isMine={role === 'employer' && employerTaskIds.includes(task.id)}
+						role={role}
+						showControls={false}
+					/>
+				</motion.div>
+			</AnimatePresence>
+		))
+	}, [visibleTasks, listType, role, favoriteTasks, employerTaskIds, addToFavorite])
 
 	return (
 		<>

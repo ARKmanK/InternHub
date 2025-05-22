@@ -1,16 +1,14 @@
 import { FC, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { getTasks, TypeTasksData } from '@data/tasksData' // Заменили initialTasks на getTasks
-import { BadgeCheck, Star, CircleCheckBig, CircleEllipsis } from 'lucide-react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { getTasks, TypeTasksData } from '@data/tasksData'
+import { addToFavorite, removeTaskFromFavorite, getRole, setPage, TypePages } from '@data/userData'
+import { BadgeCheck, Star, CircleCheckBig, CircleEllipsis, Heart, Undo2 } from 'lucide-react'
 import useNotification from '@hooks/useNotification'
+import Notification from '@components/UI/Notification/Notification'
 import Header from '@components/Header'
 import NavBar from '@components/NavBar'
-import Notification from '@components/UI/Notification/Notification'
-import { useNavigate } from 'react-router-dom'
-import { Undo2 } from 'lucide-react'
-import TaskData from '@data/TaskData.json'
 import AddAnswerForm from '@components/AddAnswerForm'
-import { getRole, setPage, TypePages } from '@/src/data/userData'
+import TaskData from '@data/TaskData.json'
 
 type UserActivity = {
 	status: string
@@ -30,32 +28,69 @@ type TaskDataJSON = {
 
 const TaskPage: FC = () => {
 	const { taskId } = useParams<{ taskId?: string }>()
+	const navigate = useNavigate()
+	const { notifications, addNotification } = useNotification()
 	const [task, setTask] = useState<TypeTasksData | null>(null)
 	const [activityData, setActivityData] = useState<UserActivity[] | null>(null)
-	const { notifications, addNotification } = useNotification()
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [showAddAnswerForm, setShowAddAnswerForm] = useState<boolean>(false)
-	const [role, setRole] = useState('')
-
-	useEffect(() => {
-		getRole() === 'user' ? setRole('user') : setRole('employer')
-	}, [])
+	const [role, setRole] = useState(getRole())
 
 	useEffect(() => {
 		setPage(`/task/${taskId}`)
-		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-		const taskIds = userData.users?.['admin']?.favoriteTasks?.id || []
-		setFavoriteTasks(taskIds)
+		const loadData = () => {
+			const userData = JSON.parse(localStorage.getItem('userData') || '{}')
+			const taskIds = userData.user?.favoriteTasks?.id || []
+			setFavoriteTasks(taskIds)
 
-		const foundTask = getTasks().find(t => t.id === Number(taskId))
-		setTask(foundTask || null)
+			const foundTask = getTasks().find(t => t.id === Number(taskId))
+			setTask(foundTask || null)
 
-		const taskKey = `taskId-${taskId}`
-		const taskActivity = (TaskData as TaskDataJSON).tasks[taskKey]
-		setActivityData(taskActivity?.usersActivity || null)
+			const taskKey = `taskId-${taskId}`
+			const taskActivity = (TaskData as TaskDataJSON).tasks[taskKey]
+			setActivityData(taskActivity?.usersActivity || null)
+		}
+
+		loadData()
 	}, [taskId])
 
-	const navigate = useNavigate()
+	useEffect(() => {
+		const handleStorageChange = (e: StorageEvent) => {
+			if (e.key === 'userData') {
+				const userData = JSON.parse(localStorage.getItem('userData') || '{}')
+				setFavoriteTasks(userData.user?.favoriteTasks?.id || [])
+			}
+		}
+		window.addEventListener('storage', handleStorageChange)
+		return () => window.removeEventListener('storage', handleStorageChange)
+	}, [])
+
+	const handleFavorite = () => {
+		if (!task) return
+		if (favoriteTasks.includes(task.id)) {
+			removeTaskFromFavorite(task.id)
+			setFavoriteTasks(favoriteTasks.filter(id => id !== task.id))
+			addNotification('warning', 'Внимание', 'Задача убрана из избранного')
+		} else {
+			addToFavorite(task.id)
+			setFavoriteTasks([...favoriteTasks, task.id])
+			addNotification('success', 'Успешно', 'Задача добавлена в избранное')
+		}
+	}
+
+	const handleClick = () => {
+		if (!task) return
+		if (role === 'employer') {
+			addNotification('warning', 'Роль', 'Ваша роль не соответствует необходимой')
+			return
+		}
+		if (!favoriteTasks.includes(task.id)) {
+			addNotification('warning', 'Нет в избранном', 'Добавьте задачу в избранное')
+			return
+		}
+		setShowAddAnswerForm(true)
+	}
+
 	const goBack = () => {
 		const data = localStorage.getItem('prevPage')
 		let prevPage = '/tasks'
@@ -88,19 +123,6 @@ const TaskPage: FC = () => {
 		return <div>Задача не найдена</div>
 	}
 
-	const handleClick = () => {
-		if (role === 'employer') {
-			addNotification('warning', 'Роль', 'Ваша роль не соответствует необходимой')
-			return
-		} else {
-			if (!favoriteTasks.includes(Number(taskId))) {
-				addNotification('warning', 'Нет в избранном', 'Добавьте задачу в избранное')
-				return
-			}
-			setShowAddAnswerForm(true)
-		}
-	}
-
 	return (
 		<>
 			<Header />
@@ -108,7 +130,7 @@ const TaskPage: FC = () => {
 			<div className='md:flex md:justify-center md:py-[20px] md:px-[10px]'>
 				<div className='md:min-h-[1200px] md:w-[980px]'>
 					<div className='md:flex md:flex-col'>
-						<div className='md:py-4 md:flex md:justify-end items-center'>
+						<div className='md:py-4 md:flex md:justify-end md:items-center md:gap-4'>
 							<button
 								className='md:p-1 hover:bg-gray-300'
 								onClick={goBack}
@@ -116,6 +138,18 @@ const TaskPage: FC = () => {
 							>
 								<Undo2 size={30} />
 							</button>
+							{role === 'user' && (
+								<button className='p-1 rounded transition-colors' onClick={handleFavorite}>
+									<Heart
+										fill={favoriteTasks.includes(task.id) ? 'red' : 'gray'}
+										color={favoriteTasks.includes(task.id) ? 'red' : 'red'}
+										className={
+											favoriteTasks.includes(task.id) ? '' : 'hover:fill-red-500 hover:text-red-500'
+										}
+										size={32}
+									/>
+								</button>
+							)}
 						</div>
 
 						<div className='md:min-w-[300px] md:min-h-[250px] rounded-xl md:mb-11 border-2 border-gray-[#dce3eb] bg-[#96bddd]'>
@@ -177,7 +211,6 @@ const TaskPage: FC = () => {
 											<span>Имя пользователя</span>
 										</div>
 									</div>
-
 									<div className='border-l min-w-[120px] md:flex md:justify-center md:py-2.5'>
 										<span>Дата</span>
 									</div>

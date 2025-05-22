@@ -67,7 +67,10 @@ const initializeTasks = (): TypeTasksData[] => {
 	return JSON.parse(storedTasks) as TypeTasksData[]
 }
 
-export const getTasks = (): TypeTasksData[] => initializeTasks()
+export const getTasks = (): TypeTasksData[] => {
+	const tasks = initializeTasks()
+	return tasks
+}
 
 export const addTask = (task: AddTaskInput): TypeTasksData => {
 	const tasks = getTasks()
