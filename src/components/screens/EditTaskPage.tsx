@@ -24,7 +24,6 @@ const EditTaskPage = () => {
 	const [tags, setTags] = useState<string[]>([])
 	const [previewTask, setPreviewTask] = useState<TypeTasksData | null>(null)
 
-	// Получаем имя компании из localStorage
 	const role = JSON.parse(localStorage.getItem('userData') || '{}').role || 'employer'
 	let companyName = ''
 	if (role === 'employer') {
@@ -32,7 +31,6 @@ const EditTaskPage = () => {
 		companyName = userData.users?.employer?.companyName || 'Неизвестная'
 	}
 
-	// Загружаем данные задачи из localStorage
 	useEffect(() => {
 		setPage('/edit-task')
 		if (id) {

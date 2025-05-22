@@ -154,14 +154,14 @@ const AddTaskForm = () => {
 								</div>
 							</div>
 							<div>
-								<p>Описание задачи (максимум {MAX_DESCRIPTION_LENGTH} символов)</p>
-								<textarea
-									className='h-[150px] w-[380px] border rounded-xl p-2 resize-none outline-0'
-									placeholder='...'
-									value={description}
-									onChange={handleDescriptionChange}
-									maxLength={MAX_DESCRIPTION_LENGTH}
-								></textarea>
+								<label className='block text-sm font-medium text-gray-600'>Описание</label>
+								<div className='mt-1 relative rounded-md shadow-sm'>
+									<textarea
+										className='block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
+										placeholder='Опишите задачу...'
+										rows={3}
+									/>
+								</div>
 							</div>
 							<div className='md:flex md:flex-col'>
 								<span>Выберите сложность задачи</span>
