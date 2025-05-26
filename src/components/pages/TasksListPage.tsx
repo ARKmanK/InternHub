@@ -1,21 +1,32 @@
 import Header from '@components/Header'
 import NavBar from '@components/NavBar'
 import TaskCard from '@components/TaskCard'
-import TaskFilter from '@/src/components/TaskFilter'
+import TaskFilter from '@components/TaskFilter'
 import { useNavigate } from 'react-router-dom'
-import { getTasks, TypeTasksData } from '@data/tasksData'
 import {
-	addToFavorite as addToFavoriteJSON,
-	getRole,
-	removeTaskFromFavorite,
-	setPage,
-} from '@data/userData'
+	getAllTasks,
+	getUserByEmail,
+	getUserFavorites,
+	addTaskToFavorites,
+} from '@/src/lib/API/supabaseAPI'
+import { supabase } from '@/supabaseClient'
 import { List, BookCopy, CircleUserRound } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import { Button } from '@components/UI/Button/Button'
+
+type TypeTask = {
+	id: number
+	tracking_number: number
+	title: string
+	description: string
+	difficulty: number
+	company_name: string
+	deadline: string
+	tags: string[]
+}
 
 type TypeFilter = {
 	companies: string | null
@@ -26,10 +37,10 @@ type TypeFilter = {
 
 const TasksListPage = () => {
 	const [listType, setListType] = useState('list')
-	const [role, setRole] = useState(getRole())
+	const [role, setRole] = useState<'user' | 'employer' | null>(null)
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
-	const [visibleTasks, setVisibleTasks] = useState<TypeTasksData[]>([])
-	const [tasks, setTasks] = useState<TypeTasksData[]>(getTasks())
+	const [visibleTasks, setVisibleTasks] = useState<TypeTask[]>([])
+	const [tasks, setTasks] = useState<TypeTask[]>([])
 	const [employerTaskIds, setEmployerTaskIds] = useState<number[]>([])
 	const { notifications, addNotification } = useNotification()
 	const [filter, setFilter] = useState<TypeFilter>({
@@ -39,51 +50,103 @@ const TasksListPage = () => {
 		tags: null,
 	})
 
-	const addToFavorite = (id: number) => {
-		if (favoriteTasks.includes(id)) {
-			setFavoriteTasks(favoriteTasks.filter(task => task !== id))
-			removeTaskFromFavorite(id)
-			addNotification('warning', '', 'Задача убрана из избранного')
-		} else {
-			setFavoriteTasks([...favoriteTasks, id])
-			addToFavoriteJSON(id)
-			addNotification('success', 'Успешно', 'Задача добавлена в избранное')
+	const addToFavorite = async (id: number) => {
+		if (!role || !userId) {
+			addNotification('warning', '', 'Пользователь не авторизован')
+			return
+		}
+		try {
+			if (favoriteTasks.includes(id)) {
+				// Логика удаления из избранного пока не реализована в supabaseApi, можно добавить позже
+				setFavoriteTasks(favoriteTasks.filter(task => task !== id))
+				addNotification('warning', '', 'Задача убрана из избранного')
+			} else {
+				await addTaskToFavorites(userId, id)
+				setFavoriteTasks([...favoriteTasks, id])
+				addNotification('success', 'Успешно', 'Задача добавлена в избранное')
+			}
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось обновить избранное: ${error.message}`)
 		}
 	}
 
-	const loadFavoriteTasks = () => {
-		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-		setFavoriteTasks(userData.user?.favoriteTasks?.id || [])
+	const loadFavoriteTasks = async (userId: number) => {
+		try {
+			const favorites = await getUserFavorites(userId)
+			setFavoriteTasks(favorites)
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось загрузить избранные задачи: ${error.message}`)
+		}
 	}
 
-	const loadEmployerTasks = () => {
-		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-		setEmployerTaskIds(userData.employer?.tasks || [])
+	const loadEmployerTasks = async (userId: number) => {
+		// Предполагаем, что задачи работодателя можно получить через фильтр по employer_id
+		try {
+			const { data, error } = await supabase.from('tasks').select('id').eq('employer_id', userId)
+			if (error) throw error
+			setEmployerTaskIds(data.map(task => task.id))
+		} catch (error: any) {
+			addNotification(
+				'error',
+				'Ошибка',
+				`Не удалось загрузить задачи работодателя: ${error.message}`
+			)
+		}
 	}
+
+	const [userId, setUserId] = useState<number | null>(null)
 
 	useEffect(() => {
-		setPage('/tasks')
-		loadFavoriteTasks()
-		loadEmployerTasks()
-		setRole(getRole() === 'user' ? 'user' : 'employer')
+		const fetchUser = async () => {
+			const {
+				data: { session },
+			} = await supabase.auth.getSession()
+			if (session?.user) {
+				const user = await getUserByEmail(session.user.email!)
+				if (user) {
+					setUserId(user.id)
+					setRole(user.role)
+					await loadFavoriteTasks(user.id)
+					if (user.role === 'employer') {
+						await loadEmployerTasks(user.id)
+					}
+				}
+			}
+		}
+
+		const fetchTasks = async () => {
+			try {
+				const tasksData = await getAllTasks()
+				const normalizedTasks = tasksData.map(task => ({
+					...task,
+					tags: task.tags ?? [],
+				}))
+				setTasks(normalizedTasks)
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', `Не удалось загрузить задачи: ${error.message}`)
+			}
+		}
+
+		fetchUser()
+		fetchTasks()
 	}, [])
 
 	useEffect(() => {
 		let filteredTasks = [...tasks]
 		if (filter.companies !== null)
-			filteredTasks = filteredTasks.filter(task => task.companyName === filter.companies)
+			filteredTasks = filteredTasks.filter(task => task.company_name === filter.companies)
 		if (filter.difficulty !== null)
 			filteredTasks = filteredTasks.filter(task => task.difficulty === filter.difficulty)
 		if (filter.tracking !== null)
 			filteredTasks = filteredTasks.filter(task =>
-				filter.tracking ? task.trackingNumber > 0 : task.trackingNumber === 0
+				filter.tracking ? task.tracking_number > 0 : task.tracking_number === 0
 			)
 		if (filter.tags && filter.tags.length > 0)
 			filteredTasks = filteredTasks.filter(task =>
 				filter.tags!.some(tag => task.tags.includes(tag))
 			)
 		setVisibleTasks(filteredTasks)
-	}, [filter, listType, tasks])
+	}, [filter, tasks])
 
 	const navigate = useNavigate()
 	const openProfile = () => navigate('/user')
@@ -108,11 +171,11 @@ const TasksListPage = () => {
 				>
 					<TaskCard
 						id={task.id}
-						trackingNumber={task.trackingNumber}
+						trackingNumber={task.tracking_number}
 						title={task.title}
 						description={task.description}
 						difficulty={task.difficulty}
-						companyName={task.companyName}
+						companyName={task.company_name}
 						type={listType}
 						addToFavorite={addToFavorite}
 						isFavorite={favoriteTasks.includes(task.id)}

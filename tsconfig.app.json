@@ -9,19 +9,16 @@
 
 		"resolveJsonModule": true,
 
-
 		"paths": {
 			"@/*": ["./*"],
 			"@components/*": ["./src/components/*"],
 			"@data/*": ["./src/data/*"],
 			"@hooks/*": ["./src/hooks/*"],
 			"@img/*": ["./src/img/*"],
-			"@pages/*": ["./src/pages/*"],
 			"@services/*": ["./src/services/*"],
-
 			"@public/*": ["./public/*"],
-			"@screens/*": ["./src/components/screens/*"]
-
+			"@pages/*": ["./src/components/pages/*"],
+			"@types/*": ["./src/types/*"]
 		},
 
 		/* Bundler mode */

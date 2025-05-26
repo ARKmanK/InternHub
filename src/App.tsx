@@ -1,12 +1,13 @@
 import { FC, useEffect } from 'react'
 import { createBrowserRouter, RouterProvider, useNavigate } from 'react-router-dom'
-import TasksListPage from '@screens/TasksListPage'
-import TaskPage from '@screens/TaskPage'
-import UserPage from '@screens/UserPage'
+import TasksListPage from '@/src/components/pages/TasksListPage'
+import TaskPage from '@/src/components/pages/TaskPage'
+import UserPage from '@/src/components/pages/UserPage'
 import { MantineProvider } from '@mantine/core'
-import RegisterPage from '@/src/components/screens/RegisterPage'
-import CreateTaskPage from '@screens/CreateTaskPage'
-import EditTaskPage from './components/screens/EditTaskPage'
+import RegisterPage from '@/src/components/pages/RegisterPage'
+import CreateTaskPage from '@/src/components/pages/CreateTaskPage'
+import LoginPage from '@/src/components/pages/LoginPage'
+import EditTaskPage from './components/pages/EditTaskPage'
 
 const RootRedirect = () => {
 	const navigate = useNavigate()
@@ -34,7 +35,7 @@ const App: FC = () => {
 			},
 			{
 				path: '/login',
-				element: <RegisterPage />,
+				element: <LoginPage />,
 				errorElement: <>404</>,
 			},
 			{

@@ -1,23 +1,31 @@
 import { FC } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart, BadgeCheck, Star, Delete, BookCheck, Settings } from 'lucide-react'
-import { TypeTasksData } from '@data/tasksData'
 import { motion } from 'framer-motion'
 import { Button } from '@components/UI/Button/Button'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 
-type TypeTasksDataProps = TypeTasksData & {
+// Определяем тип для задачи, аналогичный TypeTask из TasksListPage
+type TaskCardProps = {
+	id: number
+	trackingNumber: number
+	title: string
+	description: string
+	difficulty: number
+	companyName: string
 	type: string
 	addToFavorite?: (id: number) => void
 	isFavorite?: boolean
-	role?: string
+	deadline: string
+	tags: string[]
+	role?: 'user' | 'employer' | null // Обновляем тип role, чтобы включить null
 	isMine?: boolean
 	onDelete?: () => void
 	showControls?: boolean
 }
 
-const TaskCard: FC<TypeTasksDataProps> = ({
+const TaskCard: FC<TaskCardProps> = ({
 	id,
 	trackingNumber,
 	title,

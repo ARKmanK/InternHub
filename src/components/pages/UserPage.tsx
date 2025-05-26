@@ -4,19 +4,37 @@ import TaskCard from '@components/TaskCard'
 import { useNavigate } from 'react-router-dom'
 import { List, BookCopy, Undo2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { deleteTask, getTasks, TypeTasksData } from '@data/tasksData'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
-import { getRole, removeTaskFromFavorite, setPage } from '@data/userData'
+import { supabase } from '@/supabaseClient'
+import {
+	getAllTasks,
+	getUserByEmail,
+	getUserFavorites,
+	addTaskToFavorites,
+	removeTaskFromFavorite,
+} from '@/src/lib/API/supabaseAPI'
 import EmptyCard from '@components/EmptyCard'
 import { Button } from '@components/UI/Button/Button'
 import DeleteConfirmation from '@components/DeleteConfirmation'
 
+type TypeTask = {
+	id: number
+	tracking_number: number
+	title: string
+	description: string
+	difficulty: number
+	company_name: string
+	deadline: string
+	tags?: string[]
+	employer_id: number
+}
+
 const UserPage = () => {
-	const [role, setRole] = useState(getRole())
+	const [role, setRole] = useState<'employer' | 'user' | null>(null)
 	const [listType, setListType] = useState<'list' | 'card'>('list')
-	const [visibleTasks, setVisibleTasks] = useState<TypeTasksData[]>([])
+	const [visibleTasks, setVisibleTasks] = useState<TypeTask[]>([])
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [startedTasks, setStartedTasks] = useState<number[]>([])
 	const [finishedTasks, setFinishedTasks] = useState<number[]>([])
@@ -25,73 +43,165 @@ const UserPage = () => {
 	const { notifications, addNotification } = useNotification()
 	const [category, setCategory] = useState<'favorite' | 'started' | 'finished'>('favorite')
 	const [activeCategory, setActiveCategory] = useState('favorite')
+	const [userId, setUserId] = useState<number | null>(null)
 
 	const navigate = useNavigate()
 
 	useEffect(() => {
-		setPage('/user')
-	}, [])
-
-	const loadTasks = () => {
-		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-		let tasksData: TypeTasksData[] = []
-
-		if (role === 'employer') {
-			const employerTaskIds = userData.employer?.tasks || []
-			tasksData = getTasks().filter(task => employerTaskIds.includes(task.id))
-		} else {
-			const favoriteTaskIds = userData.user?.favoriteTasks?.id || []
-			const startedTaskIds = userData.user?.startedTasks?.id || []
-			const finishedTaskIds = userData.user?.finishedTasks?.id || []
-			setFavoriteTasks(favoriteTaskIds)
-			setStartedTasks(startedTaskIds)
-			setFinishedTasks(finishedTaskIds)
-
-			let taskIds: number[] = []
-			switch (category) {
-				case 'favorite':
-					taskIds = favoriteTaskIds
-					break
-				case 'started':
-					taskIds = startedTaskIds
-					break
-				case 'finished':
-					taskIds = finishedTaskIds
-					break
+		const fetchUser = async () => {
+			const {
+				data: { session },
+			} = await supabase.auth.getSession()
+			if (session?.user) {
+				const user = await getUserByEmail(session.user.email!)
+				if (user) {
+					setUserId(user.id)
+					setRole(user.role)
+					await loadFavoriteTasks(user.id)
+					await loadStartedTasks(user.id)
+					await loadFinishedTasks(user.id)
+					if (user.role === 'employer') {
+						await loadEmployerTasks(user.id)
+					}
+				}
 			}
-			tasksData = getTasks().filter(task => taskIds.includes(task.id))
 		}
 
-		setVisibleTasks(tasksData)
+		fetchUser()
+	}, [])
+
+	const loadFavoriteTasks = async (userId: number) => {
+		try {
+			const favorites = await getUserFavorites(userId)
+			setFavoriteTasks(favorites)
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось загрузить избранные задачи: ${error.message}`)
+		}
+	}
+
+	const loadStartedTasks = async (userId: number) => {
+		try {
+			// Предполагаем таблицу user_tasks с полем is_started
+			const { data, error } = await supabase
+				.from('user_tasks')
+				.select('task_id')
+				.eq('user_id', userId)
+				.eq('is_started', true)
+			if (error) throw error
+			setStartedTasks(data.map(item => item.task_id))
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось загрузить начатые задачи: ${error.message}`)
+		}
+	}
+
+	const loadFinishedTasks = async (userId: number) => {
+		try {
+			// Предполагаем таблицу user_tasks с полем is_finished
+			const { data, error } = await supabase
+				.from('user_tasks')
+				.select('task_id')
+				.eq('user_id', userId)
+				.eq('is_finished', true)
+			if (error) throw error
+			setFinishedTasks(data.map(item => item.task_id))
+		} catch (error: any) {
+			addNotification(
+				'error',
+				'Ошибка',
+				`Не удалось загрузить завершенные задачи: ${error.message}`
+			)
+		}
+	}
+
+	const loadEmployerTasks = async (userId: number) => {
+		try {
+			const { data, error } = await supabase.from('tasks').select('*').eq('employer_id', userId)
+			if (error) throw error
+			setVisibleTasks(data)
+		} catch (error: any) {
+			addNotification(
+				'error',
+				'Ошибка',
+				`Не удалось загрузить задачи работодателя: ${error.message}`
+			)
+		}
+	}
+
+	const loadTasks = async () => {
+		if (!role || !userId) return
+
+		try {
+			const allTasks = await getAllTasks()
+			if (role === 'employer') {
+				const employerTasks = allTasks.filter(task => task.employer_id === userId)
+				setVisibleTasks(employerTasks.map(task => ({ ...task, tags: task.tags ?? [] })))
+			} else {
+				let taskIds: number[] = []
+				switch (category) {
+					case 'favorite':
+						taskIds = favoriteTasks
+						break
+					case 'started':
+						taskIds = startedTasks
+						break
+					case 'finished':
+						taskIds = finishedTasks
+						break
+				}
+				const filteredTasks = allTasks.filter(task => taskIds.includes(task.id))
+				setVisibleTasks(filteredTasks)
+			}
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось загрузить задачи: ${error.message}`)
+		}
 	}
 
 	useEffect(() => {
-		if (role) {
+		if (role && userId) {
 			loadTasks()
 		}
-	}, [category, role])
+	}, [category, role, userId, favoriteTasks, startedTasks, finishedTasks])
 
-	const removeFromFavorite = (id: number) => {
-		if (favoriteTasks.includes(id)) {
-			setFavoriteTasks(favoriteTasks.filter(task => task !== id))
-			removeTaskFromFavorite(id)
-			addNotification('warning', 'Внимание', 'Задача убрана из избранного')
-			setVisibleTasks(prev => prev.filter(task => task.id !== id))
+	const removeFromFavorite = async (id: number) => {
+		if (role === 'user' && favoriteTasks.includes(id)) {
+			try {
+				await removeTaskFromFavorite(userId!, id)
+				setFavoriteTasks(favoriteTasks.filter(task => task !== id))
+				addNotification('warning', 'Внимание', 'Задача убрана из избранного')
+				setVisibleTasks(prev => prev.filter(task => task.id !== id))
+			} catch (error: any) {
+				addNotification(
+					'error',
+					'Ошибка',
+					`Не удалось убрать задачу из избранного: ${error.message}`
+				)
+			}
 		}
 	}
 
 	const handleDelete = (id: number) => {
-		setTaskToDelete(id)
-		setShowDeleteForm(true)
+		if (role === 'employer') {
+			setTaskToDelete(id)
+			setShowDeleteForm(true)
+		}
 	}
 
-	const confirmDelete = () => {
-		if (taskToDelete !== null) {
-			deleteTask(taskToDelete)
-			addNotification('success', 'Успешно', 'Задача удалена')
-			loadTasks()
-			setShowDeleteForm(false)
-			setTaskToDelete(null)
+	const confirmDelete = async () => {
+		if (taskToDelete !== null && role === 'employer' && userId) {
+			try {
+				const { error } = await supabase
+					.from('tasks')
+					.delete()
+					.eq('id', taskToDelete)
+					.eq('employer_id', userId)
+				if (error) throw error
+				addNotification('success', 'Успешно', 'Задача удалена')
+				await loadTasks()
+				setShowDeleteForm(false)
+				setTaskToDelete(null)
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', `Не удалось удалить задачу: ${error.message}`)
+			}
 		}
 	}
 
@@ -110,18 +220,18 @@ const UserPage = () => {
 			>
 				<TaskCard
 					id={task.id}
-					trackingNumber={task.trackingNumber}
+					trackingNumber={task.tracking_number}
 					title={task.title}
 					description={task.description}
 					difficulty={task.difficulty}
-					companyName={task.companyName}
+					companyName={task.company_name}
 					type={listType}
 					addToFavorite={role === 'user' ? removeFromFavorite : undefined}
 					isFavorite={favoriteTasks.includes(task.id)}
 					deadline={task.deadline}
-					tags={task.tags}
+					tags={task.tags ?? []}
 					role={role}
-					onDelete={() => handleDelete(task.id)}
+					onDelete={role === 'employer' ? () => handleDelete(task.id) : undefined}
 					showControls={role === 'employer'}
 				/>
 			</motion.div>

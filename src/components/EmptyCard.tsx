@@ -2,7 +2,7 @@ import { FC } from 'react'
 
 type TypeEmptyCardProps = {
 	listType: string
-	role: string
+	role: string | null
 }
 
 const EmptyCard: FC<TypeEmptyCardProps> = ({ listType, role }) => {
