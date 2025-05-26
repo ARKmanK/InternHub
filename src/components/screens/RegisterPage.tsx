@@ -3,14 +3,50 @@ import NavBar from '@components/NavBar'
 import { FC, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { setRole } from '@data/userData'
+import useNotification from '@hooks/useNotification'
+import Notification from '@components/UI/Notification/Notification'
 
-const RegistryPage: FC = () => {
+const RegisterPage: FC = () => {
 	const navigate = useNavigate()
+	const { notifications, addNotification } = useNotification()
 	const [selectedRole, setSelectedRole] = useState<'user' | 'employer' | null>(null)
 
 	const handleRole = (role: 'employer' | 'user') => {
 		setRole(role)
 		setSelectedRole(role)
+	}
+
+	const verifyUserInputs = (data: {
+		firstName: FormDataEntryValue | null
+		lastName: FormDataEntryValue | null
+		group: FormDataEntryValue | null
+		course: FormDataEntryValue | null
+	}) => {
+		if (!data.firstName || !data.firstName.toString().trim()) {
+			addNotification('warning', 'Ошибка', 'Имя — обязательное поле')
+			return false
+		}
+		if (!data.lastName || !data.lastName.toString().trim()) {
+			addNotification('warning', 'Ошибка', 'Фамилия — обязательное поле')
+			return false
+		}
+		if (!data.group || !data.group.toString().trim()) {
+			addNotification('warning', 'Ошибка', 'Группа — обязательное поле')
+			return false
+		}
+		if (!data.course || !data.course.toString().trim()) {
+			addNotification('warning', 'Ошибка', 'Курс — обязательное поле')
+			return false
+		}
+		return true
+	}
+
+	const verifyEmployerInputs = (data: { companyName: FormDataEntryValue | null }) => {
+		if (!data.companyName || !data.companyName.toString().trim()) {
+			addNotification('warning', 'Ошибка', 'Наименование — обязательное поле')
+			return false
+		}
+		return true
 	}
 
 	const saveUserData = (data: any) => {
@@ -31,6 +67,7 @@ const RegistryPage: FC = () => {
 			}
 		}
 		localStorage.setItem('userData', JSON.stringify(userData))
+		addNotification('success', 'Успешно', 'Регистрация завершена')
 		navigate('/tasks')
 	}
 
@@ -43,6 +80,11 @@ const RegistryPage: FC = () => {
 			group: formData.get('group'),
 			course: formData.get('course'),
 		}
+
+		if (!verifyUserInputs(data)) {
+			return
+		}
+
 		saveUserData(data)
 	}
 
@@ -52,6 +94,11 @@ const RegistryPage: FC = () => {
 		const data = {
 			companyName: formData.get('companyName'),
 		}
+
+		if (!verifyEmployerInputs(data)) {
+			return
+		}
+
 		saveUserData(data)
 	}
 
@@ -63,11 +110,8 @@ const RegistryPage: FC = () => {
 		<>
 			<Header />
 			<NavBar />
-			<div
-				className='md:flex md:justify-center md:py-[20px] md:px-[10px] mt-20'
-				style={{ maxHeight: '660px' }}
-			>
-				<div className='md:w-[980px] flex-grow' style={{ maxHeight: '540px', overflowY: 'auto' }}>
+			<div className='md:flex md:justify-center md:py-[20px] md:px-[10px] mt-20 max-h-[660px]'>
+				<div className='md:w-[980px] flex-grow max-h-[540px] overflow-auto'>
 					{!selectedRole ? (
 						<div className='md:mt-10 md:p-4 bg-white rounded-lg shadow-md max-w-[300px] m-auto'>
 							<div className='flex items-center mb-4'>
@@ -145,7 +189,7 @@ const RegistryPage: FC = () => {
 											name='firstName'
 											className='block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 											placeholder='Введите имя'
-											required
+											defaultValue=''
 										/>
 									</div>
 								</div>
@@ -172,7 +216,7 @@ const RegistryPage: FC = () => {
 											name='lastName'
 											className='block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 											placeholder='Введите фамилию'
-											required
+											defaultValue=''
 										/>
 									</div>
 								</div>
@@ -199,7 +243,7 @@ const RegistryPage: FC = () => {
 											name='group'
 											className='block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 											placeholder='Введите группу'
-											required
+											defaultValue=''
 										/>
 									</div>
 								</div>
@@ -224,9 +268,9 @@ const RegistryPage: FC = () => {
 										<select
 											name='course'
 											className='block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
-											required
+											defaultValue=''
 										>
-											<option value='' disabled selected>
+											<option value='' disabled>
 												Выберите курс
 											</option>
 											{[1, 2, 3, 4].map(course => (
@@ -296,7 +340,7 @@ const RegistryPage: FC = () => {
 											name='companyName'
 											className='block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 											placeholder='Введите наименование'
-											required
+											defaultValue=''
 										/>
 									</div>
 								</div>
@@ -320,8 +364,9 @@ const RegistryPage: FC = () => {
 					)}
 				</div>
 			</div>
+			<Notification notifications={notifications} />
 		</>
 	)
 }
 
-export default RegistryPage
+export default RegisterPage

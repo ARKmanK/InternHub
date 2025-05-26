@@ -4,7 +4,7 @@ import TasksListPage from '@screens/TasksListPage'
 import TaskPage from '@screens/TaskPage'
 import UserPage from '@screens/UserPage'
 import { MantineProvider } from '@mantine/core'
-import RegistryPage from '@screens/RegistryPage'
+import RegisterPage from '@/src/components/screens/RegisterPage'
 import CreateTaskPage from '@screens/CreateTaskPage'
 import EditTaskPage from './components/screens/EditTaskPage'
 
@@ -34,7 +34,7 @@ const App: FC = () => {
 			},
 			{
 				path: '/login',
-				element: <RegistryPage />,
+				element: <RegisterPage />,
 				errorElement: <>404</>,
 			},
 			{

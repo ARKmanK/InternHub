@@ -125,13 +125,14 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 							{title}
 						</h3>
 						<div className='pt-4 break-words'>{truncatedDescription}</div>
-						<div className='flex py-2 mt-4 flex-wrap'>
-							<p className='text-nowrap'>{`Срок до: ${deadline}`}</p>
-							<div className='ml-4 flex flex-wrap'>
+						<div className='py-2 mt-4'>
+							<p className='text-nowrap mb-2'>{`Срок до: ${deadline}`}</p>
+							<div className='flex flex-wrap gap-3' style={{ margin: '-4px 0' }}>
 								{tags.map(tag => (
 									<div
 										key={tag}
-										className='bg-[#6092bb] mx-1.5 min-w-[40px] h-[28px] rounded-md text-center px-2 py-0.5 flex items-center justify-center'
+										className='bg-[#6092bb] min-w-[40px] h-[28px] rounded-md text-center px-2 py-0.5 flex items-center justify-center'
+										style={{ margin: '4px 0' }}
 									>
 										{tag}
 									</div>
@@ -184,13 +185,14 @@ const TaskCard: FC<TypeTasksDataProps> = ({
 							</div>
 							<div className='flex-1 mt-6'>
 								<div className='flex flex-col'>
-									<p>{`Срок до: ${deadline}`}</p>
-									<div className='flex flex-wrap mt-1'>
+									<p className='mb-2'>{`Срок до: ${deadline}`}</p>
+									<div className='flex flex-wrap gap-3 -my-[2px]'>
 										{tags.map(tag => (
-											<div className='mt-2 flex' key={tag}>
-												<div className='bg-[#6092bb] mr-2.5 min-w-[40px] rounded-md text-center px-2 py-0.5 flex items-center justify-center'>
-													{tag}
-												</div>
+											<div
+												key={tag}
+												className='bg-[#6092bb] min-w-[40px] rounded-md my-[1px] text-center px-2 py-0.5 flex items-center justify-center'
+											>
+												{tag}
 											</div>
 										))}
 									</div>
