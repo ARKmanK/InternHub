@@ -1,219 +1,210 @@
-import { FormEvent, useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { AppWindow } from 'lucide-react'
-import DatePicker from 'react-datepicker'
-import 'react-datepicker/dist/react-datepicker.css'
+import { CircleX, FileArchive, Link, SendHorizontal, FileImage, Check } from 'lucide-react'
+import { FC, MouseEventHandler, useState } from 'react'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
-import { addTask, TypeTasksData } from '../data/tasksData'
-import { availableTags } from '../data/tags'
-import { getRole } from '../data/userData'
-import TaskCard from '@components/TaskCard'
+import { addTaskActivity, getUserId } from '@/src/lib/API/supabaseAPI'
+import { addToStarted } from '@data/userData'
+import { useNavigate } from 'react-router-dom'
+import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
+import { supabase } from '@/supabaseClient'
 
-const AddTaskForm = () => {
-	const navigate = useNavigate()
-	const [title, setTitle] = useState<string>('')
-	const [description, setDescription] = useState<string>('')
-	const [difficulty, setDifficulty] = useState<number>(0)
-	const [deadline, setDeadline] = useState<Date | null>(null)
-	const [tags, setTags] = useState<string[]>([])
+type TypeAddAnswerForm = {
+	onClose: MouseEventHandler<HTMLButtonElement>
+	taskId: string
+}
+
+const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
+	const [url, setUrl] = useState('')
+	const [comment, setComment] = useState('')
+	const [zip, setZip] = useState<File[]>([])
+	const [zipAdded, setZipAdded] = useState(false)
+	const [images, setImages] = useState<File[]>([])
+	const [imagesAdded, setImagesAdded] = useState(false)
 	const { notifications, addNotification } = useNotification()
+	const navigate = useNavigate()
+	const currentUserId = getUserId()
 
-	const [previewTask, setPreviewTask] = useState<TypeTasksData | null>(null)
-	const role = getRole()
-	let companyName = ''
-	if (role === 'employer') {
-		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-		companyName = userData.users?.employer?.companyName || 'хз что'
-	}
-
-	useEffect(() => {
-		const deadlineStr = formatDate(deadline)
-		const tempTask: TypeTasksData = {
-			id: 0,
-			trackingNumber: 0,
-			title: title || 'Пример заголовка',
-			description: description || 'Пример описания...',
-			difficulty: difficulty || 1,
-			companyName: companyName || 'Пример компании',
-			deadline: deadlineStr || '01.01.2025',
-			tags: tags.length > 0 ? tags : ['Тег 1', 'Тег 2'],
-		}
-		setPreviewTask(tempTask)
-	}, [title, description, difficulty, deadline, tags, companyName])
-
-	const handleTagChange = (tag: string) => {
-		if (tags.includes(tag)) {
-			setTags(tags.filter(t => t !== tag))
-		} else {
-			setTags([...tags, tag])
-		}
-	}
-
-	const formatDate = (date: Date | null): string => {
-		if (!date) return ''
-		const day = String(date.getDate()).padStart(2, '0')
-		const month = String(date.getMonth() + 1).padStart(2, '0')
-		const year = date.getFullYear()
-		return `${day}.${month}.${year}`
-	}
-
-	const handleSubmit = (e: FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 
-		if (!title.trim()) {
-			addNotification('warning', 'Ошибка', 'Заголовок — обязательное поле')
-			return
-		}
-		if (!description.trim()) {
-			addNotification('warning', 'Ошибка', 'Описание — обязательное поле')
-			return
-		}
-		if (!difficulty) {
-			addNotification('warning', 'Ошибка', 'Сложность — обязательное поле')
-			return
-		}
-		if (!deadline) {
-			addNotification('warning', 'Ошибка', 'Дата — обязательное поле')
-			return
-		}
-		if (!tags.length) {
-			addNotification('warning', 'Ошибка', 'Теги — обязательное поле')
+		if (!url) {
+			addNotification('error', 'Ошибка', 'Поле URL обязательно для заполнения')
 			return
 		}
 
-		const deadlineStr = formatDate(deadline)
-		const newTask: Omit<TypeTasksData, 'id'> = {
-			trackingNumber: 0,
-			title,
-			description,
-			difficulty,
-			companyName,
-			deadline: deadlineStr,
-			tags,
+		if (!currentUserId) {
+			addNotification('error', 'Ошибка', 'Пользователь не авторизован')
+			return
 		}
 
-		addTask(newTask)
-		setTitle('')
-		setDescription('')
-		setDifficulty(0)
-		setDeadline(null)
-		setTags([])
-		navigate('/tasks')
+		try {
+			const firstName = localStorage.getItem('first_name') || 'User'
+			const lastNameInitial = localStorage.getItem('last_name')?.charAt(0) || ''
+			const username = `${firstName} ${lastNameInitial}.`
+
+			const activityData: Omit<TypeTaskActivity, 'id' | 'created_at'> = {
+				task_id: Number(taskId),
+				user_id: currentUserId,
+				status: 'verifying',
+				username: username,
+				activity_date: new Date().toISOString().split('T')[0],
+				url: url,
+				comment: comment || null,
+			}
+
+			console.log('Activity Data:', activityData)
+			console.log('Status before sending:', activityData.status)
+
+			const { error: activityError } = await addTaskActivity(activityData)
+			if (activityError) {
+				console.error('Error adding activity:', activityError)
+				addNotification('error', 'Ошибка', `Не удалось отправить решение: ${activityError.message}`)
+				return
+			}
+
+			// Используем upsert вместо insert, чтобы обновить существующую запись или вставить новую
+			const { error: userTaskError } = await supabase.from('user_tasks').upsert(
+				{
+					user_id: currentUserId,
+					task_id: Number(taskId),
+					is_started: true,
+				},
+				{
+					onConflict: 'user_id,task_id', // Указываем, что конфликт проверяется по полям user_id и task_id
+				}
+			)
+
+			if (userTaskError) {
+				console.error('Error upserting to user_tasks:', userTaskError)
+				addNotification(
+					'error',
+					'Ошибка',
+					`Не удалось отметить задачу как начатую: ${userTaskError.message}`
+				)
+				return
+			}
+
+			addToStarted(Number(taskId))
+			addNotification('success', 'Успешно', 'Решение отправлено на модерацию')
+			window.location.reload()
+		} catch (error: any) {
+			addNotification(
+				'error',
+				'Ошибка',
+				`Не удалось отправить решение: ${error.message || 'Неизвестная ошибка'}`
+			)
+		} finally {
+			setUrl('')
+			setComment('')
+			setZip([])
+			setImages([])
+			setZipAdded(false)
+			setImagesAdded(false)
+			onClose(e as any)
+		}
 	}
 
 	return (
 		<>
-			<div className='md:bg-[#96bddd] md:border-2 md:rounded-2xl h-[655px] md:flex md:flex-col px-2'>
-				<div className='md:flex md:flex-col mt-0.5 h-full'>
-					<p className='font-medium text-lg mt-3 ml-2'>Создать карточку</p>
-					<form className='px-2 mt-7 flex flex-col justify-between h-full' onSubmit={handleSubmit}>
-						<div className='flex flex-col gap-4'>
-							<div>
-								<p>Заголовок</p>
-								<div className='md:flex border-1 max-w-[380px] md:rounded-lg'>
-									<AppWindow className='m-1' size={26} />
-									<input
-										type='text'
-										placeholder='title'
-										value={title}
-										className='outline-0 w-full text-lg'
-										onChange={e => setTitle(e.target.value)}
-										autoFocus
-									/>
-								</div>
-							</div>
-							<div>
-								<p>Описание задачи</p>
-								<textarea
-									className='h-[150px] w-[380px] border rounded-xl p-2 resize-none outline-0'
-									placeholder='...'
-									value={description}
-									onChange={e => setDescription(e.target.value)}
-								></textarea>
-							</div>
-							<div className='md:flex md:flex-col'>
-								<span>Выберите сложность задачи</span>
-								<select
-									value={difficulty}
-									onChange={e => setDifficulty(Number(e.target.value))}
-									className='outline-0 text-lg w-[380px] border'
-								>
-									<option value={0} disabled>
-										Выберите сложность
-									</option>
-									<option value={1}>1</option>
-									<option value={2}>2</option>
-									<option value={3}>3</option>
-								</select>
-							</div>
-							<div className='md:flex md:flex-col'>
-								<span>Выберите дату сдачи</span>
-								<DatePicker
-									selected={deadline}
-									onChange={(date: Date | null) => setDeadline(date)}
-									dateFormat='dd.MM.yyyy'
-									className='outline-0 w-[380px] text-lg border pl-1'
-									placeholderText='Выберите дату'
-								/>
-							</div>
-							<div>
-								<span>Выберите ключевые теги</span>
-								<div className='flex flex-wrap gap-2 mt-2'>
-									{availableTags.map(tag => (
-										<label key={tag} className='inline-flex items-center'>
-											<input
-												type='checkbox'
-												checked={tags.includes(tag)}
-												onChange={() => handleTagChange(tag)}
-												className='hidden'
-											/>
-											<span
-												className={`px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors ${
-													tags.includes(tag)
-														? 'bg-blue-500 text-white'
-														: 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-												}`}
-											>
-												{tag}
-											</span>
-										</label>
-									))}
-								</div>
-							</div>
-						</div>
-						<div className='md:flex md:justify-center md:my-3'>
-							<button
-								type='submit'
-								className='mt-4 px-4 py-2 bg-[#0c426f] text-white rounded-lg w-[250px]'
-							>
-								Создать
-							</button>
-						</div>
-					</form>
+			<div className='md:bg-[#96bddd] md:border-2 md:rounded-2xl h-[565px] md:flex md:flex-col px-2'>
+				<div className='h-[45px] md:flex md:justify-between mt-0.5'>
+					<p className='font-medium text-lg mt-3 ml-2'>Добавить решение</p>
+					<button onClick={onClose}>
+						<CircleX size={33} />
+					</button>
 				</div>
-			</div>
-			<div className='mt-10 '>
-				<p className='font-medium text-lg mb-4'>Что получится</p>
-				{previewTask && (
-					<TaskCard
-						id={previewTask.id}
-						trackingNumber={previewTask.trackingNumber}
-						title={previewTask.title}
-						description={previewTask.description}
-						difficulty={previewTask.difficulty}
-						companyName={previewTask.companyName}
-						type='list'
-						deadline={previewTask.deadline}
-						tags={previewTask.tags}
-						isFavorite={false}
-						isMine={role === 'employer'}
-					/>
-				)}
+				<form className='mt-3 ml-2' onSubmit={handleSubmit}>
+					<div className='flex flex-col'>
+						<p className='mt-4'>Ссылка на репозиторий GitHub *</p>
+						<div className='md:flex border-1 max-w-[380px] md:rounded-lg'>
+							<Link className='m-1' size={28} />
+							<input
+								type='text'
+								placeholder='url'
+								value={url}
+								className='outline-0 w-full text-lg'
+								onChange={e => setUrl(e.target.value)}
+								autoFocus
+								required
+							/>
+						</div>
+					</div>
+					<div className='flex flex-col'>
+						<p className='mt-4'>Комментарий (опционально)</p>
+						<textarea
+							className='h-[150px] w-[480px] border rounded-xl p-2 resize-none outline-0'
+							placeholder='Введите комментарий...'
+							value={comment}
+							onChange={e => setComment(e.target.value)}
+						></textarea>
+					</div>
+					<div className='flex flex-col'>
+						<p className='mt-4'>Архив проекта (опционально)</p>
+						<div className='md:flex'>
+							<label className='py-2 px-3 border-1 rounded-lg md:bg-[#69859c] cursor-pointer flex items-center w-[180px]'>
+								<FileArchive className='mr-2' />
+								<span>Выбрать архив</span>
+								<input
+									type='file'
+									accept='.zip,.rar,.7z,.tar,.gz'
+									className='hidden'
+									onChange={e => {
+										const file = e.target.files?.[0]
+										if (file) {
+											setZipAdded(true)
+											setZip([file])
+										}
+									}}
+								/>
+							</label>
+							{zipAdded && (
+								<div className='md:flex md:items-center md:ml-3'>
+									<Check size={29} />
+								</div>
+							)}
+						</div>
+					</div>
+					<div className='flex flex-col'>
+						<p className='mt-4'>Фото (опционально)</p>
+						<div className='md:flex'>
+							<label className='mt-1 py-2 px-3 border-1 rounded-lg md:bg-[#69859c] cursor-pointer flex items-center w-[180px]'>
+								<FileImage className='mr-2' />
+								<span>Выбрать фото</span>
+								<input
+									type='file'
+									accept='image/*'
+									multiple
+									className='hidden'
+									onChange={e => {
+										const files = e.target.files
+										if (files && files.length > 0) {
+											setImagesAdded(true)
+											setImages(Array.from(files))
+										}
+									}}
+								/>
+							</label>
+							{imagesAdded && (
+								<div className='md:flex md:items-center md:ml-3'>
+									<Check size={29} />
+								</div>
+							)}
+						</div>
+					</div>
+					<div className='md:flex md:items-end mt-4'>
+						<button
+							className='p-1 cursor-pointer hover:bg-amber-300 md:flex border-2 rounded-xl py-1 px-2'
+							type='submit'
+						>
+							<span className='mr-2'>Отправить</span>
+							<SendHorizontal />
+						</button>
+					</div>
+				</form>
 			</div>
 			<Notification notifications={notifications} />
 		</>
 	)
 }
 
-export default AddTaskForm
+export default AddAnswerForm
