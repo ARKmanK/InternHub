@@ -9,6 +9,13 @@ import Header from '@components/Header'
 import NavBar from '@components/NavBar'
 import AddAnswerForm from '@components/AddAnswerForm'
 import TaskData from '@data/TaskData.json'
+import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
+import {
+	getTaskActivity,
+	getTaskById,
+	getUserFavorites,
+	getUserId,
+} from '@/src/lib/API/supabaseAPI'
 
 type UserActivity = {
 	status: string
@@ -31,28 +38,46 @@ const TaskPage: FC = () => {
 	const navigate = useNavigate()
 	const { notifications, addNotification } = useNotification()
 	const [task, setTask] = useState<TypeTasksData | null>(null)
-	const [activityData, setActivityData] = useState<UserActivity[] | null>(null)
+	const [activityData, setActivityData] = useState<TypeTaskActivity[] | null>(null)
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [showAddAnswerForm, setShowAddAnswerForm] = useState<boolean>(false)
 	const [role, setRole] = useState(getRole())
+	const [userId, setUserId] = useState<number | null>(getUserId())
 
 	useEffect(() => {
 		setPage(`/task/${taskId}`)
-		const loadData = () => {
-			const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-			const taskIds = userData.user?.favoriteTasks?.id || []
-			setFavoriteTasks(taskIds)
+		const loadData = async () => {
+			try {
+				if (!userId) {
+					addNotification('warning', 'Ошибка', 'Пользователь не авторизован')
+					navigate('/login')
+					return
+				}
 
-			const foundTask = getTasks().find(t => t.id === Number(taskId))
-			setTask(foundTask || null)
-
-			const taskKey = `taskId-${taskId}`
-			const taskActivity = (TaskData as TaskDataJSON).tasks[taskKey]
-			setActivityData(taskActivity?.usersActivity || null)
+				if (taskId) {
+					const foundTask = await getTaskById(Number(taskId))
+					if (!foundTask) {
+						addNotification('error', 'Ошибка', 'Задача не найдена')
+						return
+					}
+					setTask({
+						...foundTask,
+						tags: foundTask.tags ?? [],
+						trackingNumber: foundTask.tracking_number,
+						companyName: foundTask.company_name,
+					} as TypeTasksData)
+					const favorites = await getUserFavorites(userId) // Теперь userId гарантированно number
+					setFavoriteTasks(favorites)
+					const taskActivity = await getTaskActivity(Number(taskId))
+					setActivityData(taskActivity)
+				}
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', `Не удалось загрузить данные: ${error.message}`)
+			}
 		}
 
 		loadData()
-	}, [taskId])
+	}, [taskId, navigate, addNotification, userId])
 
 	useEffect(() => {
 		const handleStorageChange = (e: StorageEvent) => {
@@ -225,21 +250,24 @@ const TaskPage: FC = () => {
 												<div className='md:flex md:w-full md:justify-between'>
 													<div className='md:flex md:justify-start'>
 														<div className='md:flex min-w-[150px] md:justify-start md:pl-4'>
-															{activity.status === 'done' ? (
+															{activity.status === 'completed' ? (
 																<CircleCheckBig size={20} />
 															) : (
 																<CircleEllipsis size={20} />
 															)}
 															<span className='md:max-w-[60px] md:flex md:justify-center md:ml-1'>
-																{activity.status}
+																{activity.status || 'Не указан'}
 															</span>
 														</div>
 														<div className='md:min-w-[180px] md:flex md:justify-start md:pl-12'>
-															<span className=''>{activity.username}</span>
+															<span className=''>{activity.username || 'Неизвестно'}</span>
 														</div>
 													</div>
 													<div className=''>
-														<span>{activity.date}</span>
+														<span>
+															{activity.activity_date ||
+																new Date(activity.created_at).toLocaleDateString()}
+														</span>
 													</div>
 												</div>
 											</div>

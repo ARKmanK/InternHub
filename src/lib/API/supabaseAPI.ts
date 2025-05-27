@@ -141,7 +141,7 @@ export const getTaskActivity = async (taskId: number): Promise<TypeTaskActivity[
 		throw new Error(`Failed to fetch task activity: ${error.message}`)
 	}
 
-	return data
+	return data || []
 }
 
 // Функции для работы с таблицей task_submissions
