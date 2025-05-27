@@ -6,14 +6,42 @@ import { TypeTaskSubmission } from '@/src/types/TypeTaskSubmission'
 import { TypeTag } from '@/src/types/TypeTag'
 
 // Функции для работы с таблицей users
-export const createUser = async (userData: Omit<TypeUser, 'id'>): Promise<TypeUser | null> => {
-	const { data, error } = await supabase.from('users').insert([userData]).select().single()
+type TypeUserData = {
+	email: string
+	role: 'user' | 'employer'
+	first_name?: string
+	last_name?: string
+	student_group?: string
+	course?: number | string
+	company_name?: string | null
+}
+
+export const createUser = async (userData: TypeUserData) => {
+	const { email, role, first_name, last_name, student_group, course, company_name } = userData
+
+	const dataToInsert: TypeUserData = {
+		email,
+		role,
+		first_name,
+		last_name,
+		student_group,
+		course,
+		company_name: role === 'employer' ? company_name : null,
+	}
+
+	// Удаляем undefined значения
+	;(Object.keys(dataToInsert) as (keyof TypeUserData)[]).forEach(key => {
+		if (dataToInsert[key] === undefined) {
+			delete dataToInsert[key]
+		}
+	})
+
+	console.log('Data to insert into users:', dataToInsert) // Отладочный вывод
+	const { error } = await supabase.from('users').insert(dataToInsert)
 
 	if (error) {
 		throw new Error(`Failed to create user: ${error.message}`)
 	}
-
-	return data
 }
 
 export const getUserByEmail = async (email: string): Promise<TypeUser | null> => {
@@ -199,4 +227,24 @@ export const removeTaskFromFinished = async (userId: number, taskId: number): Pr
 		.eq('task_id', taskId)
 		.eq('is_finished', true)
 	if (error) throw new Error(`Failed to remove task from finished: ${error.message}`)
+}
+
+export const getRole = (): 'user' | 'employer' | null => {
+	const role = localStorage.getItem('role')
+	if (role === 'user' || role === 'employer') {
+		return role
+	}
+	return null
+}
+
+export const getUserId = (): number | null => {
+	const userId = localStorage.getItem('userId')
+	return userId ? parseInt(userId, 10) : null
+}
+
+export const clearAuthData = () => {
+	localStorage.removeItem('userId')
+	localStorage.removeItem('role')
+	localStorage.removeItem('rememberMe')
+	localStorage.removeItem('email')
 }

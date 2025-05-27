@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import { Button } from '@components/UI/Button/Button'
+import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
 
 type TypeTask = {
 	id: number
@@ -39,7 +40,6 @@ const TasksListPage = () => {
 	const [listType, setListType] = useState('list')
 	const [role, setRole] = useState<'user' | 'employer' | null>(null)
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
-	const [visibleTasks, setVisibleTasks] = useState<TypeTask[]>([])
 	const [tasks, setTasks] = useState<TypeTask[]>([])
 	const [employerTaskIds, setEmployerTaskIds] = useState<number[]>([])
 	const { notifications, addNotification } = useNotification()
@@ -49,6 +49,9 @@ const TasksListPage = () => {
 		tracking: null,
 		tags: null,
 	})
+	const [userId, setUserId] = useState<number | null>(null)
+	const [loading, setLoading] = useState(true)
+	const navigate = useNavigate()
 
 	const addToFavorite = async (id: number) => {
 		if (!role || !userId) {
@@ -57,7 +60,6 @@ const TasksListPage = () => {
 		}
 		try {
 			if (favoriteTasks.includes(id)) {
-				// Логика удаления из избранного пока не реализована в supabaseApi, можно добавить позже
 				setFavoriteTasks(favoriteTasks.filter(task => task !== id))
 				addNotification('warning', '', 'Задача убрана из избранного')
 			} else {
@@ -80,7 +82,6 @@ const TasksListPage = () => {
 	}
 
 	const loadEmployerTasks = async (userId: number) => {
-		// Предполагаем, что задачи работодателя можно получить через фильтр по employer_id
 		try {
 			const { data, error } = await supabase.from('tasks').select('id').eq('employer_id', userId)
 			if (error) throw error
@@ -94,28 +95,51 @@ const TasksListPage = () => {
 		}
 	}
 
-	const [userId, setUserId] = useState<number | null>(null)
-
 	useEffect(() => {
-		const fetchUser = async () => {
-			const {
-				data: { session },
-			} = await supabase.auth.getSession()
-			if (session?.user) {
-				const user = await getUserByEmail(session.user.email!)
-				if (user) {
-					setUserId(user.id)
-					setRole(user.role)
-					await loadFavoriteTasks(user.id)
-					if (user.role === 'employer') {
-						await loadEmployerTasks(user.id)
-					}
-				}
-			}
-		}
-
-		const fetchTasks = async () => {
+		const fetchUserAndTasks = async () => {
+			setLoading(true)
 			try {
+				const {
+					data: { session },
+				} = await supabase.auth.getSession()
+
+				if (!session?.user) {
+					addNotification('warning', 'Ошибка', 'Пользователь не авторизован')
+					navigate('/login')
+					return
+				}
+
+				const storedUserId = getUserId()
+				const storedRole = getRole()
+
+				let finalUserId = storedUserId
+				let finalRole = storedRole
+
+				if (!storedUserId || !storedRole) {
+					const user = await getUserByEmail(session.user.email!)
+					if (!user) {
+						addNotification('error', 'Ошибка', 'Пользователь не найден в базе данных')
+						navigate('/login')
+						return
+					}
+					finalUserId = user.id
+					finalRole = user.role
+
+					localStorage.setItem('userId', finalUserId.toString())
+					localStorage.setItem('role', finalRole)
+				}
+
+				setUserId(finalUserId)
+				setRole(finalRole)
+
+				if (finalUserId) {
+					await loadFavoriteTasks(finalUserId)
+				}
+
+				if (finalRole === 'employer' && finalUserId) {
+					await loadEmployerTasks(finalUserId)
+				}
+
 				const tasksData = await getAllTasks()
 				const normalizedTasks = tasksData.map(task => ({
 					...task,
@@ -123,32 +147,37 @@ const TasksListPage = () => {
 				}))
 				setTasks(normalizedTasks)
 			} catch (error: any) {
-				addNotification('error', 'Ошибка', `Не удалось загрузить задачи: ${error.message}`)
+				addNotification('error', 'Ошибка', `Не удалось загрузить данные: ${error.message}`)
+			} finally {
+				setLoading(false)
 			}
 		}
 
-		fetchUser()
-		fetchTasks()
-	}, [])
+		fetchUserAndTasks()
+	}, []) // Убираем зависимости, чтобы эффект вызывался только при монтировании
 
-	useEffect(() => {
+	// Используем useMemo для фильтрации задач вместо useEffect
+	const visibleTasks = useMemo(() => {
 		let filteredTasks = [...tasks]
-		if (filter.companies !== null)
+		if (filter.companies !== null) {
 			filteredTasks = filteredTasks.filter(task => task.company_name === filter.companies)
-		if (filter.difficulty !== null)
+		}
+		if (filter.difficulty !== null) {
 			filteredTasks = filteredTasks.filter(task => task.difficulty === filter.difficulty)
-		if (filter.tracking !== null)
+		}
+		if (filter.tracking !== null) {
 			filteredTasks = filteredTasks.filter(task =>
 				filter.tracking ? task.tracking_number > 0 : task.tracking_number === 0
 			)
-		if (filter.tags && filter.tags.length > 0)
+		}
+		if (filter.tags && filter.tags.length > 0) {
 			filteredTasks = filteredTasks.filter(task =>
 				filter.tags!.some(tag => task.tags.includes(tag))
 			)
-		setVisibleTasks(filteredTasks)
+		}
+		return filteredTasks
 	}, [filter, tasks])
 
-	const navigate = useNavigate()
 	const openProfile = () => navigate('/user')
 	const openCreateTaskPage = () => navigate('/create-task')
 
@@ -188,7 +217,19 @@ const TasksListPage = () => {
 				</motion.div>
 			</AnimatePresence>
 		))
-	}, [visibleTasks, listType, role, favoriteTasks, employerTaskIds, addToFavorite])
+	}, [visibleTasks, listType, role, favoriteTasks, employerTaskIds])
+
+	if (loading) {
+		return (
+			<div className='flex justify-center items-center h-screen'>
+				<div className='text-white'>Загрузка...</div>
+			</div>
+		)
+	}
+
+	if (!role) {
+		return null
+	}
 
 	return (
 		<>

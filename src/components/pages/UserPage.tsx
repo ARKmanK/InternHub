@@ -12,7 +12,6 @@ import {
 	getAllTasks,
 	getUserByEmail,
 	getUserFavorites,
-	addTaskToFavorites,
 	removeTaskFromFavorite,
 } from '@/src/lib/API/supabaseAPI'
 import EmptyCard from '@components/EmptyCard'

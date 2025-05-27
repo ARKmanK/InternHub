@@ -7,7 +7,8 @@ import Notification from '@components/UI/Notification/Notification'
 import LoginForm from '@components/LoginForm'
 import RegisterForm from '@components/RegisterForm'
 import { supabase } from '@/supabaseClient'
-import { createUser } from '@/src/lib/API/supabaseAPI'
+import { createUser, getUserByEmail } from '@/src/lib/API/supabaseAPI'
+import { debounce } from 'lodash'
 
 const LoginPage: FC = () => {
 	const navigate = useNavigate()
@@ -27,11 +28,29 @@ const LoginPage: FC = () => {
 		}
 
 		try {
-			const { error } = await supabase.auth.signInWithPassword({
+			const {
+				data: { user },
+				error,
+			} = await supabase.auth.signInWithPassword({
 				email,
 				password,
 			})
 			if (error) throw error
+			if (!user) {
+				addNotification('error', 'Ошибка', 'Не удалось войти')
+				return
+			}
+
+			// Получаем данные пользователя из таблицы users
+			const userFromDb = await getUserByEmail(email)
+			if (!userFromDb) {
+				addNotification('error', 'Ошибка', 'Пользователь не найден в базе данных')
+				return
+			}
+
+			// Сохраняем userId и role в localStorage
+			localStorage.setItem('userId', userFromDb.id.toString())
+			localStorage.setItem('role', userFromDb.role)
 
 			// Сохранение состояния "Запомнить меня" в localStorage
 			if (rememberMe) {
@@ -49,7 +68,7 @@ const LoginPage: FC = () => {
 		}
 	}
 
-	const handleRegister = async (data: any) => {
+	const handleRegister = debounce(async (data: any) => {
 		try {
 			const {
 				data: { user },
@@ -67,16 +86,38 @@ const LoginPage: FC = () => {
 			const userData = {
 				email: data.email,
 				role: data.role,
-				...data,
+				first_name: data.first_name,
+				last_name: data.last_name,
+				student_group: data.student_group,
+				course: data.course,
+				company_name: data.company_name,
+				password: data.password,
 			}
 
+			// Создаем запись в таблице users
 			await createUser(userData)
+
+			// Получаем данные пользователя из таблицы users
+			const userFromDb = await getUserByEmail(data.email)
+			if (!userFromDb) {
+				addNotification(
+					'error',
+					'Ошибка',
+					'Не удалось получить данные пользователя после регистрации'
+				)
+				return
+			}
+
+			// Сохраняем userId и role в localStorage
+			localStorage.setItem('userId', userFromDb.id.toString())
+			localStorage.setItem('role', userFromDb.role)
+
 			addNotification('success', 'Успешно', 'Регистрация завершена')
 			navigate('/tasks')
 		} catch (error: any) {
 			addNotification('error', 'Ошибка', `Не удалось зарегистрироваться: ${error.message}`)
 		}
-	}
+	}, 2000)
 
 	const toggleForm = (targetForm: 'login' | 'register') => {
 		setIsLogin(targetForm === 'login')

@@ -14,11 +14,11 @@ const RegisterForm: FC<RegisterFormProps> = ({ onSubmit }) => {
 			role: selectedRole,
 			email: formData.get('email'),
 			password: formData.get('password'),
-			firstName: formData.get('firstName'),
-			lastName: formData.get('lastName'),
-			group: formData.get('group'),
+			first_name: formData.get('first_name'), // Изменено с firstName на first_name
+			last_name: formData.get('last_name'), // Изменено с lastName на last_name
+			student_group: formData.get('student_group'), // Изменено с group на student_group
 			course: formData.get('course'),
-			companyName: formData.get('companyName'),
+			company_name: formData.get('company_name'), // Изменено с companyName на company_name
 		}
 
 		if (!data.email || !data.password) {
@@ -27,12 +27,12 @@ const RegisterForm: FC<RegisterFormProps> = ({ onSubmit }) => {
 		}
 
 		if (selectedRole === 'user') {
-			if (!data.firstName || !data.lastName || !data.group || !data.course) {
+			if (!data.first_name || !data.last_name || !data.student_group || !data.course) {
 				alert('Все поля обязательны для регистрации пользователя')
 				return
 			}
 		} else if (selectedRole === 'employer') {
-			if (!data.companyName) {
+			if (!data.company_name) {
 				alert('Наименование компании обязательно для регистрации работодателя')
 				return
 			}
@@ -116,7 +116,7 @@ const RegisterForm: FC<RegisterFormProps> = ({ onSubmit }) => {
 									<label className='block text-sm font-medium'>Имя</label>
 									<input
 										type='text'
-										name='firstName'
+										name='first_name' // Изменено с firstName на first_name
 										className='mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 										placeholder='Введите имя'
 										defaultValue=''
@@ -126,7 +126,7 @@ const RegisterForm: FC<RegisterFormProps> = ({ onSubmit }) => {
 									<label className='block text-sm font-medium'>Фамилия</label>
 									<input
 										type='text'
-										name='lastName'
+										name='last_name' // Изменено с lastName на last_name
 										className='mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 										placeholder='Введите фамилию'
 										defaultValue=''
@@ -136,7 +136,7 @@ const RegisterForm: FC<RegisterFormProps> = ({ onSubmit }) => {
 									<label className='block text-sm font-medium'>Группа</label>
 									<input
 										type='text'
-										name='group'
+										name='student_group' // Изменено с group на student_group
 										className='mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 										placeholder='Введите группу'
 										defaultValue=''
@@ -166,7 +166,7 @@ const RegisterForm: FC<RegisterFormProps> = ({ onSubmit }) => {
 								<label className='block text-sm font-medium'>Наименование компании</label>
 								<input
 									type='text'
-									name='companyName'
+									name='company_name' // Изменено с companyName на company_name
 									className='mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 									placeholder='Введите наименование компании'
 									defaultValue=''
