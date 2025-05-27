@@ -81,7 +81,6 @@ const UserPage = () => {
 
 	const loadStartedTasks = async (userId: number) => {
 		try {
-			// Предполагаем таблицу user_tasks с полем is_started
 			const { data, error } = await supabase
 				.from('user_tasks')
 				.select('task_id')

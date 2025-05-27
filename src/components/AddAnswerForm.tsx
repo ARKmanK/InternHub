@@ -6,6 +6,7 @@ import { addTaskActivity, getUserId } from '@/src/lib/API/supabaseAPI'
 import { addToStarted } from '@data/userData'
 import { useNavigate } from 'react-router-dom'
 import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
+import { supabase } from '@/supabaseClient'
 
 type TypeAddAnswerForm = {
 	onClose: MouseEventHandler<HTMLButtonElement>
@@ -13,7 +14,7 @@ type TypeAddAnswerForm = {
 }
 
 const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
-	const [url, setUrl] = useState('') // Для хранения ссылки на GitHub
+	const [url, setUrl] = useState('')
 	const [comment, setComment] = useState('')
 	const [zip, setZip] = useState<File[]>([])
 	const [zipAdded, setZipAdded] = useState(false)
@@ -26,7 +27,6 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 
-		// Проверка обязательного поля url
 		if (!url) {
 			addNotification('error', 'Ошибка', 'Поле URL обязательно для заполнения')
 			return
@@ -38,35 +38,65 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 		}
 
 		try {
-			// Формирование username в формате "Имя Ф." (например, "Артем К.")
 			const firstName = localStorage.getItem('first_name') || 'User'
 			const lastNameInitial = localStorage.getItem('last_name')?.charAt(0) || ''
 			const username = `${firstName} ${lastNameInitial}.`
 
-			// Подготовка данных для task_activity
 			const activityData: Omit<TypeTaskActivity, 'id' | 'created_at'> = {
 				task_id: Number(taskId),
 				user_id: currentUserId,
-				status: 'verifying', // Начальный статус для модерации
+				status: 'verifying',
 				username: username,
-				activity_date: new Date().toISOString().split('T')[0], // Дата в формате YYYY-MM-DD
-				url: url, // GitHub URL (обязательное поле)
-				comment: comment || null, // Комментарий (опционально)
+				activity_date: new Date().toISOString().split('T')[0],
+				url: url,
+				comment: comment || null,
 			}
 
 			console.log('Activity Data:', activityData)
 			console.log('Status before sending:', activityData.status)
 
-			const { error } = await addTaskActivity(activityData)
-			if (error) {
-				console.error('Error adding activity:', error)
-				addNotification('error', 'Ошибка', `Не удалось отправить решение: ${error.message}`)
+			const { error: activityError } = await addTaskActivity(activityData)
+			if (activityError) {
+				console.error('Error adding activity:', activityError)
+				addNotification('error', 'Ошибка', `Не удалось отправить решение: ${activityError.message}`)
+				return
+			}
+
+			// Проверяем текущее состояние записи в user_tasks
+			const { data: existing, error: fetchError } = await supabase
+				.from('user_tasks')
+				.select('is_favorite')
+				.eq('user_id', currentUserId)
+				.eq('task_id', Number(taskId))
+				.single()
+
+			const isFavorite = existing ? existing.is_favorite : false
+
+			const { error: userTaskError } = await supabase.from('user_tasks').upsert(
+				{
+					user_id: currentUserId,
+					task_id: Number(taskId),
+					is_favorite: isFavorite, // Сохраняем текущее значение is_favorite
+					is_started: true, // Устанавливаем is_started в true
+				},
+				{
+					onConflict: 'user_id,task_id', // Обновляем при конфликте
+				}
+			)
+
+			if (userTaskError) {
+				console.error('Error upserting to user_tasks:', userTaskError)
+				addNotification(
+					'error',
+					'Ошибка',
+					`Не удалось отметить задачу как начатую: ${userTaskError.message}`
+				)
 				return
 			}
 
 			addToStarted(Number(taskId))
 			addNotification('success', 'Успешно', 'Решение отправлено на модерацию')
-			window.location.reload() // Перезагрузка страницы после успешной отправки
+			window.location.reload()
 		} catch (error: any) {
 			addNotification(
 				'error',
@@ -105,7 +135,7 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 								className='outline-0 w-full text-lg'
 								onChange={e => setUrl(e.target.value)}
 								autoFocus
-								required // HTML-атрибут для обязательного поля
+								required
 							/>
 						</div>
 					</div>
