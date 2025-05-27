@@ -8,6 +8,7 @@ import {
 	getUserByEmail,
 	getUserFavorites,
 	addTaskToFavorites,
+	removeTaskFromFavorite, // Добавляем функцию для удаления из избранного
 } from '@/src/lib/API/supabaseAPI'
 import { supabase } from '@/supabaseClient'
 import { List, BookCopy, CircleUserRound } from 'lucide-react'
@@ -60,11 +61,68 @@ const TasksListPage = () => {
 		}
 		try {
 			if (favoriteTasks.includes(id)) {
+				// Удаляем из избранного
+				await removeTaskFromFavorite(userId, id)
+
+				// Получаем текущее значение tracking_number
+				const { data: taskData, error: fetchError } = await supabase
+					.from('tasks')
+					.select('tracking_number')
+					.eq('id', id)
+					.single()
+
+				if (fetchError) throw fetchError
+				if (!taskData) throw new Error('Task not found')
+
+				// Уменьшаем tracking_number на 1, но не ниже 0
+				const newTrackingNumber = Math.max(taskData.tracking_number - 1, 0)
+
+				// Обновляем tracking_number
+				const { error: updateError } = await supabase
+					.from('tasks')
+					.update({ tracking_number: newTrackingNumber })
+					.eq('id', id)
+
+				if (updateError) throw updateError
+
 				setFavoriteTasks(favoriteTasks.filter(task => task !== id))
+				setTasks(prev =>
+					prev.map(task =>
+						task.id === id ? { ...task, tracking_number: newTrackingNumber } : task
+					)
+				)
 				addNotification('warning', '', 'Задача убрана из избранного')
 			} else {
+				// Добавляем в избранное
 				await addTaskToFavorites(userId, id)
+
+				// Получаем текущее значение tracking_number
+				const { data: taskData, error: fetchError } = await supabase
+					.from('tasks')
+					.select('tracking_number')
+					.eq('id', id)
+					.single()
+
+				if (fetchError) throw fetchError
+				if (!taskData) throw new Error('Task not found')
+
+				// Увеличиваем tracking_number на 1
+				const newTrackingNumber = taskData.tracking_number + 1
+
+				// Обновляем tracking_number
+				const { error: updateError } = await supabase
+					.from('tasks')
+					.update({ tracking_number: newTrackingNumber })
+					.eq('id', id)
+
+				if (updateError) throw updateError
+
 				setFavoriteTasks([...favoriteTasks, id])
+				setTasks(prev =>
+					prev.map(task =>
+						task.id === id ? { ...task, tracking_number: newTrackingNumber } : task
+					)
+				)
 				addNotification('success', 'Успешно', 'Задача добавлена в избранное')
 			}
 		} catch (error: any) {
@@ -154,9 +212,26 @@ const TasksListPage = () => {
 		}
 
 		fetchUserAndTasks()
-	}, []) // Убираем зависимости, чтобы эффект вызывался только при монтировании
 
-	// Используем useMemo для фильтрации задач вместо useEffect
+		// Подписка на изменения в таблице tasks
+		const subscription = supabase
+			.channel('tasks-changes')
+			.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, payload => {
+				setTasks(prev =>
+					prev.map(task =>
+						task.id === payload.new.id
+							? { ...task, tracking_number: payload.new.tracking_number }
+							: task
+					)
+				)
+			})
+			.subscribe()
+
+		return () => {
+			subscription.unsubscribe()
+		}
+	}, [])
+
 	const visibleTasks = useMemo(() => {
 		let filteredTasks = [...tasks]
 		if (filter.companies !== null) {

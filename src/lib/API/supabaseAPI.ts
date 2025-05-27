@@ -189,15 +189,13 @@ export const getAllTags = async (): Promise<TypeTag[]> => {
 	return data
 }
 
-// supabaseApi.ts
-export const removeTaskFromFavorite = async (userId: number, taskId: number): Promise<void> => {
+export const removeTaskFromFavorite = async (userId: number, taskId: number) => {
 	const { error } = await supabase
 		.from('user_tasks')
-		.delete()
+		.update({ is_favorite: false })
 		.eq('user_id', userId)
 		.eq('task_id', taskId)
-		.eq('is_favorite', true)
-	if (error) throw new Error(`Failed to remove task from favorites: ${error.message}`)
+	if (error) throw error
 }
 
 // Добавьте функции для started и finished, если еще нет

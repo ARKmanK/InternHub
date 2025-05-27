@@ -5,14 +5,17 @@ import {
 	getTaskActivity,
 	getUserFavorites,
 	getUserId,
+	addTaskToFavorites, // Импортируем из supabaseAPI
+	removeTaskFromFavorite, // Импортируем из supabaseAPI
 } from '@/src/lib/API/supabaseAPI'
-import { addToFavorite, removeTaskFromFavorite, getRole, setPage, TypePages } from '@data/userData'
+import { getRole, setPage, TypePages } from '@data/userData'
 import { BadgeCheck, Star, CircleCheckBig, Hourglass, Heart, Undo2 } from 'lucide-react'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import Header from '@components/Header'
 import NavBar from '@components/NavBar'
 import AddAnswerForm from '@components/AddAnswerForm'
+import { supabase } from '@/supabaseClient'
 
 type TypeTasksData = {
 	id: number
@@ -111,7 +114,6 @@ const TaskPage: FC = () => {
 			if (e.key === 'userData') {
 				const userData = JSON.parse(localStorage.getItem('userData') || '{}')
 				const newUserId = userData.user?.id || null
-				setFavoriteTasks(userData.user?.favoriteTasks?.id || [])
 				setUserId(newUserId)
 				loadData()
 			}
@@ -120,16 +122,79 @@ const TaskPage: FC = () => {
 		return () => window.removeEventListener('storage', handleStorageChange)
 	}, [])
 
-	const handleFavorite = () => {
-		if (!task) return
+	const handleFavorite = async () => {
+		if (!task || !userId) return
+
 		if (favoriteTasks.includes(task.id)) {
-			removeTaskFromFavorite(task.id)
-			setFavoriteTasks(favoriteTasks.filter(id => id !== task.id))
-			addNotification('warning', 'Внимание', 'Задача убрана из избранного')
+			try {
+				await removeTaskFromFavorite(userId, task.id)
+
+				// Получаем текущее значение tracking_number
+				const { data: taskData, error: fetchError } = await supabase
+					.from('tasks')
+					.select('tracking_number')
+					.eq('id', task.id)
+					.single()
+
+				if (fetchError) throw fetchError
+				if (!taskData) throw new Error('Task not found')
+
+				// Уменьшаем tracking_number на 1, но не ниже 0
+				const newTrackingNumber = Math.max(taskData.tracking_number - 1, 0)
+
+				// Обновляем tracking_number
+				const { error: updateTrackingError } = await supabase
+					.from('tasks')
+					.update({ tracking_number: newTrackingNumber })
+					.eq('id', task.id)
+
+				if (updateTrackingError) throw updateTrackingError
+
+				setFavoriteTasks(favoriteTasks.filter(id => id !== task.id))
+				setTask(prev => (prev ? { ...prev, tracking_number: newTrackingNumber } : null))
+				addNotification('warning', 'Внимание', 'Задача убрана из избранного')
+			} catch (error: any) {
+				addNotification(
+					'error',
+					'Ошибка',
+					`Не удалось убрать задачу из избранного: ${error.message}`
+				)
+			}
 		} else {
-			addToFavorite(task.id)
-			setFavoriteTasks([...favoriteTasks, task.id])
-			addNotification('success', 'Успешно', 'Задача добавлена в избранное')
+			try {
+				await addTaskToFavorites(userId, task.id)
+
+				// Получаем текущее значение tracking_number
+				const { data: taskData, error: fetchError } = await supabase
+					.from('tasks')
+					.select('tracking_number')
+					.eq('id', task.id)
+					.single()
+
+				if (fetchError) throw fetchError
+				if (!taskData) throw new Error('Task not found')
+
+				// Увеличиваем tracking_number на 1
+				const newTrackingNumber = taskData.tracking_number + 1
+
+				// Обновляем tracking_number
+				const { error: updateError } = await supabase
+					.from('tasks')
+					.update({ tracking_number: newTrackingNumber })
+					.eq('id', task.id)
+
+				if (updateError) throw updateError
+
+				setFavoriteTasks([...favoriteTasks, task.id])
+				setTask(prev => (prev ? { ...prev, tracking_number: newTrackingNumber } : null))
+				addNotification('success', 'Успешно', 'Задача добавлена в избранное')
+			} catch (error: any) {
+				addNotification(
+					'error',
+					'Ошибка',
+					`Не удалось добавить задачу в избранное: ${error.message}`
+				)
+			}
 		}
 	}
 

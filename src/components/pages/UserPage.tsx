@@ -66,7 +66,6 @@ const UserPage = () => {
 				}
 			}
 		}
-
 		fetchUser()
 	}, [])
 
@@ -95,7 +94,6 @@ const UserPage = () => {
 
 	const loadFinishedTasks = async (userId: number) => {
 		try {
-			// Предполагаем таблицу user_tasks с полем is_finished
 			const { data, error } = await supabase
 				.from('user_tasks')
 				.select('task_id')
@@ -165,14 +163,89 @@ const UserPage = () => {
 		if (role === 'user' && favoriteTasks.includes(id)) {
 			try {
 				await removeTaskFromFavorite(userId!, id)
+
+				// Получаем текущее значение tracking_number
+				const { data: taskData, error: fetchError } = await supabase
+					.from('tasks')
+					.select('tracking_number')
+					.eq('id', id)
+					.single()
+
+				if (fetchError) throw fetchError
+				if (!taskData) throw new Error('Task not found')
+
+				// Уменьшаем tracking_number на 1, но не ниже 0
+				const newTrackingNumber = Math.max(taskData.tracking_number - 1, 0)
+
+				// Обновляем tracking_number
+				const { error: updateError } = await supabase
+					.from('tasks')
+					.update({ tracking_number: newTrackingNumber })
+					.eq('id', id)
+
+				if (updateError) throw updateError
+
 				setFavoriteTasks(favoriteTasks.filter(task => task !== id))
 				addNotification('warning', 'Внимание', 'Задача убрана из избранного')
-				setVisibleTasks(prev => prev.filter(task => task.id !== id))
+				setVisibleTasks(prev =>
+					prev.map(task =>
+						task.id === id ? { ...task, tracking_number: newTrackingNumber } : task
+					)
+				)
 			} catch (error: any) {
 				addNotification(
 					'error',
 					'Ошибка',
 					`Не удалось убрать задачу из избранного: ${error.message}`
+				)
+			}
+		}
+	}
+
+	const addToFavorite = async (id: number) => {
+		if (role === 'user' && !favoriteTasks.includes(id)) {
+			try {
+				const { error: addError } = await supabase
+					.from('user_tasks')
+					.upsert(
+						{ user_id: userId!, task_id: id, is_favorite: true },
+						{ onConflict: 'user_id,task_id' }
+					)
+				if (addError) throw addError
+
+				// Получаем текущее значение tracking_number
+				const { data: taskData, error: fetchError } = await supabase
+					.from('tasks')
+					.select('tracking_number')
+					.eq('id', id)
+					.single()
+
+				if (fetchError) throw fetchError
+				if (!taskData) throw new Error('Task not found')
+
+				// Увеличиваем tracking_number на 1
+				const newTrackingNumber = taskData.tracking_number + 1
+
+				// Обновляем tracking_number
+				const { error: updateError } = await supabase
+					.from('tasks')
+					.update({ tracking_number: newTrackingNumber })
+					.eq('id', id)
+
+				if (updateError) throw updateError
+
+				setFavoriteTasks([...favoriteTasks, id])
+				addNotification('success', 'Успешно', 'Задача добавлена в избранное')
+				setVisibleTasks(prev =>
+					prev.map(task =>
+						task.id === id ? { ...task, tracking_number: newTrackingNumber } : task
+					)
+				)
+			} catch (error: any) {
+				addNotification(
+					'error',
+					'Ошибка',
+					`Не удалось добавить задачу в избранное: ${error.message}`
 				)
 			}
 		}
@@ -225,7 +298,7 @@ const UserPage = () => {
 					difficulty={task.difficulty}
 					companyName={task.company_name}
 					type={listType}
-					addToFavorite={role === 'user' ? removeFromFavorite : undefined}
+					addToFavorite={role === 'user' ? addToFavorite : undefined}
 					isFavorite={favoriteTasks.includes(task.id)}
 					deadline={task.deadline}
 					tags={task.tags ?? []}
@@ -268,9 +341,8 @@ const UserPage = () => {
 								>
 									<Undo2 size={30} />
 								</button>
-
 								<button
-									className='md:flex gap-x-2 border rounded-xl py-1 px-2 ml-4 bg-blue-400 hover:bg-gray-300'
+									className='md:flex gap-x-2 border rounded-xl py-1 px-2 ml-4 bg-blue-400 hover:bg-gray-400'
 									onClick={handleLogout}
 								>
 									<LogOut /> <span>Выйти</span>
@@ -287,7 +359,6 @@ const UserPage = () => {
 									<BookCopy size={30} />
 								</button>
 							</div>
-
 							<div className='md:flex mt-7'>
 								<div className='md:w-[80%]'>
 									<h1 className='text-2xl font-bold mb-14'>Страница профиля</h1>
@@ -324,7 +395,6 @@ const UserPage = () => {
 											<h2 className='text-xl font-semibold'>Мои задачи</h2>
 										</div>
 									)}
-
 									{visibleTasks.length === 0 ? (
 										<EmptyCard
 											role={role}
