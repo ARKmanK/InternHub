@@ -1,21 +1,21 @@
 import { FC, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { companyNames } from '../data/companyNames'
 import { availableTags } from '../data/tags'
 
 type TypeFilter = {
 	companies: string | null
 	difficulty: number | null
-	tracking: boolean | null
+	tracking: '0' | '1-5' | '6-10' | '15-20' | '20+' | null
 	tags: string[] | null
 }
 
 interface TaskFilterProps {
 	filter: TypeFilter
 	setFilter: React.Dispatch<React.SetStateAction<TypeFilter>>
+	companies: string[] // Новый пропс для динамических компаний
 }
 
-const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter }) => {
+const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 	const [openSection, setOpenSection] = useState({
 		companies: false,
 		difficulty: false,
@@ -53,7 +53,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter }) => {
 		})
 	}
 
-	const handleTrackingChange = (value: boolean | null) => {
+	const handleTrackingChange = (value: '0' | '1-5' | '6-10' | '15-20' | '20+' | null) => {
 		setFilter({
 			...filter,
 			tracking: filter.tracking === value ? null : value,
@@ -98,7 +98,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter }) => {
 					}`}
 				>
 					<ul className='space-y-2'>
-						{companyNames.map(company => (
+						{companies.map(company => (
 							<li key={company} className='flex items-center space-x-2'>
 								<input
 									type='radio'
@@ -166,26 +166,18 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter }) => {
 					}`}
 				>
 					<ul className='space-y-2'>
-						<li className='flex items-center space-x-2'>
-							<input
-								type='radio'
-								name='tracking'
-								checked={filter.tracking === true}
-								onChange={() => handleTrackingChange(true)}
-								className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500'
-							/>
-							<span>Да</span>
-						</li>
-						<li className='flex items-center space-x-2'>
-							<input
-								type='radio'
-								name='tracking'
-								checked={filter.tracking === false}
-								onChange={() => handleTrackingChange(false)}
-								className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500'
-							/>
-							<span>Нет</span>
-						</li>
+						{(['0', '1-5', '6-10', '15-20', '20+'] as const).map(range => (
+							<li key={range} className='flex items-center space-x-2'>
+								<input
+									type='radio'
+									name='tracking'
+									checked={filter.tracking === range}
+									onChange={() => handleTrackingChange(range)}
+									className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500'
+								/>
+								<span>{range}</span>
+							</li>
+						))}
 					</ul>
 				</div>
 			</div>

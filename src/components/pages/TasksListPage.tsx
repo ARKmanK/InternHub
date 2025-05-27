@@ -8,7 +8,8 @@ import {
 	getUserByEmail,
 	getUserFavorites,
 	addTaskToFavorites,
-	removeTaskFromFavorite, // Добавляем функцию для удаления из избранного
+	removeTaskFromFavorite,
+	getUniqueCompanies, // Добавляем новую функцию
 } from '@/src/lib/API/supabaseAPI'
 import { supabase } from '@/supabaseClient'
 import { List, BookCopy, CircleUserRound } from 'lucide-react'
@@ -34,7 +35,7 @@ type TypeTask = {
 type TypeFilter = {
 	companies: string | null
 	difficulty: number | null
-	tracking: boolean | null
+	tracking: '0' | '1-5' | '6-10' | '15-20' | '20+' | null
 	tags: string[] | null
 }
 
@@ -53,6 +54,7 @@ const TasksListPage = () => {
 	})
 	const [userId, setUserId] = useState<number | null>(null)
 	const [loading, setLoading] = useState(true)
+	const [companies, setCompanies] = useState<string[]>([]) // Новое состояние для компаний
 	const navigate = useNavigate()
 
 	const addToFavorite = async (id: number) => {
@@ -62,30 +64,20 @@ const TasksListPage = () => {
 		}
 		try {
 			if (favoriteTasks.includes(id)) {
-				// Удаляем из избранного
 				await removeTaskFromFavorite(userId, id)
-
-				// Получаем текущее значение tracking_number
 				const { data: taskData, error: fetchError } = await supabase
 					.from('tasks')
 					.select('tracking_number')
 					.eq('id', id)
 					.single()
-
 				if (fetchError) throw fetchError
 				if (!taskData) throw new Error('Task not found')
-
-				// Уменьшаем tracking_number на 1, но не ниже 0
 				const newTrackingNumber = Math.max(taskData.tracking_number - 1, 0)
-
-				// Обновляем tracking_number
 				const { error: updateError } = await supabase
 					.from('tasks')
 					.update({ tracking_number: newTrackingNumber })
 					.eq('id', id)
-
 				if (updateError) throw updateError
-
 				setFavoriteTasks(favoriteTasks.filter(task => task !== id))
 				setTasks(prev =>
 					prev.map(task =>
@@ -94,30 +86,20 @@ const TasksListPage = () => {
 				)
 				addNotification('warning', '', 'Задача убрана из избранного')
 			} else {
-				// Добавляем в избранное
 				await addTaskToFavorites(userId, id)
-
-				// Получаем текущее значение tracking_number
 				const { data: taskData, error: fetchError } = await supabase
 					.from('tasks')
 					.select('tracking_number')
 					.eq('id', id)
 					.single()
-
 				if (fetchError) throw fetchError
 				if (!taskData) throw new Error('Task not found')
-
-				// Увеличиваем tracking_number на 1
 				const newTrackingNumber = taskData.tracking_number + 1
-
-				// Обновляем tracking_number
 				const { error: updateError } = await supabase
 					.from('tasks')
 					.update({ tracking_number: newTrackingNumber })
 					.eq('id', id)
-
 				if (updateError) throw updateError
-
 				setFavoriteTasks([...favoriteTasks, id])
 				setTasks(prev =>
 					prev.map(task =>
@@ -184,13 +166,16 @@ const TasksListPage = () => {
 					}
 					finalUserId = user.id
 					finalRole = user.role
-
 					localStorage.setItem('userId', finalUserId.toString())
 					localStorage.setItem('role', finalRole)
 				}
 
 				setUserId(finalUserId)
 				setRole(finalRole)
+
+				// Загружаем уникальные компании
+				const uniqueCompanies = await getUniqueCompanies()
+				setCompanies(uniqueCompanies)
 
 				if (finalUserId) {
 					await loadFavoriteTasks(finalUserId)
@@ -215,7 +200,6 @@ const TasksListPage = () => {
 
 		fetchUserAndTasks()
 
-		// Подписка на изменения в таблице tasks
 		const subscription = supabase
 			.channel('tasks-changes')
 			.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, payload => {
@@ -243,9 +227,23 @@ const TasksListPage = () => {
 			filteredTasks = filteredTasks.filter(task => task.difficulty === filter.difficulty)
 		}
 		if (filter.tracking !== null) {
-			filteredTasks = filteredTasks.filter(task =>
-				filter.tracking ? task.tracking_number > 0 : task.tracking_number === 0
-			)
+			filteredTasks = filteredTasks.filter(task => {
+				const num = task.tracking_number
+				switch (filter.tracking) {
+					case '0':
+						return num === 0
+					case '1-5':
+						return num >= 1 && num <= 5
+					case '6-10':
+						return num >= 6 && num <= 10
+					case '15-20':
+						return num >= 15 && num <= 20
+					case '20+':
+						return num > 20
+					default:
+						return true
+				}
+			})
 		}
 		if (filter.tags && filter.tags.length > 0) {
 			filteredTasks = filteredTasks.filter(task =>
@@ -340,7 +338,7 @@ const TasksListPage = () => {
 						</div>
 						<div className='md:flex mt-7'>
 							<div className='md:w-[25%] md:mr-10'>
-								<TaskFilter filter={filter} setFilter={setFilter} />
+								<TaskFilter filter={filter} setFilter={setFilter} companies={companies} />
 							</div>
 							<div className='md:w-[80%]'>
 								{listType === 'card' ? (

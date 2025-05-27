@@ -318,3 +318,20 @@ export const createTask = async (
 		throw new Error(`Failed to link tags to task: ${taskTagsError.message}`)
 	}
 }
+
+export const getUniqueCompanies = async (): Promise<string[]> => {
+	try {
+		const { data, error } = await supabase
+			.from('tasks')
+			.select('company_name')
+			.order('company_name', { ascending: true })
+
+		if (error) throw error
+
+		// Извлекаем уникальные company_name
+		const uniqueCompanies = [...new Set(data.map(item => item.company_name))]
+		return uniqueCompanies
+	} catch (error: any) {
+		throw new Error(`Не удалось загрузить компании: ${error.message}`)
+	}
+}
