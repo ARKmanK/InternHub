@@ -1,4 +1,5 @@
-import { FC } from 'react'
+// components/TaskCard.tsx
+import { FC, MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart, BadgeCheck, Star, Delete, BookCheck, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -6,7 +7,6 @@ import { Button } from '@components/UI/Button/Button'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 
-// Определяем тип для задачи, аналогичный TypeTask из TasksListPage
 type TaskCardProps = {
 	id: number
 	trackingNumber: number
@@ -19,10 +19,11 @@ type TaskCardProps = {
 	isFavorite?: boolean
 	deadline: string
 	tags: string[]
-	role?: 'user' | 'employer' | null // Обновляем тип role, чтобы включить null
+	role?: 'user' | 'employer' | null
 	isMine?: boolean
 	onDelete?: () => void
 	showControls?: boolean
+	onClick?: () => void // Добавляем новый пропс
 }
 
 const TaskCard: FC<TaskCardProps> = ({
@@ -41,6 +42,7 @@ const TaskCard: FC<TaskCardProps> = ({
 	isMine,
 	onDelete,
 	showControls = false,
+	onClick,
 }) => {
 	const { notifications, addNotification } = useNotification()
 	const navigate = useNavigate()
@@ -51,6 +53,14 @@ const TaskCard: FC<TaskCardProps> = ({
 
 	const handleEdit = () => {
 		navigate(`/edit-task/${id}`)
+	}
+
+	const handleNavigate = (e: MouseEvent<HTMLButtonElement>) => {
+		if (onClick) {
+			onClick() // Вызываем onClick из пропсов, если он передан
+		} else {
+			handleClick(id.toString()) // Запасной вариант
+		}
 	}
 
 	const renderDifficultyStars = (difficulty: number) => {
@@ -78,7 +88,6 @@ const TaskCard: FC<TaskCardProps> = ({
 		)
 	}
 
-	// Обрезаем описание для типа card до 150 символов
 	const truncatedDescription =
 		type === 'card' && description.length > 150 ? description.slice(0, 150) + '...' : description
 
@@ -152,7 +161,7 @@ const TaskCard: FC<TaskCardProps> = ({
 							{renderDifficultyStars(difficulty)}
 						</div>
 						<div className='flex justify-between'>
-							<Button onClick={() => handleClick(id.toString())}>На страницу задачи</Button>
+							<Button onClick={handleNavigate}>На страницу задачи</Button>
 							<div className='flex items-center'>
 								{companyName}
 								<BadgeCheck className='ml-2' fill='green' />
@@ -212,7 +221,7 @@ const TaskCard: FC<TaskCardProps> = ({
 							</div>
 						</div>
 						<div className='flex flex-col items-start gap-1 md:mt-3.5'>
-							<Button onClick={() => handleClick(id.toString())} className='text-sm px-2 py-1'>
+							<Button onClick={handleNavigate} className='text-sm px-2 py-1'>
 								На страницу задачи
 							</Button>
 							<div className='flex items-center md:my-2 md:ml-0.5'>

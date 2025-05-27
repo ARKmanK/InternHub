@@ -35,11 +35,12 @@ const syncWithLocalStorage = (newData: UserData) => {
 	localStorage.setItem('userData', JSON.stringify(newData))
 }
 
-/* export type TypePages = {
+export type TypePages = {
 	prevPage: string
 	currentPage: string
 }
 
+/*
 export const setPage = (page: string): void => {
 	// Получаем текущие данные из localStorage
 	const data = localStorage.getItem('pageHistory')

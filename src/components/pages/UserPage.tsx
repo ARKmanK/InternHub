@@ -49,7 +49,7 @@ const UserPage = () => {
 	const navigate = useNavigate()
 
 	useEffect(() => {
-		setPage('/user') // Устанавливаем текущую страницу
+		setPage('/user')
 		const fetchUser = async () => {
 			const {
 				data: { session },
@@ -301,6 +301,10 @@ const UserPage = () => {
 					role={role}
 					onDelete={role === 'employer' ? () => handleDelete(task.id) : undefined}
 					showControls={role === 'employer'}
+					onClick={() => {
+						setPage(`/task/${task.id}`)
+						navigate(`/task/${task.id}`)
+					}}
 				/>
 			</motion.div>
 		</AnimatePresence>
@@ -312,10 +316,19 @@ const UserPage = () => {
 	}
 
 	const handleLogout = async () => {
-		await supabase.auth.signOut()
-		clearAuthData()
-		localStorage.removeItem('pageHistory') // Очищаем историю при выходе
-		navigate('/login')
+		try {
+			await supabase.auth.signOut()
+			// Очищаем все ключи localStorage, связанные с пользователем и сессией
+			clearAuthData() // Удаляет userId, role, rememberMe, email
+			localStorage.removeItem('pageHistory')
+			localStorage.removeItem('supabaseSession')
+			localStorage.removeItem('sessionExpiry')
+			addNotification('success', 'Успешно', 'Вы вышли из системы')
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось выйти из системы: ${error.message}`)
+		} finally {
+			navigate('/login')
+		}
 	}
 
 	return (
