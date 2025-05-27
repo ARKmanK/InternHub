@@ -1,36 +1,40 @@
 import { FC, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTasks, TypeTasksData } from '@data/tasksData'
+import {
+	getTaskById,
+	getTaskActivity,
+	getUserFavorites,
+	getUserId,
+} from '@/src/lib/API/supabaseAPI'
 import { addToFavorite, removeTaskFromFavorite, getRole, setPage, TypePages } from '@data/userData'
-import { BadgeCheck, Star, CircleCheckBig, CircleEllipsis, Heart, Undo2 } from 'lucide-react'
+import { BadgeCheck, Star, CircleCheckBig, Hourglass, Heart, Undo2 } from 'lucide-react'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import Header from '@components/Header'
 import NavBar from '@components/NavBar'
 import AddAnswerForm from '@components/AddAnswerForm'
-import TaskData from '@data/TaskData.json'
-import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
-import {
-	getTaskActivity,
-	getTaskById,
-	getUserFavorites,
-	getUserId,
-} from '@/src/lib/API/supabaseAPI'
 
-type UserActivity = {
-	status: string
+type TypeTasksData = {
+	id: number
+	tracking_number: number
+	title: string
+	description: string
+	difficulty: number
+	company_name: string
+	deadline: string
+	tags: string[]
+}
+
+type TypeTaskActivity = {
+	id: number
+	task_id: number
+	user_id: number
+	status: 'verifying' | 'done'
 	username: string
-	date: string
-}
-
-type TaskActivity = {
-	usersActivity: UserActivity[]
-}
-
-type TaskDataJSON = {
-	tasks: {
-		[key: string]: TaskActivity
-	}
+	activity_date: string
+	created_at: string
+	url: string | null
+	comment: string | null
 }
 
 const TaskPage: FC = () => {
@@ -44,111 +48,72 @@ const TaskPage: FC = () => {
 	const [role, setRole] = useState(getRole())
 	const [userId, setUserId] = useState<number | null>(getUserId())
 	const [isLoading, setIsLoading] = useState<boolean>(true)
-	const [dataLoaded, setDataLoaded] = useState<boolean>(false) // Флаг загрузки данных
+
+	const loadData = async () => {
+		setIsLoading(true)
+		try {
+			if (!userId) {
+				addNotification('warning', 'Ошибка', 'Пользователь не авторизован')
+				navigate('/login')
+				return
+			}
+
+			if (!taskId || isNaN(Number(taskId))) {
+				addNotification('error', 'Ошибка', 'Некорректный идентификатор задачи')
+				navigate('/tasks')
+				return
+			}
+
+			const taskIdNum = Number(taskId)
+			const foundTask = await getTaskById(taskIdNum)
+			if (!foundTask) {
+				addNotification('error', 'Ошибка', 'Задача не найдена')
+				navigate('/tasks')
+				return
+			}
+			setTask({
+				...foundTask,
+				tags: foundTask.tags ?? [],
+				tracking_number: foundTask.tracking_number,
+				company_name: foundTask.company_name,
+			} as TypeTasksData)
+
+			const favorites = await getUserFavorites(userId)
+			setFavoriteTasks(favorites)
+
+			const taskActivity = await getTaskActivity(taskIdNum)
+			const normalizedActivity = taskActivity.map(activity => ({
+				...activity,
+				status:
+					activity.status === 'verifying' || activity.status === 'done'
+						? activity.status
+						: 'verifying',
+			}))
+			setActivityData(normalizedActivity)
+		} catch (error: any) {
+			addNotification(
+				'error',
+				'Ошибка',
+				`Не удалось загрузить данные: ${error.message || 'Неизвестная ошибка'}`
+			)
+		} finally {
+			setIsLoading(false)
+		}
+	}
 
 	useEffect(() => {
 		setPage(`/task/${taskId}`)
-		let isMounted = true
-		console.log(
-			'useEffect triggered with taskId:',
-			taskId,
-			'userId:',
-			userId,
-			'dataLoaded:',
-			dataLoaded
-		)
-
-		if (dataLoaded) {
-			console.log('Data already loaded, skipping reload')
-			return
-		}
-
-		const loadData = async () => {
-			setIsLoading(true)
-			console.log('Starting loadData')
-			try {
-				if (!userId) {
-					console.log('User not authenticated, redirecting to login')
-					addNotification('warning', 'Ошибка', 'Пользователь не авторизован')
-					navigate('/login')
-					return
-				}
-
-				if (!taskId || isNaN(Number(taskId))) {
-					console.log('Invalid taskId, redirecting to tasks')
-					addNotification('error', 'Ошибка', 'Некорректный идентификатор задачи')
-					navigate('/tasks')
-					return
-				}
-
-				const taskIdNum = Number(taskId)
-				console.log('Fetching task with id:', taskIdNum)
-				const foundTask = await getTaskById(taskIdNum)
-				if (!foundTask) {
-					console.log('Task not found, redirecting to tasks')
-					addNotification('error', 'Ошибка', 'Задача не найдена')
-					navigate('/tasks')
-					return
-				}
-				if (isMounted) {
-					console.log('Setting task data:', foundTask)
-					setTask({
-						...foundTask,
-						tags: foundTask.tags ?? [],
-						trackingNumber: foundTask.tracking_number,
-						companyName: foundTask.company_name,
-					} as TypeTasksData)
-				}
-
-				console.log('Fetching favorites for userId:', userId)
-				const favorites = await getUserFavorites(userId)
-				if (isMounted) {
-					console.log('Setting favorites:', favorites)
-					setFavoriteTasks(favorites)
-				}
-
-				console.log('Fetching task activity for taskId:', taskIdNum)
-				const taskActivity = await getTaskActivity(taskIdNum)
-				if (isMounted) {
-					console.log('Setting activity data:', taskActivity)
-					setActivityData(taskActivity)
-				}
-			} catch (error: any) {
-				console.error('Error in loadData:', error)
-				if (isMounted) {
-					addNotification(
-						'error',
-						'Ошибка',
-						`Не удалось загрузить данные: ${error.message || 'Неизвестная ошибка'}`
-					)
-				}
-			} finally {
-				console.log('Finally block executed, setting isLoading to false')
-				if (isMounted) {
-					setIsLoading(false)
-					setDataLoaded(true) // Устанавливаем флаг после успешной или неуспешной загрузки
-				}
-			}
-		}
-
 		loadData()
-			.then(() => console.log('loadData completed'))
-			.catch(error => console.error('Uncaught error in loadData:', error))
-
-		return () => {
-			isMounted = false
-			console.log('Component unmounted')
-		}
-	}, [taskId, userId, dataLoaded]) // Обновляем зависимости
+	}, [taskId, userId])
 
 	useEffect(() => {
 		const handleStorageChange = (e: StorageEvent) => {
 			if (e.key === 'userData') {
 				const userData = JSON.parse(localStorage.getItem('userData') || '{}')
 				const newUserId = userData.user?.id || null
-				console.log('Storage changed, new userId:', newUserId)
 				setFavoriteTasks(userData.user?.favoriteTasks?.id || [])
 				setUserId(newUserId)
+				loadData()
 			}
 		}
 		window.addEventListener('storage', handleStorageChange)
@@ -245,7 +210,7 @@ const TaskPage: FC = () => {
 						<div className='md:min-w-[300px] md:min-h-[250px] rounded-xl md:mb-11 border-2 border-gray-[#dce3eb] bg-[#96bddd]'>
 							<div className='md:py-2 md:px-3'>
 								<div className='md:flex md:justify-between text-gray-500 text-sm'>
-									<p>Сейчас отслеживают {task.trackingNumber}</p>
+									<p>Сейчас отслеживают {task.tracking_number}</p>
 								</div>
 								<h3 className='text-xl font-semibold md:pt-4'>{task.title}</h3>
 								<div className='w-[70%] md:pt-4'>{task.description}</div>
@@ -268,7 +233,7 @@ const TaskPage: FC = () => {
 								</div>
 								<div className='md:flex md:justify-end'>
 									<div className='md:flex'>
-										{task.companyName}
+										{task.company_name}
 										<BadgeCheck className='ml-2' fill='green' />
 									</div>
 								</div>
@@ -281,13 +246,19 @@ const TaskPage: FC = () => {
 									className='md:py-1.5 md:px-2 md:rounded-lg bg-[#0c426f] text-white font-semibold'
 									onClick={handleClick}
 								>
-									Привести решение
+									Приложить решение
 								</button>
 							</div>
 						)}
 
 						{showAddAnswerForm && (
-							<AddAnswerForm taskId={taskId || ''} onClose={() => setShowAddAnswerForm(false)} />
+							<AddAnswerForm
+								taskId={taskId || ''}
+								onClose={() => {
+									setShowAddAnswerForm(false)
+									loadData()
+								}}
+							/>
 						)}
 
 						{!showAddAnswerForm && (
@@ -305,40 +276,36 @@ const TaskPage: FC = () => {
 										<span>Дата</span>
 									</div>
 								</div>
-								<div className=''>
+								<div>
 									{activityData && activityData.length > 0 ? (
 										activityData.map((activity, index) => (
 											<div
 												key={index}
-												className='md:mb-2 md:border-b-1 last:border-b-0 last:mb-0 md:px-4 md:py-1.5'
+												className='md:mb-2 md:border-b-1 last:border-b-0 last:mb-0 md:px-4 md:py-2 flex items-center justify-between'
 											>
-												<div className='md:flex md:w-full md:justify-between'>
-													<div className='md:flex md:justify-start'>
-														<div className='md:flex min-w-[150px] md:justify-start md:pl-4'>
-															{activity.status === 'completed' ? (
-																<CircleCheckBig size={20} />
-															) : (
-																<CircleEllipsis size={20} />
-															)}
-															<span className='md:max-w-[60px] md:flex md:justify-center md:ml-1'>
-																{activity.status || 'Не указан'}
-															</span>
-														</div>
-														<div className='md:min-w-[180px] md:flex md:justify-start md:pl-12'>
-															<span className=''>{activity.username || 'Неизвестно'}</span>
-														</div>
+												<div className='flex items-center'>
+													<div className='mr-4'>
+														{activity.status === 'done' ? (
+															<CircleCheckBig size={20} />
+														) : (
+															<Hourglass size={20} />
+														)}
 													</div>
-													<div className=''>
-														<span>
-															{activity.activity_date ||
-																new Date(activity.created_at).toLocaleDateString()}
-														</span>
-													</div>
+													<span className='text-sm'>
+														{activity.status === 'verifying' ? 'Верифицируется' : 'Готово'}
+													</span>
+												</div>
+												<div className='flex-1 mx-4 text-sm truncate max-w-[180px]'>
+													{activity.username || 'Неизвестно'}
+												</div>
+												<div className='text-sm'>
+													{activity.activity_date ||
+														new Date(activity.created_at).toLocaleDateString()}
 												</div>
 											</div>
 										))
 									) : (
-										<div className='ml-7'>Нет данных</div>
+										<div className='ml-7 text-sm'>Нет данных</div>
 									)}
 								</div>
 							</div>

@@ -42,6 +42,10 @@ export const createUser = async (userData: TypeUserData) => {
 	if (error) {
 		throw new Error(`Failed to create user: ${error.message}`)
 	}
+	localStorage.setItem('first_name', first_name || '')
+	localStorage.setItem('last_name', last_name || '')
+	localStorage.setItem('userId', (await getUserByEmail(email))?.id?.toString() || '')
+	localStorage.setItem('role', role)
 }
 
 export const getUserByEmail = async (email: string): Promise<TypeUser | null> => {
@@ -126,13 +130,15 @@ export const getUserFavorites = async (userId: number): Promise<number[]> => {
 }
 
 // Функции для работы с таблицей task_activity
-export const addTaskActivity = async (activity: Omit<TypeTaskActivity, 'id'>): Promise<void> => {
-	const { error } = await supabase.from('task_activity').insert([activity])
 
-	if (error) {
-		throw new Error(`Failed to add task activity: ${error.message}`)
-	}
+export const addTaskActivity = async (
+	activity: Omit<TypeTaskActivity, 'id' | 'created_at'>
+): Promise<{ error: Error | null }> => {
+	const { error } = await supabase.from('task_activity').insert([activity])
+	return { error: error || null }
 }
+
+// ... (остальные функции остаются без изменений)
 
 export const getTaskActivity = async (taskId: number): Promise<TypeTaskActivity[]> => {
 	const { data, error } = await supabase.from('task_activity').select('*').eq('task_id', taskId)
