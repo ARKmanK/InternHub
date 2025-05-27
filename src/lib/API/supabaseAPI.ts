@@ -248,3 +248,69 @@ export const clearAuthData = () => {
 	localStorage.removeItem('rememberMe')
 	localStorage.removeItem('email')
 }
+
+// Функция для создания задачи
+export const createTask = async (
+	taskData: Omit<TypeTask, 'id'> & { employer_id: number },
+	tags: string[]
+): Promise<void> => {
+	// 1. Добавляем задачу в таблицу tasks
+	const { data, error } = await supabase
+		.from('tasks')
+		.insert([
+			{
+				tracking_number: taskData.tracking_number,
+				title: taskData.title,
+				description: taskData.description,
+				difficulty: taskData.difficulty,
+				company_name: taskData.company_name,
+				deadline: taskData.deadline,
+				employer_id: taskData.employer_id,
+			},
+		])
+		.select()
+		.single()
+
+	if (error) {
+		throw new Error(`Failed to create task: ${error.message}`)
+	}
+
+	const taskId = data.id
+
+	// 2. Обрабатываем теги: добавляем новые теги в таблицу tags, если их там нет
+	const existingTags = await supabase.from('tags').select('id, name').in('name', tags)
+	if (existingTags.error) {
+		throw new Error(`Failed to fetch tags: ${existingTags.error.message}`)
+	}
+
+	const existingTagNames = existingTags.data.map(tag => tag.name)
+	const newTags = tags.filter(tag => !existingTagNames.includes(tag))
+
+	// Добавляем новые теги в таблицу tags
+	if (newTags.length > 0) {
+		const { error: insertTagsError } = await supabase
+			.from('tags')
+			.insert(newTags.map(tag => ({ name: tag })))
+		if (insertTagsError) {
+			throw new Error(`Failed to insert new tags: ${insertTagsError.message}`)
+		}
+	}
+
+	// 3. Получаем ID всех тегов (существующих и новых)
+	const allTags = await supabase.from('tags').select('id, name').in('name', tags)
+	if (allTags.error) {
+		throw new Error(`Failed to fetch all tags: ${allTags.error.message}`)
+	}
+
+	// 4. Связываем теги с задачей через таблицу task_tags
+	const tagIds = allTags.data.map(tag => tag.id)
+	const taskTags = tagIds.map(tagId => ({
+		task_id: taskId,
+		tag_id: tagId,
+	}))
+
+	const { error: taskTagsError } = await supabase.from('task_tags').insert(taskTags)
+	if (taskTagsError) {
+		throw new Error(`Failed to link tags to task: ${taskTagsError.message}`)
+	}
+}

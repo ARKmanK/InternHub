@@ -2,13 +2,14 @@ import Header from '@components/Header'
 import NavBar from '@components/NavBar'
 import TaskCard from '@components/TaskCard'
 import { useNavigate } from 'react-router-dom'
-import { List, BookCopy, Undo2 } from 'lucide-react'
+import { List, BookCopy, Undo2, LogOut } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import { supabase } from '@/supabaseClient'
 import {
+	clearAuthData,
 	getAllTasks,
 	getUserByEmail,
 	getUserFavorites,
@@ -242,6 +243,12 @@ const UserPage = () => {
 		setActiveCategory(type)
 	}
 
+	const handleLogout = async () => {
+		await supabase.auth.signOut()
+		clearAuthData()
+		navigate('/login')
+	}
+
 	const goBack = () => {
 		navigate('/tasks')
 	}
@@ -261,6 +268,13 @@ const UserPage = () => {
 									aria-label='Вернуться к задачам'
 								>
 									<Undo2 size={30} />
+								</button>
+
+								<button
+									className='md:flex gap-x-2 border rounded-xl py-1 px-2 ml-4 bg-blue-400 hover:bg-gray-300'
+									onClick={handleLogout}
+								>
+									<LogOut /> <span>Выйти</span>
 								</button>
 							</div>
 							<div className='md:flex md:justify-end'>

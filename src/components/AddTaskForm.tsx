@@ -1,14 +1,16 @@
 import { FormEvent, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AppWindow, X } from 'lucide-react' // Добавлен X для кнопки удаления
+import { AppWindow, X } from 'lucide-react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
-import { addTask, TypeTasksData } from '../data/tasksData'
+import { createTask } from '@/src/lib/API/supabaseAPI' // Импортируем функцию для создания задачи
 import { availableTags } from '../data/tags'
-import { getRole } from '../data/userData'
+import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
+import { supabase } from '@/supabaseClient'
 import TaskCard from '@components/TaskCard'
+import { TypeTask } from '@/src/types/TypeTask'
 
 const AddTaskForm = () => {
 	const navigate = useNavigate()
@@ -19,31 +21,60 @@ const AddTaskForm = () => {
 	const [tags, setTags] = useState<string[]>([])
 	const [newTag, setNewTag] = useState<string>('')
 	const { notifications, addNotification } = useNotification()
+	const [previewTask, setPreviewTask] = useState<TypeTask | null>(null)
+	const [companyName, setCompanyName] = useState<string>('')
 
-	const [previewTask, setPreviewTask] = useState<TypeTasksData | null>(null)
 	const role = getRole()
-	let companyName = ''
-	if (role === 'employer') {
-		const userData = JSON.parse(localStorage.getItem('userData') || '{}')
-		companyName = userData.employer?.companyName
-	}
+	const userId = getUserId()
 
 	const MAX_TITLE_LENGTH = 50
 	const MAX_DESCRIPTION_LENGTH = 250
 	const MAX_TAG_LENGTH = 20
 	const MAX_TAGS = 5
 
+	// Загружаем companyName при монтировании компонента
+	useEffect(() => {
+		const fetchCompanyName = async () => {
+			if (role !== 'employer' || !userId) {
+				addNotification('warning', 'Ошибка', 'Только работодатели могут создавать задачи')
+				navigate('/tasks')
+				return
+			}
+
+			try {
+				const { data: user, error } = await supabase
+					.from('users')
+					.select('company_name')
+					.eq('id', userId)
+					.single()
+
+				if (error) {
+					throw new Error(`Не удалось получить данные компании: ${error.message}`)
+				}
+
+				setCompanyName(user.company_name || 'Неизвестная компания')
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', error.message)
+				navigate('/tasks')
+			}
+		}
+
+		fetchCompanyName()
+	}, [role, userId, navigate, addNotification])
+
+	// Обновляем превью задачи
 	useEffect(() => {
 		const deadlineStr = formatDate(deadline)
-		const tempTask: TypeTasksData = {
+		const tempTask: TypeTask = {
 			id: 0,
-			trackingNumber: 0,
+			tracking_number: 0,
 			title: title || 'Пример названия',
 			description: description || 'Пример описания...',
 			difficulty: difficulty || 1,
-			companyName: companyName || 'Пример компании',
+			company_name: companyName || 'Пример компании',
 			deadline: deadlineStr || '01.01.2025',
 			tags: tags.length > 0 ? tags : ['Тег 1', 'Тег 2'],
+			employer_id: userId || 0,
 		}
 		setPreviewTask(tempTask)
 	}, [title, description, difficulty, deadline, tags, companyName])
@@ -125,7 +156,7 @@ const AddTaskForm = () => {
 		}
 	}
 
-	const handleSubmit = (e: FormEvent) => {
+	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
 
 		if (!title.trim()) {
@@ -148,26 +179,36 @@ const AddTaskForm = () => {
 			addNotification('warning', 'Ошибка', 'Теги — обязательное поле')
 			return
 		}
+		if (!userId) {
+			addNotification('warning', 'Ошибка', 'Пользователь не авторизован')
+			navigate('/login')
+			return
+		}
 
 		const deadlineStr = formatDate(deadline)
-		const newTask: Omit<TypeTasksData, 'id'> = {
-			trackingNumber: 0,
+		const newTask = {
+			tracking_number: 0,
 			title,
 			description,
 			difficulty,
-			companyName,
+			company_name: companyName,
 			deadline: deadlineStr,
-			tags,
+			employer_id: userId,
 		}
 
-		addTask(newTask)
-		setTitle('')
-		setDescription('')
-		setDifficulty(0)
-		setDeadline(null)
-		setTags([])
-		setNewTag('')
-		navigate('/tasks')
+		try {
+			await createTask(newTask, tags)
+			addNotification('success', 'Успешно', 'Задача успешно создана')
+			setTitle('')
+			setDescription('')
+			setDifficulty(0)
+			setDeadline(null)
+			setTags([])
+			setNewTag('')
+			navigate('/tasks')
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось создать задачу: ${error.message}`)
+		}
 	}
 
 	return (
@@ -362,8 +403,7 @@ const AddTaskForm = () => {
 					</div>
 					<div className='mt-4'>
 						<button
-							type='button'
-							onClick={handleSubmit}
+							type='submit' // Изменяем type на submit, чтобы форма отправлялась корректно
 							className='w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
 						>
 							Создать
@@ -376,14 +416,14 @@ const AddTaskForm = () => {
 				{previewTask && (
 					<TaskCard
 						id={previewTask.id}
-						trackingNumber={previewTask.trackingNumber}
+						trackingNumber={previewTask.tracking_number}
 						title={previewTask.title}
 						description={previewTask.description}
 						difficulty={previewTask.difficulty}
-						companyName={previewTask.companyName}
+						companyName={previewTask.company_name}
 						type='list'
 						deadline={previewTask.deadline}
-						tags={previewTask.tags}
+						tags={previewTask.tags || []}
 						isFavorite={false}
 						isMine={role === 'employer'}
 					/>
