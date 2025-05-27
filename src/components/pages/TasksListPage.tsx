@@ -18,6 +18,7 @@ import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import { Button } from '@components/UI/Button/Button'
 import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
+import { setPage, goBack } from '@/src/data/userData'
 
 type TypeTask = {
 	id: number
@@ -154,6 +155,7 @@ const TasksListPage = () => {
 	}
 
 	useEffect(() => {
+		setPage('/tasks')
 		const fetchUserAndTasks = async () => {
 			setLoading(true)
 			try {

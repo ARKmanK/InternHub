@@ -35,16 +35,18 @@ const syncWithLocalStorage = (newData: UserData) => {
 	localStorage.setItem('userData', JSON.stringify(newData))
 }
 
-export type TypePages = {
+/* export type TypePages = {
 	prevPage: string
 	currentPage: string
 }
 
 export const setPage = (page: string): void => {
-	const data = localStorage.getItem('prevPage')
+	// Получаем текущие данные из localStorage
+	const data = localStorage.getItem('pageHistory')
 	let pageData: TypePages
 
 	if (!data) {
+		// Если истории нет, инициализируем с пустой prevPage
 		pageData = {
 			prevPage: '',
 			currentPage: page,
@@ -52,20 +54,24 @@ export const setPage = (page: string): void => {
 	} else {
 		try {
 			const parsedData: TypePages = JSON.parse(data)
+			// Обновляем pageData: текущая страница становится prevPage, новая — currentPage
 			pageData = {
-				prevPage: parsedData.currentPage,
+				prevPage: parsedData.currentPage || '',
 				currentPage: page,
 			}
 		} catch (error) {
-			console.error('Ошибка парсинга данных из localStorage:', error)
+			console.error('Ошибка при разборе pageHistory из localStorage:', error)
+			// В случае ошибки используем значения по умолчанию
 			pageData = {
 				prevPage: '',
 				currentPage: page,
 			}
 		}
 	}
-	localStorage.setItem('prevPage', JSON.stringify(pageData))
-}
+
+	// Сохраняем обновленные данные в localStorage
+	localStorage.setItem('pageHistory', JSON.stringify(pageData))
+} */
 
 export const setRole = (role: 'employer' | 'user') => {
 	const newData: UserData = {}
@@ -178,4 +184,70 @@ export const removeTaskFromEmployer = (taskId: number) => {
 	}
 	jsonData.employer.tasks = jsonData.employer.tasks.filter(id => id !== taskId)
 	syncWithLocalStorage(jsonData)
+}
+
+export type PageHistory = string[]
+
+export const setPage = (page: string): void => {
+	// Получаем текущую историю из localStorage
+	const data = localStorage.getItem('pageHistory')
+	let pageHistory: PageHistory = []
+
+	if (data) {
+		try {
+			pageHistory = JSON.parse(data)
+			// Проверяем, что это массив строк
+			if (!Array.isArray(pageHistory) || !pageHistory.every(item => typeof item === 'string')) {
+				console.error('Некорректный формат pageHistory, сбрасываем историю')
+				pageHistory = []
+			}
+		} catch (error) {
+			console.error('Ошибка при разборе pageHistory из localStorage:', error)
+			pageHistory = []
+		}
+	}
+
+	// Если текущая страница уже последняя в истории, не добавляем её повторно
+	if (pageHistory[pageHistory.length - 1] !== page) {
+		pageHistory.push(page)
+	}
+
+	// Ограничиваем длину стека, чтобы избежать бесконечного роста (например, до 10 страниц)
+	if (pageHistory.length > 10) {
+		pageHistory = pageHistory.slice(-10)
+	}
+
+	// Сохраняем обновленную историю
+	localStorage.setItem('pageHistory', JSON.stringify(pageHistory))
+}
+
+export const goBack = (navigate: (path: string) => void): void => {
+	// Получаем текущую историю
+	const data = localStorage.getItem('pageHistory')
+	let pageHistory: PageHistory = []
+
+	if (data) {
+		try {
+			pageHistory = JSON.parse(data)
+			if (!Array.isArray(pageHistory) || !pageHistory.every(item => typeof item === 'string')) {
+				console.error('Некорректный формат pageHistory')
+				pageHistory = []
+			}
+		} catch (error) {
+			console.error('Ошибка при разборе pageHistory:', error)
+			pageHistory = []
+		}
+	}
+
+	// Удаляем текущую страницу из стека
+	pageHistory.pop()
+
+	// Если после удаления стека осталась хотя бы одна страница, переходим на неё
+	const prevPage = pageHistory.length > 0 ? pageHistory[pageHistory.length - 1] : '/tasks'
+
+	// Сохраняем обновленный стек
+	localStorage.setItem('pageHistory', JSON.stringify(pageHistory))
+
+	// Переходим на предыдущую страницу
+	navigate(prevPage)
 }

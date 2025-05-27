@@ -5,10 +5,10 @@ import {
 	getTaskActivity,
 	getUserFavorites,
 	getUserId,
-	addTaskToFavorites, // Импортируем из supabaseAPI
-	removeTaskFromFavorite, // Импортируем из supabaseAPI
+	addTaskToFavorites,
+	removeTaskFromFavorite,
 } from '@/src/lib/API/supabaseAPI'
-import { getRole, setPage, TypePages } from '@data/userData'
+import { getRole, setPage, goBack } from '@data/userData'
 import { BadgeCheck, Star, CircleCheckBig, Hourglass, Heart, Undo2 } from 'lucide-react'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
@@ -129,7 +129,6 @@ const TaskPage: FC = () => {
 			try {
 				await removeTaskFromFavorite(userId, task.id)
 
-				// Получаем текущее значение tracking_number
 				const { data: taskData, error: fetchError } = await supabase
 					.from('tasks')
 					.select('tracking_number')
@@ -139,10 +138,8 @@ const TaskPage: FC = () => {
 				if (fetchError) throw fetchError
 				if (!taskData) throw new Error('Task not found')
 
-				// Уменьшаем tracking_number на 1, но не ниже 0
 				const newTrackingNumber = Math.max(taskData.tracking_number - 1, 0)
 
-				// Обновляем tracking_number
 				const { error: updateTrackingError } = await supabase
 					.from('tasks')
 					.update({ tracking_number: newTrackingNumber })
@@ -164,7 +161,6 @@ const TaskPage: FC = () => {
 			try {
 				await addTaskToFavorites(userId, task.id)
 
-				// Получаем текущее значение tracking_number
 				const { data: taskData, error: fetchError } = await supabase
 					.from('tasks')
 					.select('tracking_number')
@@ -174,10 +170,8 @@ const TaskPage: FC = () => {
 				if (fetchError) throw fetchError
 				if (!taskData) throw new Error('Task not found')
 
-				// Увеличиваем tracking_number на 1
 				const newTrackingNumber = taskData.tracking_number + 1
 
-				// Обновляем tracking_number
 				const { error: updateError } = await supabase
 					.from('tasks')
 					.update({ tracking_number: newTrackingNumber })
@@ -209,16 +203,6 @@ const TaskPage: FC = () => {
 			return
 		}
 		setShowAddAnswerForm(true)
-	}
-
-	const goBack = () => {
-		const data = localStorage.getItem('prevPage')
-		let prevPage = '/tasks'
-		if (data) {
-			const parsedData: TypePages = JSON.parse(data)
-			prevPage = parsedData.prevPage || '/tasks'
-		}
-		navigate(prevPage)
 	}
 
 	const renderDifficultyStars = (difficulty: number) => {
@@ -253,8 +237,8 @@ const TaskPage: FC = () => {
 						<div className='md:py-4 md:flex md:justify-end md:items-center md:gap-4'>
 							<button
 								className='md:p-1 hover:bg-gray-300'
-								onClick={goBack}
-								aria-label='Вернуться к задачам'
+								onClick={() => goBack(navigate)}
+								aria-label='Вернуться назад'
 							>
 								<Undo2 size={30} />
 							</button>

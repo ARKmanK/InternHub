@@ -18,6 +18,7 @@ import {
 import EmptyCard from '@components/EmptyCard'
 import { Button } from '@components/UI/Button/Button'
 import DeleteConfirmation from '@components/DeleteConfirmation'
+import { setPage, goBack } from '@data/userData'
 
 type TypeTask = {
 	id: number
@@ -48,6 +49,7 @@ const UserPage = () => {
 	const navigate = useNavigate()
 
 	useEffect(() => {
+		setPage('/user') // Устанавливаем текущую страницу
 		const fetchUser = async () => {
 			const {
 				data: { session },
@@ -164,7 +166,6 @@ const UserPage = () => {
 			try {
 				await removeTaskFromFavorite(userId!, id)
 
-				// Получаем текущее значение tracking_number
 				const { data: taskData, error: fetchError } = await supabase
 					.from('tasks')
 					.select('tracking_number')
@@ -174,10 +175,8 @@ const UserPage = () => {
 				if (fetchError) throw fetchError
 				if (!taskData) throw new Error('Task not found')
 
-				// Уменьшаем tracking_number на 1, но не ниже 0
 				const newTrackingNumber = Math.max(taskData.tracking_number - 1, 0)
 
-				// Обновляем tracking_number
 				const { error: updateError } = await supabase
 					.from('tasks')
 					.update({ tracking_number: newTrackingNumber })
@@ -213,7 +212,6 @@ const UserPage = () => {
 					)
 				if (addError) throw addError
 
-				// Получаем текущее значение tracking_number
 				const { data: taskData, error: fetchError } = await supabase
 					.from('tasks')
 					.select('tracking_number')
@@ -223,10 +221,8 @@ const UserPage = () => {
 				if (fetchError) throw fetchError
 				if (!taskData) throw new Error('Task not found')
 
-				// Увеличиваем tracking_number на 1
 				const newTrackingNumber = taskData.tracking_number + 1
 
-				// Обновляем tracking_number
 				const { error: updateError } = await supabase
 					.from('tasks')
 					.update({ tracking_number: newTrackingNumber })
@@ -318,11 +314,8 @@ const UserPage = () => {
 	const handleLogout = async () => {
 		await supabase.auth.signOut()
 		clearAuthData()
+		localStorage.removeItem('pageHistory') // Очищаем историю при выходе
 		navigate('/login')
-	}
-
-	const goBack = () => {
-		navigate('/tasks')
 	}
 
 	return (
@@ -336,8 +329,8 @@ const UserPage = () => {
 							<div className='md:py-4 md:flex md:justify-end items-center'>
 								<button
 									className='md:p-1 hover:bg-gray-300'
-									onClick={goBack}
-									aria-label='Вернуться к задачам'
+									onClick={() => goBack(navigate)}
+									aria-label='Вернуться назад'
 								>
 									<Undo2 size={30} />
 								</button>
@@ -417,16 +410,16 @@ const UserPage = () => {
 							</div>
 						</div>
 					</div>
+					{showDeleteForm && (
+						<DeleteConfirmation
+							taskId={taskToDelete || 0}
+							onConfirm={confirmDelete}
+							onCancel={cancelDelete}
+						/>
+					)}
 				</div>
-				{showDeleteForm && (
-					<DeleteConfirmation
-						taskId={taskToDelete || 0}
-						onConfirm={confirmDelete}
-						onCancel={cancelDelete}
-					/>
-				)}
+				<Notification notifications={notifications} />
 			</div>
-			<Notification notifications={notifications} />
 		</>
 	)
 }
