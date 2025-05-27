@@ -43,47 +43,112 @@ const TaskPage: FC = () => {
 	const [showAddAnswerForm, setShowAddAnswerForm] = useState<boolean>(false)
 	const [role, setRole] = useState(getRole())
 	const [userId, setUserId] = useState<number | null>(getUserId())
+	const [isLoading, setIsLoading] = useState<boolean>(true)
+	const [dataLoaded, setDataLoaded] = useState<boolean>(false) // Флаг загрузки данных
 
 	useEffect(() => {
 		setPage(`/task/${taskId}`)
+		let isMounted = true
+		console.log(
+			'useEffect triggered with taskId:',
+			taskId,
+			'userId:',
+			userId,
+			'dataLoaded:',
+			dataLoaded
+		)
+
+		if (dataLoaded) {
+			console.log('Data already loaded, skipping reload')
+			return
+		}
+
 		const loadData = async () => {
+			setIsLoading(true)
+			console.log('Starting loadData')
 			try {
 				if (!userId) {
+					console.log('User not authenticated, redirecting to login')
 					addNotification('warning', 'Ошибка', 'Пользователь не авторизован')
 					navigate('/login')
 					return
 				}
 
-				if (taskId) {
-					const foundTask = await getTaskById(Number(taskId))
-					if (!foundTask) {
-						addNotification('error', 'Ошибка', 'Задача не найдена')
-						return
-					}
+				if (!taskId || isNaN(Number(taskId))) {
+					console.log('Invalid taskId, redirecting to tasks')
+					addNotification('error', 'Ошибка', 'Некорректный идентификатор задачи')
+					navigate('/tasks')
+					return
+				}
+
+				const taskIdNum = Number(taskId)
+				console.log('Fetching task with id:', taskIdNum)
+				const foundTask = await getTaskById(taskIdNum)
+				if (!foundTask) {
+					console.log('Task not found, redirecting to tasks')
+					addNotification('error', 'Ошибка', 'Задача не найдена')
+					navigate('/tasks')
+					return
+				}
+				if (isMounted) {
+					console.log('Setting task data:', foundTask)
 					setTask({
 						...foundTask,
 						tags: foundTask.tags ?? [],
 						trackingNumber: foundTask.tracking_number,
 						companyName: foundTask.company_name,
 					} as TypeTasksData)
-					const favorites = await getUserFavorites(userId) // Теперь userId гарантированно number
+				}
+
+				console.log('Fetching favorites for userId:', userId)
+				const favorites = await getUserFavorites(userId)
+				if (isMounted) {
+					console.log('Setting favorites:', favorites)
 					setFavoriteTasks(favorites)
-					const taskActivity = await getTaskActivity(Number(taskId))
+				}
+
+				console.log('Fetching task activity for taskId:', taskIdNum)
+				const taskActivity = await getTaskActivity(taskIdNum)
+				if (isMounted) {
+					console.log('Setting activity data:', taskActivity)
 					setActivityData(taskActivity)
 				}
 			} catch (error: any) {
-				addNotification('error', 'Ошибка', `Не удалось загрузить данные: ${error.message}`)
+				console.error('Error in loadData:', error)
+				if (isMounted) {
+					addNotification(
+						'error',
+						'Ошибка',
+						`Не удалось загрузить данные: ${error.message || 'Неизвестная ошибка'}`
+					)
+				}
+			} finally {
+				console.log('Finally block executed, setting isLoading to false')
+				if (isMounted) {
+					setIsLoading(false)
+					setDataLoaded(true) // Устанавливаем флаг после успешной или неуспешной загрузки
+				}
 			}
 		}
 
 		loadData()
-	}, [taskId, navigate, addNotification, userId])
+			.then(() => console.log('loadData completed'))
+			.catch(error => console.error('Uncaught error in loadData:', error))
+
+		return () => {
+			isMounted = false
+			console.log('Component unmounted')
+		}
+	}, [taskId, userId, dataLoaded]) // Обновляем зависимости
 
 	useEffect(() => {
 		const handleStorageChange = (e: StorageEvent) => {
 			if (e.key === 'userData') {
 				const userData = JSON.parse(localStorage.getItem('userData') || '{}')
+				const newUserId = userData.user?.id || null
+				console.log('Storage changed, new userId:', newUserId)
 				setFavoriteTasks(userData.user?.favoriteTasks?.id || [])
+				setUserId(newUserId)
 			}
 		}
 		window.addEventListener('storage', handleStorageChange)
@@ -144,8 +209,8 @@ const TaskPage: FC = () => {
 		)
 	}
 
-	if (!task) {
-		return <div>Задача не найдена</div>
+	if (!task || isLoading) {
+		return <div>{isLoading ? 'Загрузка...' : 'Задача не найдена'}</div>
 	}
 
 	return (
