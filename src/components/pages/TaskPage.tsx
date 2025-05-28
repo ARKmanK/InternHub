@@ -7,8 +7,9 @@ import {
 	getUserId,
 	addTaskToFavorites,
 	removeTaskFromFavorite,
+	getRole,
 } from '@/src/lib/API/supabaseAPI'
-import { getRole, setPage, goBack } from '@data/userData'
+import { setPage, goBack } from '@data/userData'
 import { BadgeCheck, Star, CircleCheckBig, Hourglass, Heart, Undo2 } from 'lucide-react'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
@@ -75,10 +76,14 @@ const TaskPage: FC = () => {
 				return
 			}
 			setTask({
-				...foundTask,
-				tags: foundTask.tags ?? [],
+				id: foundTask.id,
 				tracking_number: foundTask.tracking_number,
+				title: foundTask.title,
+				description: foundTask.description,
+				difficulty: foundTask.difficulty,
 				company_name: foundTask.company_name,
+				deadline: foundTask.deadline,
+				tags: foundTask.tags ?? [],
 			} as TypeTasksData)
 
 			const favorites = await getUserFavorites(userId)
@@ -295,7 +300,7 @@ const TaskPage: FC = () => {
 									className='md:py-1.5 md:px-2 md:rounded-lg bg-[#0c426f] text-white font-semibold'
 									onClick={handleClick}
 								>
-									Приложить решение
+									Добавить решение
 								</button>
 							</div>
 						)}
@@ -321,8 +326,11 @@ const TaskPage: FC = () => {
 											<span>Имя пользователя</span>
 										</div>
 									</div>
-									<div className='border-l min-w-[120px] md:flex md:justify-center md:py-2.5'>
-										<span>Дата</span>
+									<div className='border-l min-w-[100px] md:flex md:justify-center md:py-2.5'>
+										<div className='flex justify-between w-full px-4'>
+											<span>Дата</span>
+											<span className='ml-4'>Ссылка</span>
+										</div>
 									</div>
 								</div>
 								<div>
@@ -330,9 +338,9 @@ const TaskPage: FC = () => {
 										activityData.map((activity, index) => (
 											<div
 												key={index}
-												className='md:mb-2 md:border-b-1 last:border-b-0 last:mb-0 md:px-4 md:py-2 flex items-center justify-between'
+												className='md:mb-2 md:border-b-1 last:border-b-0 last:mb-0 md:w-full md:flex items-center justify-between'
 											>
-												<div className='flex items-center'>
+												<div className='flex items-center md:min-w-[150px] md:justify-center'>
 													<div className='mr-4'>
 														{activity.status === 'done' ? (
 															<CircleCheckBig size={20} />
@@ -344,17 +352,29 @@ const TaskPage: FC = () => {
 														{activity.status === 'verifying' ? 'Верифицируется' : 'Готово'}
 													</span>
 												</div>
-												<div className='flex-1 mx-4 text-sm truncate max-w-[180px]'>
+												<div className='md:flex-1 md:min-w-[180px] md:text-center text-sm truncate'>
 													{activity.username || 'Неизвестно'}
 												</div>
-												<div className='text-sm'>
-													{activity.activity_date ||
-														new Date(activity.created_at).toLocaleDateString()}
+												<div className='md:min-w-[100px] md:flex md:flex-1 justify-between md:px-4 text-sm'>
+													<span>
+														{activity.activity_date ||
+															new Date(activity.created_at).toLocaleDateString()}
+													</span>
+													{activity.url && (
+														<a
+															href={activity.url}
+															target='_blank'
+															rel='noopener noreferrer'
+															className='text-blue-600 hover:underline truncate max-w-[150px]'
+														>
+															{activity.url}
+														</a>
+													)}
 												</div>
 											</div>
 										))
 									) : (
-										<div className='ml-7 text-sm'>Нет данных</div>
+										<div className='ml-20 text-sm md:flex-none'>Нет данных</div>
 									)}
 								</div>
 							</div>

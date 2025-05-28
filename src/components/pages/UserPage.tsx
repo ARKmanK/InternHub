@@ -104,11 +104,7 @@ const UserPage = () => {
 			if (error) throw error
 			setFinishedTasks(data.map(item => item.task_id))
 		} catch (error: any) {
-			addNotification(
-				'error',
-				'Ошибка',
-				`Не удалось загрузить завершенные задачи: ${error.message}`
-			)
+			addNotification('error', 'Ошибка', `Не удалось загрузить Одобренные задачи: ${error.message}`)
 		}
 	}
 
@@ -392,7 +388,7 @@ const UserPage = () => {
 												}`}
 												onClick={() => handleClick('finished')}
 											>
-												<span>Завершенные задачи</span>
+												<span>Одобренные задачи</span>
 											</Button>
 										</div>
 									)}
@@ -411,7 +407,7 @@ const UserPage = () => {
 													? 'Избранное'
 													: category === 'started'
 													? 'Начатые задачи'
-													: 'Завершенные задачи'
+													: 'Одобренные задачи'
 											}
 										/>
 									) : listType === 'card' ? (

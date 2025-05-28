@@ -1,5 +1,8 @@
-import { FC, useState } from 'react'
+import { FC, useState, useEffect } from 'react'
 import { Button } from '@components/UI/Button/Button'
+import { getTaskById, deleteTask } from '@/src/lib/API/supabaseAPI'
+import { getUserId } from '@/src/lib/API/supabaseAPI'
+import useNotification from '@hooks/useNotification'
 
 type DeleteConfirmationProps = {
 	taskId: number
@@ -9,20 +12,58 @@ type DeleteConfirmationProps = {
 
 const DeleteConfirmation: FC<DeleteConfirmationProps> = ({ taskId, onConfirm, onCancel }) => {
 	const [inputText, setInputText] = useState('')
+	const [taskTitle, setTaskTitle] = useState<string>('')
+	const { addNotification } = useNotification()
+	const userId = getUserId()
 
-	const getTaskTitle = () => {
-		const tasksData = JSON.parse(localStorage.getItem('tasks') || '[]')
-		const task = tasksData.find((task: { id: number; title: string }) => task.id === taskId)
-		return task ? task.title : ''
-	}
+	useEffect(() => {
+		const fetchTaskTitle = async () => {
+			try {
+				if (!userId) {
+					addNotification('error', 'Ошибка', 'Пользователь не авторизован')
+					onCancel()
+					return
+				}
+				const task = await getTaskById(taskId)
+				if (!task) {
+					addNotification('error', 'Ошибка', 'Задача не найдена')
+					onCancel()
+					return
+				}
+				if (task.employer_id !== userId) {
+					addNotification('error', 'Ошибка', 'У вас нет прав на удаление этой задачи')
+					onCancel()
+					return
+				}
+				setTaskTitle(task.title)
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', `Не удалось загрузить данные задачи: ${error.message}`)
+				onCancel()
+			}
+		}
+		fetchTaskTitle()
+	}, [taskId, userId, onCancel, addNotification])
 
-	const taskTitle = getTaskTitle()
+	const handleConfirm = async () => {
+		if (!userId) {
+			addNotification('error', 'Ошибка', 'Пользователь не авторизован')
+			return
+		}
 
-	const handleConfirm = () => {
 		if (inputText.trim() === taskTitle.trim()) {
-			onConfirm()
+			try {
+				await deleteTask(taskId, userId)
+				addNotification('success', 'Успешно', 'Задача удалена')
+				onConfirm() // Вызываем onConfirm для закрытия модального окна или обновления списка
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', `Не удалось удалить задачу: ${error.message}`)
+			}
 		} else {
-			alert(`Пожалуйста, введите точное название задачи: "${taskTitle}" для подтверждения.`)
+			addNotification(
+				'warning',
+				'Ошибка',
+				`Пожалуйста, введите точное название задачи: "${taskTitle}" для подтверждения.`
+			)
 		}
 	}
 
@@ -39,12 +80,13 @@ const DeleteConfirmation: FC<DeleteConfirmationProps> = ({ taskId, onConfirm, on
 					onChange={e => setInputText(e.target.value)}
 					className='w-full p-2 mb-4 border rounded'
 					placeholder={`Введите "${taskTitle}"`}
+					disabled={!taskTitle} // Отключаем ввод, если title еще не загружен
 				/>
 				<div className='flex justify-end gap-4'>
 					<Button onClick={onCancel} className='bg-gray-300 text-black'>
 						Отмена
 					</Button>
-					<Button onClick={handleConfirm} className='bg-red-500 text-white'>
+					<Button onClick={handleConfirm} className='bg-red-500 text-white' disabled={!taskTitle}>
 						Удалить
 					</Button>
 				</div>

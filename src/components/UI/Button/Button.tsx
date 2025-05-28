@@ -4,6 +4,7 @@ type TypeButtonProps = {
 	onClick: (event: MouseEvent<HTMLButtonElement>) => void
 	children?: React.ReactNode
 	className?: string
+	disabled?: boolean
 }
 
 export const Button: FC<TypeButtonProps> = ({ onClick, children, className = '' }) => {
