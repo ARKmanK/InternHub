@@ -57,11 +57,13 @@ const UserPage = () => {
 				if (user) {
 					setUserId(user.id)
 					setRole(user.role)
-					await loadFavoriteTasks(user.id)
-					await loadStartedTasks(user.id)
-					await loadFinishedTasks(user.id)
-					if (user.role === 'employer') {
-						await loadEmployerTasks(user.id)
+					if (user.role !== 'admin') {
+						await loadFavoriteTasks(user.id)
+						await loadStartedTasks(user.id)
+						await loadFinishedTasks(user.id)
+						if (user.role === 'employer') {
+							await loadEmployerTasks(user.id)
+						}
 					}
 				}
 			}
@@ -121,7 +123,7 @@ const UserPage = () => {
 	}
 
 	const loadTasks = async () => {
-		if (!role || !userId) return
+		if (!role || !userId || role === 'admin') return
 
 		try {
 			const allTasks = await getAllTasks()
@@ -150,7 +152,7 @@ const UserPage = () => {
 	}
 
 	useEffect(() => {
-		if (role && userId) {
+		if (role && userId && role !== 'admin') {
 			loadTasks()
 		}
 	}, [category, role, userId, favoriteTasks, startedTasks, finishedTasks])
@@ -327,37 +329,9 @@ const UserPage = () => {
 						goBack={goBack}
 					/>
 				)}
-				{role === 'admin' ? (
-					<AdminProfile />
-				) : (
-					<div className='md:flex md:justify-center md:py-[20px] md:px-[10px]'>
-						<div className='md:min-h-[730px] md:w-[980px]'>
-							<div className='md:flex md:flex-col'>
-								<div className='md:py-4 md:flex md:justify-end items-center'>
-									<button
-										className='md:p-1 hover:bg-gray-300'
-										onClick={() => goBack(navigate)}
-										aria-label='Вернуться назад'
-									>
-										<Undo2 size={30} />
-									</button>
-									<button
-										className='md:flex gap-x-2 border rounded-xl py-1 px-2 ml-4 bg-blue-400 hover:bg-gray-400'
-										onClick={handleLogout}
-									>
-										<LogOut /> <span>Выйти</span>
-									</button>
-								</div>
-								<div className='md:flex mt-7'>
-									<div className='md:w-[80%]'>
-										<h1 className='text-2xl font-bold mb-14'>Страница пользователя</h1>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
+				{role === 'admin' && (
+					<AdminProfile navigate={navigate} handleLogout={handleLogout} goBack={goBack} />
 				)}
-
 				<Notification notifications={notifications} />
 			</div>
 		</>

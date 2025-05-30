@@ -1,13 +1,16 @@
 export type TypeTaskSubmission = {
 	id: number
-	tracking_number: number
+	user_id: number
+	submission_url?: string // Опционально, так как может быть null
+	zip_file_url?: string // Опционально
+	comment?: string // Опционально
+	photos?: string[] // Массив URL-ов фотографий
+	submitted_at: string
 	title: string
 	description: string
 	difficulty: number
 	company_name: string
 	deadline: string
-	tags?: string[]
 	employer_id: number
-	status: 'pending' | 'approved' | 'rejected'
-	submitted_at: string
+	tags?: string[] // Опционально
 }

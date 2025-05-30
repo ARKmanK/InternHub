@@ -31,7 +31,7 @@ const EditTaskPage = () => {
 	const [tags, setTags] = useState<string[]>([])
 	const [newTag, setNewTag] = useState<string>('')
 	const [previewTask, setPreviewTask] = useState<TypeTask | null>(null)
-	const [role, setRole] = useState<'user' | 'employer' | null>(null)
+	const [role, setRole] = useState<'user' | 'employer' | 'admin' | null>(null)
 	const [companyName, setCompanyName] = useState<string>('')
 	const [userId, setUserId] = useState<number | null>(null)
 	const [commonTags, setCommonTags] = useState<string[]>([])
@@ -94,7 +94,7 @@ const EditTaskPage = () => {
 
 					// Загружаем кастомные теги пользователя
 					const userTagsData = await getUserTags(user.id)
-					setUserTags(userTagsData.map(tag => tag.name))
+					setUserTags(userTagsData) // Уберите .map(tag => tag.name)
 				}
 			} catch (error: any) {
 				addNotification('error', 'Ошибка', error.message)

@@ -19,7 +19,7 @@ type TaskCardProps = {
 	isFavorite?: boolean
 	deadline: string
 	tags: string[]
-	role?: 'user' | 'employer' | null
+	role?: 'user' | 'employer' | 'admin' | null
 	isMine?: boolean
 	onDelete?: () => void
 	showControls?: boolean

@@ -5,7 +5,7 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
-import { createTask, getAllTags, getUserTags } from '@/src/lib/API/supabaseAPI'
+import { getAllTags, getUserTags } from '@/src/lib/API/supabaseAPI'
 import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
 import { supabase } from '@/supabaseClient'
 import TaskCard from '@components/TaskCard'
@@ -57,12 +57,12 @@ const AddTaskForm = () => {
 				setCompanyName(user.company_name || 'Неизвестная компания')
 
 				// Получаем общие теги
-				const commonTagsData = await getAllTags()
+				const commonTagsData = await getAllTags() // TypeTag[]
 				setCommonTags(commonTagsData.map(tag => tag.name))
 
 				// Получаем кастомные теги пользователя
-				const userTagsData = await getUserTags(userId)
-				setUserTags(userTagsData.map(tag => tag.name))
+				const userTagsData = await getUserTags(userId) // string[]
+				setUserTags(userTagsData)
 			} catch (error: any) {
 				addNotification('error', 'Ошибка', error.message)
 				navigate('/tasks')
@@ -110,7 +110,7 @@ const AddTaskForm = () => {
 		}
 	}
 
-	const addCustomTag = () => {
+	const addCustomTag = async () => {
 		const trimmedTag = newTag.trim()
 		if (!trimmedTag) {
 			addNotification('warning', 'Ошибка', 'Тег не может быть пустым')
@@ -128,9 +128,23 @@ const AddTaskForm = () => {
 			addNotification('warning', 'Ошибка', `Нельзя добавить больше ${MAX_TAGS} тегов`)
 			return
 		}
-		setTags([...tags, trimmedTag])
-		setUserTags([...userTags, trimmedTag]) // Добавляем в список кастомных тегов
-		setNewTag('')
+
+		try {
+			// Добавляем новый тег в user_tags
+			const { error } = await supabase
+				.from('user_tags')
+				.insert({ user_id: userId, name: trimmedTag })
+
+			if (error) {
+				throw new Error(`Не удалось создать тег: ${error.message}`)
+			}
+
+			setTags([...tags, trimmedTag])
+			setUserTags([...userTags, trimmedTag])
+			setNewTag('')
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', error.message)
+		}
 	}
 
 	const removeCustomTag = (tagToRemove: string) => {
@@ -202,26 +216,35 @@ const AddTaskForm = () => {
 		}
 
 		const deadlineStr = formatDate(deadline)
-		const newTask: Omit<TypeTask, 'id' | 'tags'> = {
-			tracking_number: 0,
+		const submissionData = {
+			user_id: userId,
+			submission_url: null, // В данном случае поле необязательное
+			zip_file_url: null,
+			comment: null,
+			photos: null,
 			title,
 			description,
 			difficulty,
 			company_name: companyName,
 			deadline: deadlineStr,
 			employer_id: userId,
+			tags: tags.length > 0 ? tags : null,
 		}
 
 		try {
-			const taskId = await createTask(newTask, tags, userId)
-			addNotification('success', 'Успешно', 'Задача успешно создана')
+			const { error } = await supabase.from('task_submissions').insert(submissionData)
+			if (error) {
+				throw new Error(`Не удалось создать задачу: ${error.message}`)
+			}
+
+			addNotification('success', 'Успешно', 'Задача отправлена на модерацию')
 			setTitle('')
 			setDescription('')
 			setDifficulty(0)
 			setDeadline(null)
 			setTags([])
 			setNewTag('')
-			navigate(`/task/${taskId}`)
+			navigate('/tasks')
 		} catch (error: any) {
 			addNotification('error', 'Ошибка', `Не удалось создать задачу: ${error.message}`)
 		}
@@ -432,7 +455,7 @@ const AddTaskForm = () => {
 							type='submit'
 							className='w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
 						>
-							Создать
+							Отправить на модерацию
 						</button>
 					</div>
 				</form>

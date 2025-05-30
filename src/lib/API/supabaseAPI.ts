@@ -7,9 +7,9 @@ import { TypeTag } from '@/src/types/TypeTag'
 import { TypeTasksData } from '@/src/data/tasksData'
 
 // Функции для работы с таблицей users
-type TypeUserData = {
+export type TypeUserData = {
 	email: string
-	role: 'user' | 'employer'
+	role: 'user' | 'employer' | 'admin'
 	first_name?: string
 	last_name?: string
 	student_group?: string
@@ -37,15 +37,17 @@ export const createUser = async (userData: TypeUserData) => {
 		}
 	})
 
-	console.log('Data to insert into users:', dataToInsert) // Отладочный вывод
-	const { error } = await supabase.from('users').insert(dataToInsert)
+	console.log('Data to insert into users:', dataToInsert)
+	const { data, error } = await supabase.from('users').insert(dataToInsert).select()
 
 	if (error) {
 		throw new Error(`Failed to create user: ${error.message}`)
 	}
-	localStorage.setItem('first_name', first_name || '')
-	localStorage.setItem('last_name', last_name || '')
-	localStorage.setItem('userId', (await getUserByEmail(email))?.id?.toString() || '')
+
+	// Сохраняем только существующие данные
+	if (first_name) localStorage.setItem('first_name', first_name)
+	if (last_name) localStorage.setItem('last_name', last_name)
+	if (data && data[0]?.id) localStorage.setItem('userId', data[0].id.toString())
 	localStorage.setItem('role', role)
 }
 
@@ -275,12 +277,12 @@ export const getTaskSubmissions = async (
 }
 
 // Функции для работы с таблицей tags
-export const getAllTags = async (): Promise<string[]> => {
-	const { data, error } = await supabase.from('tags').select('*')
+export const getAllTags = async (): Promise<TypeTag[]> => {
+	const { data, error } = await supabase.from('tags').select('id, name')
 	if (error) {
 		throw new Error(`Не удалось загрузить общие теги: ${error.message}`)
 	}
-	return data.map((tag: TypeTag) => tag.name) // Извлекаем только name
+	return data || []
 }
 
 export const removeTaskFromFavorite = async (userId: number, taskId: number) => {
@@ -541,14 +543,15 @@ export const updateTask = async (task: TypeTask, userId: number): Promise<void> 
 
 // Получение кастомных тегов пользователя
 export const getUserTags = async (userId: number): Promise<string[]> => {
-	const { data, error } = await supabase.from('user_tags').select('*').eq('user_id', userId)
+	const { data, error } = await supabase.from('user_tags').select('name').eq('user_id', userId)
+
 	if (error) {
 		throw new Error(`Не удалось загрузить пользовательские теги: ${error.message}`)
 	}
-	return data.map((tag: TypeTag) => tag.name) // Извлекаем только name
+
+	return data.map(item => item.name).filter((name): name is string => name !== null) || []
 }
 
-// Создание нового кастомного тега
 export const createUserTag = async (userId: number, tagName: string): Promise<number> => {
 	const { data, error } = await supabase
 		.from('user_tags')
@@ -581,147 +584,130 @@ export const deleteTask = async (taskId: number, userId: number): Promise<void> 
 
 // Получение задач из task_submissions (для верификации)
 export const getPendingTaskSubmissions = async (): Promise<TypeTaskSubmission[]> => {
-	const { data, error } = await supabase
+	const { data: submissions, error: submissionError } = await supabase
 		.from('task_submissions')
-		.select(
-			`
-					*,
-					task_tags (
-							tag_id,
-							tag_type
-					)
-			`
-		)
-		.eq('status', 'pending') // Предполагаем, что есть поле status
+		.select('*')
 
-	if (error) {
-		throw new Error(`Failed to fetch pending task submissions: ${error.message}`)
+	if (submissionError) {
+		throw new Error(`Failed to fetch pending task submissions: ${submissionError.message}`)
 	}
 
-	// Обработка тегов (аналогично getAllTasks)
-	const submissionsWithTags = await Promise.all(
-		data.map(async submission => {
-			const submissionTags = submission.task_tags || []
-			const tags: string[] = []
+	if (!submissions || submissions.length === 0) {
+		return []
+	}
 
-			const commonTagIds = submissionTags
-				.filter((tt: any) => tt.tag_type === 'common')
-				.map((tt: any) => tt.tag_id)
-			if (commonTagIds.length > 0) {
-				const { data: commonTags, error: commonTagsError } = await supabase
-					.from('tags')
-					.select('name')
-					.in('id', commonTagIds)
-				if (commonTagsError) {
-					throw new Error(`Failed to fetch common tags: ${commonTagsError.message}`)
-				}
-				tags.push(...commonTags.map((tag: any) => tag.name))
-			}
-
-			const userTagIds = submissionTags
-				.filter((tt: any) => tt.tag_type === 'user')
-				.map((tt: any) => tt.tag_id)
-			if (userTagIds.length > 0) {
-				const { data: userTags, error: userTagsError } = await supabase
-					.from('user_tags')
-					.select('name')
-					.in('id', userTagIds)
-				if (userTagsError) {
-					throw new Error(`Failed to fetch user tags: ${userTagsError.message}`)
-				}
-				tags.push(...userTags.map((tag: any) => tag.name))
-			}
-
-			return {
-				...submission,
-				tags,
-			}
-		})
-	)
-
-	return submissionsWithTags
+	return submissions.map(submission => ({
+		id: submission.id,
+		user_id: submission.user_id,
+		submission_url: submission.submission_url,
+		zip_file_url: submission.zip_file_url,
+		comment: submission.comment,
+		photos: submission.photos,
+		submitted_at: submission.submitted_at,
+		title: submission.title,
+		description: submission.description,
+		difficulty: submission.difficulty,
+		company_name: submission.company_name,
+		deadline: submission.deadline,
+		employer_id: submission.employer_id,
+		tags: submission.tags,
+	}))
 }
 
 // Одобрение задачи (перенос из task_submissions в tasks)
 export const approveTaskSubmission = async (submissionId: number): Promise<void> => {
-	try {
-		// 1. Получаем данные из task_submissions
-		const { data: submission, error: fetchError } = await supabase
-			.from('task_submissions')
-			.select('*')
-			.eq('id', submissionId)
-			.single()
+	const { data: submission, error: fetchError } = await supabase
+		.from('task_submissions')
+		.select('*')
+		.eq('id', submissionId)
+		.single()
 
-		if (fetchError) {
-			throw new Error(`Failed to fetch submission: ${fetchError.message}`)
+	if (fetchError) {
+		throw new Error(`Failed to fetch submission: ${fetchError.message}`)
+	}
+
+	if (!submission) {
+		throw new Error('Submission not found')
+	}
+
+	const newTask = {
+		tracking_number: 0,
+		title: submission.title,
+		description: submission.description,
+		difficulty: submission.difficulty,
+		company_name: submission.company_name,
+		deadline: submission.deadline,
+		employer_id: submission.employer_id,
+		created_at: new Date().toISOString(),
+	}
+
+	const { data: taskData, error: taskError } = await supabase
+		.from('tasks')
+		.insert(newTask)
+		.select()
+		.single()
+
+	if (taskError) {
+		throw new Error(`Failed to create task: ${taskError.message}`)
+	}
+
+	const taskId = taskData.id
+
+	if (submission.tags && submission.tags.length > 0) {
+		for (const tagName of submission.tags) {
+			// Проверяем, существует ли тег в tags
+			let { data: existingTag, error: tagError } = await supabase
+				.from('tags')
+				.select('id')
+				.eq('name', tagName)
+				.single()
+
+			if (tagError && tagError.code !== 'PGRST116') {
+				throw new Error(`Failed to fetch tag: ${tagError.message}`)
+			}
+
+			let tagId: number
+			if (!existingTag) {
+				// Создаем новый тег в tags
+				const { data: newTag, error: createTagError } = await supabase
+					.from('tags')
+					.insert({ name: tagName })
+					.select()
+					.single()
+
+				if (createTagError) {
+					throw new Error(`Failed to create tag: ${createTagError.message}`)
+				}
+				tagId = newTag.id
+			} else {
+				tagId = existingTag.id
+			}
+
+			// Связываем тег с задачей в task_tags, используем tag_type вместо type
+			const { error: taskTagError } = await supabase
+				.from('task_tags')
+				.insert({ task_id: taskId, tag_id: tagId, tag_type: 'common' }) // Заменили type на tag_type
+
+			if (taskTagError) {
+				throw new Error(`Failed to link tag to task: ${taskTagError.message}`)
+			}
 		}
+	}
 
-		if (!submission) {
-			throw new Error('Submission not found')
-		}
+	const { error: deleteError } = await supabase
+		.from('task_submissions')
+		.delete()
+		.eq('id', submissionId)
 
-		// 2. Получаем теги из task_tags, связанные с submission
-		const { data: submissionTags, error: tagsError } = await supabase
-			.from('task_tags')
-			.select('tag_id, tag_type')
-			.eq('task_id', submissionId)
-
-		if (tagsError) {
-			throw new Error(`Failed to fetch submission tags: ${tagsError.message}`)
-		}
-
-		// 3. Добавляем задачу в таблицу tasks
-		const { data: newTask, error: insertError } = await supabase
-			.from('tasks')
-			.insert({
-				tracking_number: submission.tracking_number || 0,
-				title: submission.title,
-				description: submission.description,
-				difficulty: submission.difficulty,
-				company_name: submission.company_name,
-				deadline: submission.deadline,
-				employer_id: submission.employer_id,
-			})
-			.select('id')
-			.single()
-
-		if (insertError) {
-			throw new Error(`Failed to create task: ${insertError.message}`)
-		}
-
-		const newTaskId = newTask.id
-
-		// 4. Переносим теги в task_tags с новым task_id
-		const taskTags = submissionTags.map(tag => ({
-			task_id: newTaskId,
-			tag_id: tag.tag_id,
-			tag_type: tag.tag_type,
-		}))
-
-		const { error: taskTagsError } = await supabase.from('task_tags').insert(taskTags)
-		if (taskTagsError) {
-			throw new Error(`Failed to transfer tags: ${taskTagsError.message}`)
-		}
-
-		// 5. Удаляем задачу из task_submissions
-		const { error: deleteError } = await supabase
-			.from('task_submissions')
-			.delete()
-			.eq('id', submissionId)
-
-		if (deleteError) {
-			throw new Error(`Failed to delete submission: ${deleteError.message}`)
-		}
-	} catch (error: any) {
-		throw new Error(`Failed to approve task submission: ${error.message}`)
+	if (deleteError) {
+		throw new Error(`Failed to delete submission: ${deleteError.message}`)
 	}
 }
 
-// Отклонение задачи (удаление из task_submissions)
 export const rejectTaskSubmission = async (submissionId: number): Promise<void> => {
 	const { error } = await supabase.from('task_submissions').delete().eq('id', submissionId)
 
 	if (error) {
-		throw new Error(`Failed to reject task submission: ${error.message}`)
+		throw new Error(`Failed to delete submission: ${error.message}`)
 	}
 }

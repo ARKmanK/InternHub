@@ -8,8 +8,16 @@ import {
 	approveTaskSubmission,
 	rejectTaskSubmission,
 } from '@/src/lib/API/supabaseAPI'
+import { Undo2, LogOut } from 'lucide-react' // Добавили LogOut
+import { NavigateFunction } from 'react-router-dom'
 
-const AdminProfile: FC = () => {
+interface AdminProfileProps {
+	navigate: NavigateFunction
+	goBack: (navigate: NavigateFunction) => void
+	handleLogout: () => void // Добавили пропс для выхода
+}
+
+const AdminProfile: FC<AdminProfileProps> = ({ navigate, goBack, handleLogout }) => {
 	const { notifications, addNotification } = useNotification()
 	const [pendingTasks, setPendingTasks] = useState<TypeTaskSubmission[]>([])
 	const [isLoading, setIsLoading] = useState<boolean>(true)
@@ -62,6 +70,22 @@ const AdminProfile: FC = () => {
 		<div className='md:flex md:justify-center md:py-[20px] md:px-[10px]'>
 			<div className='md:min-h-[730px] md:w-[980px]'>
 				<div className='md:flex md:flex-col'>
+					<div className='md:py-4 md:flex md:justify-end items-center'>
+						<button
+							className='md:p-1 hover:bg-gray-300'
+							onClick={() => goBack(navigate)}
+							aria-label='Вернуться назад'
+						>
+							<Undo2 size={30} />
+						</button>
+						<button
+							className='md:flex gap-x-2 border rounded-xl py-1 px-2 ml-4 bg-blue-400 hover:bg-gray-400'
+							onClick={handleLogout}
+							aria-label='Выйти из аккаунта'
+						>
+							<LogOut /> <span>Выйти</span>
+						</button>
+					</div>
 					<h1 className='text-2xl font-bold mb-14'>Панель администратора</h1>
 					<div className='md:mb-10'>
 						<h2 className='text-xl font-semibold'>Ожидающие верификации задачи</h2>

@@ -33,13 +33,16 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 				// Получаем общие теги
 				const commonTags = await getAllTags()
 
+				// Извлекаем имена тегов
+				const commonTagNames = commonTags.map(tag => tag.name)
+
 				// Получаем userId для загрузки кастомных тегов
 				const {
 					data: { session },
 				} = await supabase.auth.getSession()
 				if (!session?.user) {
 					addNotification('warning', 'Внимание', 'Авторизуйтесь, чтобы увидеть кастомные теги')
-					setAllTags([...new Set(commonTags)])
+					setAllTags([...new Set(commonTagNames)])
 					return
 				}
 
@@ -51,7 +54,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 
 				if (userError || !userData) {
 					addNotification('error', 'Ошибка', 'Не удалось загрузить данные пользователя')
-					setAllTags([...new Set(commonTags)])
+					setAllTags([...new Set(commonTagNames)])
 					return
 				}
 
@@ -61,7 +64,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 				const userTags = await getUserTags(userId)
 
 				// Объединяем теги и удаляем дубликаты
-				const uniqueTags = [...new Set([...commonTags, ...userTags])]
+				const uniqueTags = [...new Set([...commonTagNames, ...userTags])]
 				setAllTags(uniqueTags)
 			} catch (error: any) {
 				addNotification('error', 'Ошибка', `Не удалось загрузить теги: ${error.message}`)

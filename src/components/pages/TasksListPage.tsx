@@ -19,7 +19,7 @@ import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import { Button } from '@components/UI/Button/Button'
 import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
-import { setPage, goBack } from '@/src/data/userData'
+import { setPage } from '@/src/data/userData'
 
 type TypeTask = {
 	id: number
@@ -41,7 +41,7 @@ type TypeFilter = {
 
 const TasksListPage = () => {
 	const [listType, setListType] = useState('list')
-	const [role, setRole] = useState<'user' | 'employer' | null>(null)
+	const [role, setRole] = useState<'user' | 'employer' | 'admin' | null>(null)
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [tasks, setTasks] = useState<TypeTask[]>([])
 	const [employerTaskIds, setEmployerTaskIds] = useState<number[]>([])
@@ -155,7 +155,7 @@ const TasksListPage = () => {
 				const storedRole = getRole()
 
 				let finalUserId = storedUserId
-				let finalRole = storedRole
+				let finalRole: 'user' | 'employer' | 'admin' | null = storedRole
 
 				if (!storedUserId || !storedRole) {
 					const user = await getUserByEmail(session.user.email!)
@@ -171,7 +171,7 @@ const TasksListPage = () => {
 				}
 
 				setUserId(finalUserId)
-				setRole(finalRole)
+				setRole(finalRole as 'user' | 'employer' | 'admin' | null) // Приведение типа
 
 				// Загружаем уникальные компании
 				const uniqueCompanies = await getUniqueCompanies()
@@ -181,8 +181,12 @@ const TasksListPage = () => {
 					await loadFavoriteTasks(finalUserId)
 				}
 
+				// Для 'employer' загружаем его задачи, для 'admin' можно добавить доступ ко всем задачам
 				if (finalRole === 'employer' && finalUserId) {
 					await loadEmployerTasks(finalUserId)
+				} else if (finalRole === 'admin' && finalUserId) {
+					// Для админа можно не загружать employerTaskIds, так как он видит все задачи
+					setEmployerTaskIds([]) // Или оставьте пустым, если не нужно
 				}
 
 				const tasksData = await getAllTasks()
@@ -216,6 +220,10 @@ const TasksListPage = () => {
 		return () => {
 			subscription.unsubscribe()
 		}
+	}, [])
+
+	useEffect(() => {
+		console.log('first')
 	}, [])
 
 	const visibleTasks = useMemo(() => {
@@ -311,7 +319,7 @@ const TasksListPage = () => {
 			<Header />
 			<NavBar />
 			<div className='md:flex md:justify-center md:py-[20px] md:px-[10px] relative'>
-				<div className='md:min-h-[1200px] md:w-[980px]'>
+				<div className='md:min-h-[1200px] md:w-[980px] '>
 					<div className='md:flex md:flex-col'>
 						<div className='md:py-4 md:flex md:justify-end items-center'>
 							{role === 'employer' && (
