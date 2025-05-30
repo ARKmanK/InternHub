@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from 'react'
+import { FC, useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
 	getTaskById,
@@ -17,6 +17,8 @@ import Header from '@components/Header'
 import NavBar from '@components/NavBar'
 import AddAnswerForm from '@components/AddAnswerForm'
 import { supabase } from '@/supabaseClient'
+import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
+import AnswerVerifyWindow from '@components/AnswerVerifyWindow' // Импортируем новый компонент
 
 type TypeTasksData = {
 	id: number
@@ -27,18 +29,7 @@ type TypeTasksData = {
 	company_name: string
 	deadline: string
 	tags: string[]
-}
-
-type TypeTaskActivity = {
-	id: number
-	task_id: number
-	user_id: number
-	status: 'verifying' | 'done'
-	username: string
-	activity_date: string
-	created_at: string
-	url: string | null
-	comment: string | null
+	employer_id: number
 }
 
 const TaskPage: FC = () => {
@@ -52,6 +43,9 @@ const TaskPage: FC = () => {
 	const [role, setRole] = useState(getRole())
 	const [userId, setUserId] = useState<number | null>(getUserId())
 	const [isLoading, setIsLoading] = useState<boolean>(true)
+	const [selectedActivity, setSelectedActivity] = useState<TypeTaskActivity | null>(null)
+	const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
+	const modalRefs = useRef<Map<number, HTMLDivElement>>(new Map())
 
 	const loadData = async () => {
 		setIsLoading(true)
@@ -84,20 +78,14 @@ const TaskPage: FC = () => {
 				company_name: foundTask.company_name,
 				deadline: foundTask.deadline,
 				tags: foundTask.tags ?? [],
+				employer_id: foundTask.employer_id,
 			} as TypeTasksData)
 
 			const favorites = await getUserFavorites(userId)
 			setFavoriteTasks(favorites)
 
 			const taskActivity = await getTaskActivity(taskIdNum)
-			const normalizedActivity = taskActivity.map(activity => ({
-				...activity,
-				status:
-					activity.status === 'verifying' || activity.status === 'done'
-						? activity.status
-						: 'verifying',
-			}))
-			setActivityData(normalizedActivity)
+			setActivityData(taskActivity)
 		} catch (error: any) {
 			addNotification(
 				'error',
@@ -210,6 +198,67 @@ const TaskPage: FC = () => {
 		setShowAddAnswerForm(true)
 	}
 
+	const handleOpenModal = (activity: TypeTaskActivity) => {
+		setSelectedActivity(activity)
+		setIsModalOpen(true)
+	}
+
+	const handleCloseModal = () => {
+		setSelectedActivity(null)
+		setIsModalOpen(false)
+	}
+
+	const handleApprove = async (activityId: number) => {
+		try {
+			// Найдём текущую активность
+			const currentActivity = activityData?.find(activity => activity.id === activityId)
+			if (currentActivity?.status === 'done') {
+				addNotification('info', 'Информация', 'Решение уже одобрено')
+				return
+			}
+
+			const { error } = await supabase
+				.from('task_activity')
+				.update({ status: 'done' })
+				.eq('id', activityId)
+			if (error) throw error
+
+			setActivityData(prev =>
+				prev
+					? prev.map(activity =>
+							activity.id === activityId ? { ...activity, status: 'done' as const } : activity
+					  )
+					: null
+			)
+			addNotification('success', 'Успешно', 'Решение одобрено')
+			handleCloseModal()
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось одобрить решение: ${error.message}`)
+		}
+	}
+
+	const handleReject = async (activityId: number) => {
+		try {
+			const { error } = await supabase
+				.from('task_activity')
+				.update({ status: 'rejected' })
+				.eq('id', activityId)
+			if (error) throw error
+
+			setActivityData(prev =>
+				prev
+					? prev.map(activity =>
+							activity.id === activityId ? { ...activity, status: 'rejected' as const } : activity
+					  )
+					: null
+			)
+			addNotification('warning', 'Внимание', 'Решение отклонено')
+			handleCloseModal()
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось отклонить решение: ${error.message}`)
+		}
+	}
+
 	const renderDifficultyStars = (difficulty: number) => {
 		const starsCount = difficulty >= 1 && difficulty <= 3 ? difficulty : 1
 		const starColorClass =
@@ -231,6 +280,8 @@ const TaskPage: FC = () => {
 	if (!task || isLoading) {
 		return <div>{isLoading ? 'Загрузка...' : 'Задача не найдена'}</div>
 	}
+
+	const isEmployerTaskOwner = role === 'employer' && task.employer_id === userId
 
 	return (
 		<>
@@ -317,20 +368,26 @@ const TaskPage: FC = () => {
 
 						{!showAddAnswerForm && (
 							<div className='md:min-w-[300px] md:min-h-[250px] md:rounded-xl md:mb-10 border-1 border-gray-[#dce3eb] bg-[#96bddd]'>
-								<div className='md:flex bg-[#69a9dd] md:items-center md:w-full md:rounded-t-xl md:border-b-1 md:justify-between'>
-									<div className='md:flex md:gap-4'>
+								<div
+									className={`md:flex bg-[#69a9dd] md:items-center md:w-full md:rounded-t-xl md:border-b-1 md:justify-between`}
+								>
+									<div className='md:flex md:gap-4 w-2/3'>
 										<div className='md:border-r md:py-2.5 min-w-[150px] md:flex md:justify-center'>
 											<span>Статус</span>
 										</div>
 										<div className='md:border-r md:py-2.5 min-w-[180px] md:flex md:justify-center'>
-											<span>Имя пользователя</span>
+											<span>Пользователь</span>
 										</div>
 									</div>
-									<div className='border-l min-w-[100px] md:flex md:justify-center md:py-2.5'>
-										<div className='flex justify-between w-full px-4'>
+									<div className='md:flex md:gap-4 w-1/3 md:justify-end'>
+										<div className='md:border-r md:py-2.5 min-w-[150px] md:flex md:justify-center'>
 											<span>Дата</span>
-											<span className='ml-4'>Ссылка</span>
 										</div>
+										{isEmployerTaskOwner && (
+											<div className='md:py-2.5 min-w-[120px] md:flex md:justify-center'>
+												<span>Ответ</span>
+											</div>
+										)}
 									</div>
 								</div>
 								<div>
@@ -338,39 +395,57 @@ const TaskPage: FC = () => {
 										activityData.map((activity, index) => (
 											<div
 												key={index}
-												className='md:mb-2 md:border-b-1 last:border-b-0 last:mb-0 md:w-full md:flex items-center justify-between'
+												className='relative md:mb-2 md:border-b-1 last:border-b-0 last:mb-0 md:w-full md:flex items-center justify-between'
+												ref={el => {
+													if (el) modalRefs.current.set(activity.id, el)
+												}}
 											>
 												<div className='flex items-center md:min-w-[150px] md:justify-center'>
 													<div className='mr-4'>
 														{activity.status === 'done' ? (
 															<CircleCheckBig size={20} />
+														) : activity.status === 'rejected' ? (
+															<span className='text-red-500'>✗</span>
 														) : (
 															<Hourglass size={20} />
 														)}
 													</div>
 													<span className='text-sm'>
-														{activity.status === 'verifying' ? 'Верифицируется' : 'Готово'}
+														{activity.status === 'verifying'
+															? 'Верифицируется'
+															: activity.status === 'done'
+															? 'Готово'
+															: 'Отклонено'}
 													</span>
 												</div>
 												<div className='md:flex-1 md:min-w-[180px] md:text-center text-sm truncate'>
 													{activity.username || 'Неизвестно'}
 												</div>
-												<div className='md:min-w-[100px] md:flex md:flex-1 justify-between md:px-4 text-sm'>
+												<div className='md:min-w-[150px] md:flex md:justify-center text-sm'>
 													<span>
 														{activity.activity_date ||
 															new Date(activity.created_at).toLocaleDateString()}
 													</span>
-													{activity.url && (
-														<a
-															href={activity.url}
-															target='_blank'
-															rel='noopener noreferrer'
-															className='text-blue-600 hover:underline truncate max-w-[150px]'
-														>
-															{activity.url}
-														</a>
-													)}
 												</div>
+												{isEmployerTaskOwner && (
+													<div className='md:min-w-[120px] md:flex md:justify-center'>
+														<button
+															className='text-blue-600 hover:underline text-sm'
+															onClick={() => handleOpenModal(activity)}
+														>
+															Просмотреть
+														</button>
+													</div>
+												)}
+												{isEmployerTaskOwner && (
+													<AnswerVerifyWindow
+														activity={selectedActivity || activity}
+														isOpen={isModalOpen && selectedActivity?.id === activity.id}
+														onClose={handleCloseModal}
+														onApprove={handleApprove}
+														onReject={handleReject}
+													/>
+												)}
 											</div>
 										))
 									) : (

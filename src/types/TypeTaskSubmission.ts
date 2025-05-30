@@ -1,9 +1,13 @@
 export type TypeTaskSubmission = {
 	id: number
-	task_id: number
-	user_id: number
-	submission_url: string
-	zip_file_url?: string
-	comment?: string
-	photos?: string[]
+	tracking_number: number
+	title: string
+	description: string
+	difficulty: number
+	company_name: string
+	deadline: string
+	tags?: string[]
+	employer_id: number
+	status: 'pending' | 'approved' | 'rejected'
+	submitted_at: string
 }

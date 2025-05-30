@@ -50,6 +50,8 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 				activity_date: new Date().toISOString().split('T')[0],
 				url: url,
 				comment: comment || null,
+				archive_url: null,
+				photo_urls: [],
 			}
 
 			console.log('Activity Data:', activityData)

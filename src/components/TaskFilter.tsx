@@ -1,6 +1,8 @@
-import { FC, useState } from 'react'
+import { FC, useState, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { availableTags } from '../data/tags'
+import { supabase } from '@/supabaseClient'
+import { getAllTags, getUserTags } from '../lib/API/supabaseAPI'
+import useNotification from '@hooks/useNotification'
 
 type TypeFilter = {
 	companies: string | null
@@ -12,7 +14,7 @@ type TypeFilter = {
 interface TaskFilterProps {
 	filter: TypeFilter
 	setFilter: React.Dispatch<React.SetStateAction<TypeFilter>>
-	companies: string[] // Новый пропс для динамических компаний
+	companies: string[] // Динамический список компаний
 }
 
 const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
@@ -22,6 +24,53 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 		tracking: false,
 		tags: false,
 	})
+	const [allTags, setAllTags] = useState<string[]>([]) // Состояние для объединенного списка тегов
+	const { addNotification } = useNotification()
+
+	useEffect(() => {
+		const fetchTags = async () => {
+			try {
+				// Получаем общие теги
+				const commonTags = await getAllTags()
+
+				// Получаем userId для загрузки кастомных тегов
+				const {
+					data: { session },
+				} = await supabase.auth.getSession()
+				if (!session?.user) {
+					addNotification('warning', 'Внимание', 'Авторизуйтесь, чтобы увидеть кастомные теги')
+					setAllTags([...new Set(commonTags)])
+					return
+				}
+
+				const { data: userData, error: userError } = await supabase
+					.from('users')
+					.select('id')
+					.eq('email', session.user.email)
+					.single()
+
+				if (userError || !userData) {
+					addNotification('error', 'Ошибка', 'Не удалось загрузить данные пользователя')
+					setAllTags([...new Set(commonTags)])
+					return
+				}
+
+				const userId = userData.id
+
+				// Получаем кастомные теги пользователя
+				const userTags = await getUserTags(userId)
+
+				// Объединяем теги и удаляем дубликаты
+				const uniqueTags = [...new Set([...commonTags, ...userTags])]
+				setAllTags(uniqueTags)
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', `Не удалось загрузить теги: ${error.message}`)
+				setAllTags([])
+			}
+		}
+
+		fetchTags()
+	}, [addNotification])
 
 	const toggleSection = (section: keyof typeof openSection) => {
 		setOpenSection(prev => ({
@@ -200,7 +249,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 					}`}
 				>
 					<ul className='space-y-2'>
-						{availableTags.map(tag => (
+						{allTags.map(tag => (
 							<li key={tag} className='flex items-center space-x-2'>
 								<input
 									type='checkbox'
@@ -214,6 +263,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 					</ul>
 				</div>
 			</div>
+
 			<div className='p-4'>
 				<button
 					onClick={resetFilters}
