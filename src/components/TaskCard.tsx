@@ -4,8 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import { Heart, BadgeCheck, Star, Delete, BookCheck, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@components/UI/Button/Button'
-import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
 
 type TaskCardProps = {
 	id: number
@@ -16,6 +14,7 @@ type TaskCardProps = {
 	companyName: string
 	type: string
 	addToFavorite?: (id: number) => void
+	removeFromFavorite?: (id: number) => void
 	isFavorite?: boolean
 	deadline: string
 	tags: string[]
@@ -23,7 +22,8 @@ type TaskCardProps = {
 	isMine?: boolean
 	onDelete?: () => void
 	showControls?: boolean
-	onClick?: () => void // Добавляем новый пропс
+	onClick?: () => void
+	showFavoriteButton?: boolean
 }
 
 const TaskCard: FC<TaskCardProps> = ({
@@ -35,6 +35,7 @@ const TaskCard: FC<TaskCardProps> = ({
 	companyName,
 	type,
 	addToFavorite,
+	removeFromFavorite,
 	isFavorite = false,
 	deadline,
 	tags,
@@ -43,8 +44,8 @@ const TaskCard: FC<TaskCardProps> = ({
 	onDelete,
 	showControls = false,
 	onClick,
+	showFavoriteButton = true,
 }) => {
-	const { notifications, addNotification } = useNotification()
 	const navigate = useNavigate()
 
 	const handleClick = (id: string) => {
@@ -57,9 +58,18 @@ const TaskCard: FC<TaskCardProps> = ({
 
 	const handleNavigate = (e: MouseEvent<HTMLButtonElement>) => {
 		if (onClick) {
-			onClick() // Вызываем onClick из пропсов, если он передан
+			onClick()
 		} else {
-			handleClick(id.toString()) // Запасной вариант
+			handleClick(id.toString())
+		}
+	}
+
+	// Обработчик для переключения состояния избранного
+	const handleFavoriteClick = () => {
+		if (isFavorite && removeFromFavorite) {
+			removeFromFavorite(id) // Удаляем из избранного
+		} else if (!isFavorite && addToFavorite) {
+			addToFavorite(id) // Добавляем в избранное
 		}
 	}
 
@@ -98,10 +108,10 @@ const TaskCard: FC<TaskCardProps> = ({
 					<div className='py-2 px-3 flex flex-col justify-between'>
 						<div className='flex justify-between text-gray-500 text-sm'>
 							<p>Сейчас отслеживают {trackingNumber}</p>
-							{role === 'user' && (
+							{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
 								<button
 									className='p-1 rounded transition-colors'
-									onClick={() => addToFavorite && addToFavorite(id)}
+									onClick={handleFavoriteClick} // Используем handleFavoriteClick
 								>
 									<Heart
 										fill={isFavorite ? 'red' : 'gray'}
@@ -176,10 +186,10 @@ const TaskCard: FC<TaskCardProps> = ({
 						<div>
 							<div className='flex justify-between text-gray-500 text-sm'>
 								<p>Сейчас отслеживают {trackingNumber}</p>
-								{role === 'user' && (
+								{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
 									<button
 										className='p-1 rounded transition-colors'
-										onClick={() => addToFavorite && addToFavorite(id)}
+										onClick={handleFavoriteClick} // Используем handleFavoriteClick
 									>
 										<Heart
 											fill={isFavorite ? 'red' : 'gray'}
@@ -232,7 +242,6 @@ const TaskCard: FC<TaskCardProps> = ({
 					</div>
 				</div>
 			)}
-			<Notification notifications={notifications} />
 		</>
 	)
 }

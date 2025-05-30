@@ -4,7 +4,7 @@ import { TypeTask } from '@/src/types/TypeTask'
 import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
 import { TypeTaskSubmission } from '@/src/types/TypeTaskSubmission'
 import { TypeTag } from '@/src/types/TypeTag'
-import { TypeTasksData } from '@/src/data/tasksData'
+/* import { TypeTasksData } from '@/src/data/tasksData' */
 
 // Функции для работы с таблицей users
 export type TypeUserData = {
@@ -710,4 +710,35 @@ export const rejectTaskSubmission = async (submissionId: number): Promise<void> 
 	if (error) {
 		throw new Error(`Failed to delete submission: ${error.message}`)
 	}
+}
+
+export const addMessage = async (userId: string, text: string) => {
+	const { data, error } = await supabase.from('messages').insert({ user_id: userId, text }).select()
+
+	if (error) throw error
+	return data
+}
+
+// Получение сообщений по user_id
+export const getMessagesByUserId = async (userId: string) => {
+	const { data, error } = await supabase
+		.from('messages')
+		.select('*')
+		.eq('user_id', userId)
+		.order('timestamp', { ascending: false })
+
+	if (error) throw error
+	return data
+}
+
+// Пометка сообщения как прочитанного
+export const markMessageAsRead = async (messageId: number) => {
+	const { data, error } = await supabase
+		.from('messages')
+		.update({ is_read: true })
+		.eq('id', messageId)
+		.select()
+
+	if (error) throw error
+	return data
 }

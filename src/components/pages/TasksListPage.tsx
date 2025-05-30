@@ -9,7 +9,7 @@ import {
 	getUserFavorites,
 	addTaskToFavorites,
 	removeTaskFromFavorite,
-	getUniqueCompanies, // Добавляем новую функцию
+	getUniqueCompanies,
 } from '@/src/lib/API/supabaseAPI'
 import { supabase } from '@/supabaseClient'
 import { List, BookCopy, CircleUserRound } from 'lucide-react'
@@ -54,7 +54,7 @@ const TasksListPage = () => {
 	})
 	const [userId, setUserId] = useState<number | null>(null)
 	const [loading, setLoading] = useState(true)
-	const [companies, setCompanies] = useState<string[]>([]) // Новое состояние для компаний
+	const [companies, setCompanies] = useState<string[]>([])
 	const navigate = useNavigate()
 
 	const addToFavorite = async (id: number) => {
@@ -62,54 +62,64 @@ const TasksListPage = () => {
 			addNotification('warning', '', 'Пользователь не авторизован')
 			return
 		}
+		if (favoriteTasks.includes(id)) {
+			return // Не добавляем, если уже в избранном
+		}
 		try {
-			if (favoriteTasks.includes(id)) {
-				await removeTaskFromFavorite(userId, id)
-				const { data: taskData, error: fetchError } = await supabase
-					.from('tasks')
-					.select('tracking_number')
-					.eq('id', id)
-					.single()
-				if (fetchError) throw fetchError
-				if (!taskData) throw new Error('Task not found')
-				const newTrackingNumber = Math.max(taskData.tracking_number - 1, 0)
-				const { error: updateError } = await supabase
-					.from('tasks')
-					.update({ tracking_number: newTrackingNumber })
-					.eq('id', id)
-				if (updateError) throw updateError
-				setFavoriteTasks(favoriteTasks.filter(task => task !== id))
-				setTasks(prev =>
-					prev.map(task =>
-						task.id === id ? { ...task, tracking_number: newTrackingNumber } : task
-					)
-				)
-				addNotification('warning', '', 'Задача убрана из избранного')
-			} else {
-				await addTaskToFavorites(userId, id)
-				const { data: taskData, error: fetchError } = await supabase
-					.from('tasks')
-					.select('tracking_number')
-					.eq('id', id)
-					.single()
-				if (fetchError) throw fetchError
-				if (!taskData) throw new Error('Task not found')
-				const newTrackingNumber = taskData.tracking_number + 1
-				const { error: updateError } = await supabase
-					.from('tasks')
-					.update({ tracking_number: newTrackingNumber })
-					.eq('id', id)
-				if (updateError) throw updateError
-				setFavoriteTasks([...favoriteTasks, id])
-				setTasks(prev =>
-					prev.map(task =>
-						task.id === id ? { ...task, tracking_number: newTrackingNumber } : task
-					)
-				)
-				addNotification('success', 'Успешно', 'Задача добавлена в избранное')
-			}
+			await addTaskToFavorites(userId, id)
+			const { data: taskData, error: fetchError } = await supabase
+				.from('tasks')
+				.select('tracking_number')
+				.eq('id', id)
+				.single()
+			if (fetchError) throw fetchError
+			if (!taskData) throw new Error('Task not found')
+			const newTrackingNumber = taskData.tracking_number + 1
+			const { error: updateError } = await supabase
+				.from('tasks')
+				.update({ tracking_number: newTrackingNumber })
+				.eq('id', id)
+			if (updateError) throw updateError
+			setFavoriteTasks([...favoriteTasks, id])
+			setTasks(prev =>
+				prev.map(task => (task.id === id ? { ...task, tracking_number: newTrackingNumber } : task))
+			)
+			addNotification('success', 'Успешно', 'Задача добавлена в избранное')
 		} catch (error: any) {
-			addNotification('error', 'Ошибка', `Не удалось обновить избранное: ${error.message}`)
+			addNotification('error', 'Ошибка', `Не удалось добавить задачу в избранное: ${error.message}`)
+		}
+	}
+
+	const removeFromFavorite = async (id: number) => {
+		if (!role || !userId) {
+			addNotification('warning', '', 'Пользователь не авторизован')
+			return
+		}
+		if (!favoriteTasks.includes(id)) {
+			return // Не удаляем, если не в избранном
+		}
+		try {
+			await removeTaskFromFavorite(userId, id)
+			const { data: taskData, error: fetchError } = await supabase
+				.from('tasks')
+				.select('tracking_number')
+				.eq('id', id)
+				.single()
+			if (fetchError) throw fetchError
+			if (!taskData) throw new Error('Task not found')
+			const newTrackingNumber = Math.max(taskData.tracking_number - 1, 0)
+			const { error: updateError } = await supabase
+				.from('tasks')
+				.update({ tracking_number: newTrackingNumber })
+				.eq('id', id)
+			if (updateError) throw updateError
+			setFavoriteTasks(favoriteTasks.filter(task => task !== id))
+			setTasks(prev =>
+				prev.map(task => (task.id === id ? { ...task, tracking_number: newTrackingNumber } : task))
+			)
+			addNotification('warning', '', 'Задача убрана из избранного')
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось убрать задачу из избранного: ${error.message}`)
 		}
 	}
 
@@ -171,9 +181,8 @@ const TasksListPage = () => {
 				}
 
 				setUserId(finalUserId)
-				setRole(finalRole as 'user' | 'employer' | 'admin' | null) // Приведение типа
+				setRole(finalRole as 'user' | 'employer' | 'admin' | null)
 
-				// Загружаем уникальные компании
 				const uniqueCompanies = await getUniqueCompanies()
 				setCompanies(uniqueCompanies)
 
@@ -181,12 +190,10 @@ const TasksListPage = () => {
 					await loadFavoriteTasks(finalUserId)
 				}
 
-				// Для 'employer' загружаем его задачи, для 'admin' можно добавить доступ ко всем задачам
 				if (finalRole === 'employer' && finalUserId) {
 					await loadEmployerTasks(finalUserId)
 				} else if (finalRole === 'admin' && finalUserId) {
-					// Для админа можно не загружать employerTaskIds, так как он видит все задачи
-					setEmployerTaskIds([]) // Или оставьте пустым, если не нужно
+					setEmployerTaskIds([])
 				}
 
 				const tasksData = await getAllTasks()
@@ -220,10 +227,6 @@ const TasksListPage = () => {
 		return () => {
 			subscription.unsubscribe()
 		}
-	}, [])
-
-	useEffect(() => {
-		console.log('first')
 	}, [])
 
 	const visibleTasks = useMemo(() => {
@@ -289,7 +292,8 @@ const TasksListPage = () => {
 						difficulty={task.difficulty}
 						companyName={task.company_name}
 						type={listType}
-						addToFavorite={addToFavorite}
+						addToFavorite={addToFavorite} // Передаём addToFavorite
+						removeFromFavorite={removeFromFavorite} // Передаём removeFromFavorite
 						isFavorite={favoriteTasks.includes(task.id)}
 						deadline={task.deadline}
 						tags={task.tags}
@@ -319,7 +323,7 @@ const TasksListPage = () => {
 			<Header />
 			<NavBar />
 			<div className='md:flex md:justify-center md:py-[20px] md:px-[10px] relative'>
-				<div className='md:min-h-[1200px] md:w-[980px] '>
+				<div className='md:min-h-[1200px] md:w-[980px]'>
 					<div className='md:flex md:flex-col'>
 						<div className='md:py-4 md:flex md:justify-end items-center'>
 							{role === 'employer' && (

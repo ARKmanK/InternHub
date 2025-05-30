@@ -1,3 +1,4 @@
+// components/userComponents/UserProfile.tsx
 import { List, BookCopy, Undo2, LogOut } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import TaskCard from '@components/TaskCard'
@@ -27,6 +28,7 @@ type UserProfileProps = {
 	activeCategory: string
 	handleCategoryChange: (type: 'favorite' | 'started' | 'finished') => void
 	addToFavorite: (id: number) => void
+	removeFromFavorite: (id: number) => void // Добавляем новый пропс
 	navigate: NavigateFunction
 	handleLogout: () => void
 	goBack: (navigate: NavigateFunction) => void
@@ -41,6 +43,7 @@ const UserProfile = ({
 	activeCategory,
 	handleCategoryChange,
 	addToFavorite,
+	removeFromFavorite, // Добавляем в параметры
 	navigate,
 	handleLogout,
 	goBack,
@@ -62,7 +65,9 @@ const UserProfile = ({
 					companyName={task.company_name}
 					type={listType}
 					addToFavorite={addToFavorite}
+					removeFromFavorite={removeFromFavorite} // Передаём в TaskCard
 					isFavorite={favoriteTasks.includes(task.id)}
+					showFavoriteButton={category === 'favorite'}
 					deadline={task.deadline}
 					tags={task.tags ?? []}
 					role='user'
