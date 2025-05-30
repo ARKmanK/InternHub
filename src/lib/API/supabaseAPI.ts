@@ -742,3 +742,47 @@ export const markMessageAsRead = async (messageId: number) => {
 	if (error) throw error
 	return data
 }
+
+export const uploadFileAndCreateRecord = async (
+	taskActivityId: number,
+	file: File,
+	fileType: 'archive' | 'image'
+): Promise<string> => {
+	const fileExt = file.name.split('.').pop()
+	const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt || 'dat'}` // Добавляем защиту от отсутствия расширения
+	const filePath = `${fileType}s/${fileName}` // Используем подпапки (archives/ и images/)
+
+	// Загружаем файл в хранилище
+	const { data, error: uploadError } = await supabase.storage
+		.from('task-files')
+		.upload(filePath, file, {
+			cacheControl: '3600',
+			upsert: false,
+			contentType: file.type, // Указываем MIME-тип файла
+		})
+
+	if (uploadError) {
+		console.error('Upload error details:', uploadError)
+		throw new Error(`Failed to upload file: ${uploadError.message}`)
+	}
+
+	// Получаем публичный URL файла
+	const { data: urlData } = supabase.storage.from('task-files').getPublicUrl(filePath)
+	const fileUrl = urlData.publicUrl
+
+	// Создаем запись в таблице task_files
+	const { error: dbError } = await supabase.from('task_files').insert({
+		task_activity_id: taskActivityId,
+		file_name: fileName,
+		file_url: fileUrl,
+		file_type: fileType,
+		created_at: new Date().toISOString(),
+	})
+
+	if (dbError) {
+		console.error('Database error details:', dbError)
+		throw new Error(`Failed to create file record: ${dbError.message}`)
+	}
+
+	return fileUrl
+}

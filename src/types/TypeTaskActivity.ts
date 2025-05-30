@@ -8,6 +8,6 @@ export type TypeTaskActivity = {
 	created_at: string
 	url: string | null
 	archive_url: string | null
-	photo_urls: string[] | null
+	photo_urls: string[]
 	comment: string | null
 }

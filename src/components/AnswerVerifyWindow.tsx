@@ -38,7 +38,7 @@ const AnswerVerifyWindow: FC<ActivityModalProps> = ({
 
 	return (
 		<div className='absolute z-10 top-0 left-full ml-2'>
-			<div className='modal-content bg-white border border-gray-300 rounded-lg shadow-lg p-4 w-[300px] relative'>
+			<div className='modal-content bg-white border bottom-11.5 border-gray-300 rounded-lg shadow-lg p-4 w-[400px] relative'>
 				<button
 					className='absolute top-2 right-2 text-gray-500 hover:text-gray-700'
 					onClick={onClose}
@@ -46,7 +46,7 @@ const AnswerVerifyWindow: FC<ActivityModalProps> = ({
 					<X size={20} />
 				</button>
 				<div className='mb-4'>
-					<p className='font-semibold'>Решение:</p>
+					<p className='font-semibold mb-5'>Решение:</p>
 					<div className='flex items-center mt-2'>
 						<span className='mr-2'>GitHub URL:</span>
 						{activity.url ? (
@@ -59,13 +59,13 @@ const AnswerVerifyWindow: FC<ActivityModalProps> = ({
 								{activity.url}
 							</a>
 						) : (
-							<p className='text-gray-500'>Ссылка отсутствует</p>
+							<p className='text-gray-500 text-sm'>Ссылка отсутствует</p>
 						)}
 					</div>
 				</div>
 				{activity.archive_url && (
 					<div className='mb-4 flex items-center'>
-						<p className='text-sm mr-2'>Архивный файл (zip):</p>
+						<p className='mr-2'>Архивный файл (zip):</p>
 						<a
 							href={activity.archive_url}
 							download
@@ -78,15 +78,15 @@ const AnswerVerifyWindow: FC<ActivityModalProps> = ({
 				)}
 				{activity.photo_urls && activity.photo_urls.length > 0 && (
 					<div className='mb-4'>
-						<p className='text-sm font-semibold'>Фото:</p>
-						<div className='flex gap-2 mt-1'>
+						<p className=''>Фото:</p>
+						<div className='flex flex-col gap-1 mt-1'>
 							{activity.photo_urls.map((photoUrl, idx) => (
 								<a
 									key={idx}
 									href={photoUrl}
 									target='_blank'
 									rel='noopener noreferrer'
-									className='text-blue-600 hover:underline flex items-center'
+									className='text-blue-600 hover:underline flex items-center text-sm'
 								>
 									<Eye size={16} className='mr-1' />
 									Фото {idx + 1}
@@ -97,7 +97,7 @@ const AnswerVerifyWindow: FC<ActivityModalProps> = ({
 				)}
 				{activity.comment && (
 					<div className='mb-4'>
-						<p className='text-sm font-semibold'>Комментарий:</p>
+						<p className='font-semibold'>Комментарий:</p>
 						<p className='text-sm'>{activity.comment}</p>
 					</div>
 				)}

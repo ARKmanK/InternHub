@@ -2,7 +2,7 @@ import { CircleX, FileArchive, Link, SendHorizontal, FileImage, Check } from 'lu
 import { FC, MouseEventHandler, useState } from 'react'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
-import { addTaskActivity, getUserId } from '@/src/lib/API/supabaseAPI'
+import { getUserId, uploadFileAndCreateRecord } from '@/src/lib/API/supabaseAPI'
 import { addToStarted } from '@data/userData'
 import { useNavigate } from 'react-router-dom'
 import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
@@ -42,6 +42,7 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 			const lastNameInitial = localStorage.getItem('last_name')?.charAt(0) || ''
 			const username = `${firstName} ${lastNameInitial}.`
 
+			// Создаем новую запись активности
 			const activityData: Omit<TypeTaskActivity, 'id' | 'created_at'> = {
 				task_id: Number(taskId),
 				user_id: currentUserId,
@@ -54,17 +55,50 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 				photo_urls: [],
 			}
 
-			console.log('Activity Data:', activityData)
-			console.log('Status before sending:', activityData.status)
-
-			const { error: activityError } = await addTaskActivity(activityData)
+			const { data: activityDataResult, error: activityError } = await supabase
+				.from('task_activity')
+				.insert(activityData)
+				.select()
+				.single()
 			if (activityError) {
 				console.error('Error adding activity:', activityError)
 				addNotification('error', 'Ошибка', `Не удалось отправить решение: ${activityError.message}`)
 				return
 			}
 
-			// Проверяем текущее состояние записи в user_tasks
+			const taskActivityId = activityDataResult.id
+
+			// Загрузка архива, если есть
+			let archiveUrl: string | null = null
+			if (zip.length > 0) {
+				archiveUrl = await uploadFileAndCreateRecord(taskActivityId, zip[0], 'archive')
+			}
+
+			// Загрузка изображений, если есть
+			const photoUrls: string[] = []
+			if (images.length > 0) {
+				for (const image of images) {
+					const photoUrl = await uploadFileAndCreateRecord(taskActivityId, image, 'image')
+					photoUrls.push(photoUrl)
+				}
+			}
+
+			// Обновляем запись активности с URL-адресами файлов
+			const { error: updateError } = await supabase
+				.from('task_activity')
+				.update({
+					archive_url: archiveUrl,
+					photo_urls: photoUrls,
+				})
+				.eq('id', taskActivityId)
+
+			if (updateError) {
+				console.error('Error updating activity with file URLs:', updateError)
+				addNotification('error', 'Ошибка', `Не удалось обновить запись: ${updateError.message}`)
+				return
+			}
+
+			// Обновление user_tasks
 			const { data: existing, error: fetchError } = await supabase
 				.from('user_tasks')
 				.select('is_favorite')
@@ -78,11 +112,11 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 				{
 					user_id: currentUserId,
 					task_id: Number(taskId),
-					is_favorite: isFavorite, // Сохраняем текущее значение is_favorite
-					is_started: true, // Устанавливаем is_started в true
+					is_favorite: isFavorite,
+					is_started: true,
 				},
 				{
-					onConflict: 'user_id,task_id', // Обновляем при конфликте
+					onConflict: 'user_id,task_id',
 				}
 			)
 
