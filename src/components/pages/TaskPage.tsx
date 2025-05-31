@@ -21,7 +21,7 @@ import NavBar from '@components/NavBar'
 import AddAnswerForm from '@components/AddAnswerForm'
 import { supabase } from '@/supabaseClient'
 import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
-import AnswerVerifyWindow from '@components/AnswerVerifyWindow' // Импортируем новый компонент
+import AnswerVerifyWindow from '@components/AnswerVerifyWindow'
 import Message from '../Message'
 
 type TypeTasksData = {
@@ -226,9 +226,12 @@ const TaskPage: FC = () => {
 				.eq('id', activityId)
 			if (error) throw error
 
-			if (currentActivity) {
+			if (currentActivity && task) {
 				await addTaskToFinished(currentActivity.user_id, currentActivity.task_id)
-				await addMessage(currentActivity.user_id, 'Ваше решение было одобрено!')
+				await addMessage(
+					currentActivity.user_id,
+					`Ваше решение по задаче "${task.title}" было одобрено!`
+				)
 			}
 
 			setActivityData(prev =>
@@ -251,8 +254,11 @@ const TaskPage: FC = () => {
 			const { error } = await supabase.from('task_activity').delete().eq('id', activityId)
 			if (error) throw error
 
-			if (currentActivity) {
-				await addMessage(currentActivity.user_id, 'Ваше решение было отклонено.')
+			if (currentActivity && task) {
+				await addMessage(
+					currentActivity.user_id,
+					`Ваше решение по задаче "${task.title}" было отклонено.`
+				)
 			}
 
 			setActivityData(prev => (prev ? prev.filter(activity => activity.id !== activityId) : null))
@@ -296,14 +302,14 @@ const TaskPage: FC = () => {
 					<div className='md:flex md:flex-col'>
 						<div className='md:py-4 md:flex md:justify-end md:items-center md:gap-4'>
 							<button
-								className='md:p-1 hover:bg-gray-300'
+								className='md:p-1 hover:bg-gray-300 rounded-full transition-colors'
 								onClick={() => goBack(navigate)}
 								aria-label='Вернуться назад'
 							>
 								<Undo2 size={30} />
 							</button>
 							{role === 'user' && (
-								<button className='p-1 rounded transition-colors' onClick={handleFavorite}>
+								<button className='p-1 rounded-full transition-colors' onClick={handleFavorite}>
 									<Heart
 										fill={favoriteTasks.includes(task.id) ? 'red' : 'gray'}
 										color={favoriteTasks.includes(task.id) ? 'red' : 'red'}
@@ -316,20 +322,20 @@ const TaskPage: FC = () => {
 							)}
 						</div>
 
-						<div className='md:min-w-[300px] md:min-h-[250px] rounded-xl md:mb-11 border-2 border-gray-[#dce3eb] bg-[#96bddd]'>
-							<div className='md:py-2 md:px-3'>
-								<div className='md:flex md:justify-between text-gray-500 text-sm'>
+						<div className='md:min-w-[300px] md:min-h-[250px] rounded-xl md:mb-11 border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg'>
+							<div className='md:py-4 md:px-6'>
+								<div className='md:flex md:justify-between text-gray-600 text-sm font-medium'>
 									<p>Сейчас отслеживают {task.tracking_number}</p>
 								</div>
-								<h3 className='text-xl font-semibold md:pt-4'>{task.title}</h3>
-								<div className='w-[70%] md:pt-4'>{task.description}</div>
-								<div className='md:flex md:py-2 md:mt-4'>
-									<p>{`Срок до: ${task.deadline}`}</p>
+								<h3 className='text-2xl font-bold md:pt-4 text-gray-800'>{task.title}</h3>
+								<div className='w-[70%] md:pt-4 text-gray-700'>{task.description}</div>
+								<div className='md:flex md:py-3 md:mt-4'>
+									<p className='text-gray-600'>{`Срок до: ${task.deadline}`}</p>
 									<div className='md:ml-4 md:flex'>
 										{task.tags.map(tag => (
 											<div
 												key={tag}
-												className='bg-[#6092bb] md:mx-3 md:min-w-[40px] rounded-md md:text-center md:px-2 md:py-0.5'
+												className='bg-blue-400 text-white md:mx-3 md:min-w-[40px] rounded-full md:text-center md:px-3 md:py-1 text-sm'
 											>
 												{tag}
 											</div>
@@ -337,11 +343,11 @@ const TaskPage: FC = () => {
 									</div>
 								</div>
 								<div className='md:flex md:flex-col md:mb-4'>
-									<p className='md:mb-2'>Сложность</p>
+									<p className='md:mb-2 text-gray-600 font-medium'>Сложность</p>
 									{renderDifficultyStars(task.difficulty)}
 								</div>
 								<div className='md:flex md:justify-end'>
-									<div className='md:flex'>
+									<div className='md:flex items-center text-gray-700 font-medium'>
 										{task.company_name}
 										<BadgeCheck className='ml-2' fill='green' />
 									</div>
@@ -350,9 +356,9 @@ const TaskPage: FC = () => {
 						</div>
 
 						{role === 'user' && (
-							<div className='md:flex md:justify-end md:mb-2'>
+							<div className='md:flex md:justify-end md:mb-4'>
 								<button
-									className='md:py-1.5 md:px-2 md:rounded-lg bg-[#0c426f] text-white font-semibold'
+									className='md:py-2 md:px-4 md:rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-md'
 									onClick={handleClick}
 								>
 									Добавить решение
@@ -371,50 +377,56 @@ const TaskPage: FC = () => {
 						)}
 
 						{!showAddAnswerForm && (
-							<div className='md:min-w-[300px] md:min-h-[250px] md:rounded-xl md:mb-10 border-1 border-gray-[#dce3eb] bg-[#96bddd]'>
-								<div
-									className={`md:flex bg-[#69a9dd] md:items-center md:w-full md:rounded-t-xl md:border-b-1 md:justify-between`}
-								>
-									<div className='md:flex md:gap-4 w-2/3'>
-										<div className='md:border-r md:py-2.5 min-w-[150px] md:flex md:justify-center'>
-											<span>Статус</span>
+							<div className='md:min-w-[300px] md:min-h-[250px] md:rounded-xl md:mb-10 bg-white shadow-xl border border-gray-200'>
+								<div className='bg-gradient-to-r from-blue-500 to-blue-600 md:rounded-t-xl'>
+									<div
+										className={`grid ${
+											isEmployerTaskOwner ? 'grid-cols-4' : 'grid-cols-3'
+										} md:items-center md:w-full md:rounded-t-xl`}
+									>
+										<div className='border-r border-blue-400 md:py-3 md:flex md:justify-center'>
+											<span className='text-white font-semibold'>Статус</span>
 										</div>
-										<div className='md:border-r md:py-2.5 min-w-[180px] md:flex md:justify-center'>
-											<span>Пользователь</span>
+										<div className='border-r border-blue-400 md:py-3 md:flex md:justify-center'>
+											<span className='text-white font-semibold'>Пользователь</span>
 										</div>
-									</div>
-									<div className='md:flex md:gap-4 w-1/3 md:justify-end'>
-										<div className='md:border-r md:py-2.5 min-w-[150px] md:flex md:justify-center'>
-											<span>Дата</span>
+										<div
+											className={`${
+												isEmployerTaskOwner ? 'border-r' : ''
+											} border-blue-400 md:py-3 md:flex md:justify-center`}
+										>
+											<span className='text-white font-semibold'>Дата</span>
 										</div>
 										{isEmployerTaskOwner && (
-											<div className='md:py-2.5 min-w-[120px] md:flex md:justify-center'>
-												<span>Ответ</span>
+											<div className='md:py-3 md:flex md:justify-center'>
+												<span className='text-white font-semibold'>Действие</span>
 											</div>
 										)}
 									</div>
 								</div>
-								<div>
+								<div className='md:min-h-[150px]'>
 									{activityData && activityData.length > 0 ? (
 										activityData.map((activity, index) => (
 											<div
 												key={index}
-												className='relative md:mb-2 md:border-b-1 last:border-b-0 last:mb-0 md:w-full md:flex items-center justify-between'
+												className={`relative grid ${
+													isEmployerTaskOwner ? 'grid-cols-4' : 'grid-cols-3'
+												} md:mb-2 md:border-b border-gray-200 last:border-b-0 last:mb-0 md:w-full items-center md:py-4 md:px-6 hover:bg-gray-50 transition-colors`}
 												ref={el => {
 													if (el) modalRefs.current.set(activity.id, el)
 												}}
 											>
-												<div className='flex items-center md:min-w-[150px] md:justify-center'>
-													<div className='mr-4'>
+												<div className='flex items-center md:justify-center'>
+													<div className='mr-3'>
 														{activity.status === 'done' ? (
-															<CircleCheckBig size={20} />
+															<CircleCheckBig size={20} className='text-green-500' />
 														) : activity.status === 'rejected' ? (
 															<span className='text-red-500'>✗</span>
 														) : (
-															<Hourglass size={20} />
+															<Hourglass size={20} className='text-yellow-500' />
 														)}
 													</div>
-													<span className='text-sm'>
+													<span className='text-sm text-gray-700'>
 														{activity.status === 'verifying'
 															? 'Верифицируется'
 															: activity.status === 'done'
@@ -422,19 +434,19 @@ const TaskPage: FC = () => {
 															: 'Отклонено'}
 													</span>
 												</div>
-												<div className='md:flex-1 md:min-w-[180px] md:text-center text-sm truncate'>
+												<div className='md:text-center text-sm text-gray-700 truncate'>
 													{activity.username || 'Неизвестно'}
 												</div>
-												<div className='md:min-w-[150px] md:flex md:justify-center text-sm'>
+												<div className='md:text-center text-sm text-gray-700'>
 													<span>
 														{activity.activity_date ||
 															new Date(activity.created_at).toLocaleDateString()}
 													</span>
 												</div>
 												{isEmployerTaskOwner && (
-													<div className='md:min-w-[120px] md:flex md:justify-center'>
+													<div className='md:flex md:justify-center'>
 														<button
-															className='text-blue-600 hover:underline text-sm'
+															className='text-blue-600 hover:underline text-sm font-medium'
 															onClick={() => handleOpenModal(activity)}
 														>
 															Просмотреть
@@ -453,7 +465,11 @@ const TaskPage: FC = () => {
 											</div>
 										))
 									) : (
-										<div className='ml-20 text-sm md:flex-none'>Нет данных</div>
+										<div className='flex items-center justify-center h-[150px]'>
+											<span className='text-3xl text-gray-400 opacity-70 font-semibold'>
+												Нет данных
+											</span>
+										</div>
 									)}
 								</div>
 							</div>
@@ -466,5 +482,4 @@ const TaskPage: FC = () => {
 		</>
 	)
 }
-
 export default TaskPage
