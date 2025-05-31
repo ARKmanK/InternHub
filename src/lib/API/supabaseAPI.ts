@@ -867,3 +867,19 @@ export const deleteUserTag = async (userId: number, tagName: string): Promise<vo
 		throw new Error(`Не удалось удалить пользовательский тег: ${error.message}`)
 	}
 }
+
+export const getTaskSubmissionsCount = async (): Promise<number> => {
+	try {
+		const { count, error } = await supabase
+			.from('task_submissions')
+			.select('*', { count: 'exact', head: true }) // Используем count: 'exact' для получения количества записей
+
+		if (error) {
+			throw new Error(`Не удалось получить количество записей в task_submissions: ${error.message}`)
+		}
+
+		return count || 0
+	} catch (error: any) {
+		throw new Error(`Ошибка при загрузке количества записей: ${error.message}`)
+	}
+}

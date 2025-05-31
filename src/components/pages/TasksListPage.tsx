@@ -1,3 +1,4 @@
+import { FC, useState, useEffect, useMemo } from 'react'
 import Header from '@components/Header'
 import NavBar from '@components/NavBar'
 import TaskCard from '@components/TaskCard'
@@ -10,10 +11,10 @@ import {
 	addTaskToFavorites,
 	removeTaskFromFavorite,
 	getUniqueCompanies,
+	getTaskSubmissionsCount, // Импортируем новую функцию
 } from '@/src/lib/API/supabaseAPI'
 import { supabase } from '@/supabaseClient'
 import { List, BookCopy, CircleUserRound } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
@@ -40,12 +41,14 @@ type TypeFilter = {
 	tags: string[] | null
 }
 
-const TasksListPage = () => {
+const TasksListPage: FC = () => {
 	const [listType, setListType] = useState('list')
 	const [role, setRole] = useState<'user' | 'employer' | 'admin' | null>(null)
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [tasks, setTasks] = useState<TypeTask[]>([])
 	const [employerTaskIds, setEmployerTaskIds] = useState<number[]>([])
+	const [submissionsCount, setSubmissionsCount] = useState<number>(0) // Состояние для количества записей
+	const [submissionsLoading, setSubmissionsLoading] = useState<boolean>(true) // Состояние загрузки для submissions
 	const { notifications, addNotification } = useNotification()
 	const [filter, setFilter] = useState<TypeFilter>({
 		companies: null,
@@ -64,7 +67,7 @@ const TasksListPage = () => {
 			return
 		}
 		if (favoriteTasks.includes(id)) {
-			return // Не добавляем, если уже в избранном
+			return
 		}
 		try {
 			await addTaskToFavorites(userId, id)
@@ -97,7 +100,7 @@ const TasksListPage = () => {
 			return
 		}
 		if (!favoriteTasks.includes(id)) {
-			return // Не удаляем, если не в избранном
+			return
 		}
 		try {
 			await removeTaskFromFavorite(userId, id)
@@ -144,6 +147,18 @@ const TasksListPage = () => {
 				'Ошибка',
 				`Не удалось загрузить задачи работодателя: ${error.message}`
 			)
+		}
+	}
+
+	const loadSubmissionsCount = async () => {
+		try {
+			setSubmissionsLoading(true)
+			const count = await getTaskSubmissionsCount()
+			setSubmissionsCount(count)
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось загрузить количество заявок: ${error.message}`)
+		} finally {
+			setSubmissionsLoading(false)
 		}
 	}
 
@@ -195,6 +210,7 @@ const TasksListPage = () => {
 					await loadEmployerTasks(finalUserId)
 				} else if (finalRole === 'admin' && finalUserId) {
 					setEmployerTaskIds([])
+					await loadSubmissionsCount() // Загружаем количество записей для админа
 				}
 
 				const tasksData = await getAllTasks()
@@ -228,7 +244,7 @@ const TasksListPage = () => {
 
 		return () => {
 			channel.unsubscribe()
-			supabase.removeChannel(channel) // Полностью удаляем канал
+			supabase.removeChannel(channel)
 		}
 	}, [])
 
@@ -295,8 +311,8 @@ const TasksListPage = () => {
 						difficulty={task.difficulty}
 						companyName={task.company_name}
 						type={listType}
-						addToFavorite={addToFavorite} // Передаём addToFavorite
-						removeFromFavorite={removeFromFavorite} // Передаём removeFromFavorite
+						addToFavorite={addToFavorite}
+						removeFromFavorite={removeFromFavorite}
 						isFavorite={favoriteTasks.includes(task.id)}
 						deadline={task.deadline}
 						tags={task.tags}
@@ -333,11 +349,23 @@ const TasksListPage = () => {
 								<Button onClick={openCreateTaskPage}>Разместить задачу</Button>
 							)}
 							<button
-								className='md:ml-7 md:p-1 hover:bg-gray-300'
+								className='md:ml-7 md:p-1 hover:bg-gray-300 relative'
 								onClick={openProfile}
 								aria-label='Открыть профиль'
 							>
 								<CircleUserRound size={30} />
+								{role === 'admin' &&
+									(submissionsLoading ? (
+										<span className='absolute top-0 right-0 bg-gray-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+											...
+										</span>
+									) : (
+										submissionsCount > 0 && (
+											<span className='absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+												{submissionsCount}
+											</span>
+										)
+									))}
 							</button>
 						</div>
 						<div className='md:flex md:justify-end'>
