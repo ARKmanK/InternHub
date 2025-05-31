@@ -8,6 +8,9 @@ import {
 	addTaskToFavorites,
 	removeTaskFromFavorite,
 	getRole,
+	addTaskToFinished,
+	addMessage,
+	getUserUuidById,
 } from '@/src/lib/API/supabaseAPI'
 import { setPage, goBack } from '@data/userData'
 import { BadgeCheck, Star, CircleCheckBig, Hourglass, Heart, Undo2 } from 'lucide-react'
@@ -210,7 +213,6 @@ const TaskPage: FC = () => {
 
 	const handleApprove = async (activityId: number) => {
 		try {
-			// Найдём текущую активность
 			const currentActivity = activityData?.find(activity => activity.id === activityId)
 			if (currentActivity?.status === 'done') {
 				addNotification('info', 'Информация', 'Решение уже одобрено')
@@ -222,6 +224,11 @@ const TaskPage: FC = () => {
 				.update({ status: 'done' })
 				.eq('id', activityId)
 			if (error) throw error
+
+			if (currentActivity) {
+				await addTaskToFinished(currentActivity.user_id, currentActivity.task_id)
+				await addMessage(currentActivity.user_id, 'Ваше решение было одобрено!')
+			}
 
 			setActivityData(prev =>
 				prev
@@ -239,23 +246,19 @@ const TaskPage: FC = () => {
 
 	const handleReject = async (activityId: number) => {
 		try {
-			const { error } = await supabase
-				.from('task_activity')
-				.update({ status: 'rejected' })
-				.eq('id', activityId)
+			const currentActivity = activityData?.find(activity => activity.id === activityId)
+			const { error } = await supabase.from('task_activity').delete().eq('id', activityId)
 			if (error) throw error
 
-			setActivityData(prev =>
-				prev
-					? prev.map(activity =>
-							activity.id === activityId ? { ...activity, status: 'rejected' as const } : activity
-					  )
-					: null
-			)
-			addNotification('warning', 'Внимание', 'Решение отклонено')
+			if (currentActivity) {
+				await addMessage(currentActivity.user_id, 'Ваше решение было отклонено.')
+			}
+
+			setActivityData(prev => (prev ? prev.filter(activity => activity.id !== activityId) : null))
+			addNotification('warning', 'Внимание', 'Решение отклонено и удалено')
 			handleCloseModal()
 		} catch (error: any) {
-			addNotification('error', 'Ошибка', `Не удалось отклонить решение: ${error.message}`)
+			addNotification('error', 'Ошибка', `Не удалось отклонить и удалить решение: ${error.message}`)
 		}
 	}
 

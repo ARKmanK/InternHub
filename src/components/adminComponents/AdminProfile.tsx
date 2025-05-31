@@ -114,7 +114,7 @@ const AdminProfile: FC<AdminProfileProps> = ({ navigate, goBack, handleLogout })
 												))}
 											</div>
 											<p className='text-sm mt-2'>Компания: {task.company_name}</p>
-											<p className='text-sm'>Дедлайн: {task.deadline}</p>
+											<p className='text-sm'>Крайний срок: {task.deadline}</p>
 										</div>
 										<div className='flex gap-2 mt-4 md:mt-0'>
 											<button

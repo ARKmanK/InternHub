@@ -215,7 +215,6 @@ export const getUserFavorites = async (userId: number): Promise<number[]> => {
 }
 
 // Функции для работы с таблицей task_activity
-
 export const addTaskActivity = async (
 	activity: Omit<TypeTaskActivity, 'id' | 'created_at'>
 ): Promise<{ error: Error | null }> => {
@@ -712,23 +711,58 @@ export const rejectTaskSubmission = async (submissionId: number): Promise<void> 
 	}
 }
 
-export const addMessage = async (userId: string, text: string) => {
-	const { data, error } = await supabase.from('messages').insert({ user_id: userId, text }).select()
+export const addMessage = async (userId: number, text: string): Promise<{ id: number } | null> => {
+	const { data, error } = await supabase
+		.from('messages')
+		.insert({
+			user_id: userId,
+			text,
+			timestamp: new Date().toISOString(),
+			is_read: false,
+		})
+		.select('id')
+		.single()
 
-	if (error) throw error
-	return data
+	if (error) {
+		console.error('Error adding message:', error)
+		throw new Error(`Failed to add message: ${error.message}`)
+	}
+
+	return data || null
 }
 
 // Получение сообщений по user_id
-export const getMessagesByUserId = async (userId: string) => {
+export const getMessagesByUserId = async (
+	userId: number,
+	limit: number = 10,
+	offset: number = 0
+) => {
 	const { data, error } = await supabase
 		.from('messages')
 		.select('*')
 		.eq('user_id', userId)
 		.order('timestamp', { ascending: false })
+		.range(offset, offset + limit - 1)
 
 	if (error) throw error
 	return data
+}
+
+export const deleteMessage = async (messageId: number) => {
+	const { error } = await supabase.from('messages').delete().eq('id', messageId)
+
+	if (error) throw error
+}
+
+export const getUnreadMessagesCount = async (userId: number) => {
+	const { count, error } = await supabase
+		.from('messages')
+		.select('*', { count: 'exact', head: true })
+		.eq('user_id', userId)
+		.eq('is_read', false)
+
+	if (error) throw error
+	return count || 0
 }
 
 // Пометка сообщения как прочитанного
@@ -785,4 +819,14 @@ export const uploadFileAndCreateRecord = async (
 	}
 
 	return fileUrl
+}
+
+export const getUserUuidById = async (userId: number): Promise<string | null> => {
+	const { data, error } = await supabase.from('users').select('uuid').eq('id', userId).single()
+
+	if (error) {
+		throw new Error(`Failed to fetch user UUID: ${error.message}`)
+	}
+
+	return data?.uuid || null
 }
