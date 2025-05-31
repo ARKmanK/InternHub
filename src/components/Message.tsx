@@ -21,32 +21,43 @@ const Message: FC = () => {
 	const [isOpen, setIsOpen] = useState(false)
 	const [messages, setMessages] = useState<Message[]>([])
 	const [unreadCount, setUnreadCount] = useState<number>(0)
-	const messageRef = useRef<HTMLDivElement>(null) // Для отслеживания кликов вне области
+	const [isLoading, setIsLoading] = useState(true) // Состояние загрузки
+	const messageRef = useRef<HTMLDivElement>(null)
 
 	// Загружаем сообщения и количество непрочитанных
 	useEffect(() => {
 		const fetchMessages = async () => {
-			const userId = getUserId()
-			if (userId) {
-				// Получаем количество непрочитанных сообщений
-				const count = await getUnreadMessagesCount(userId)
-				setUnreadCount(count)
+			setIsLoading(true) // Устанавливаем флаг загрузки
+			try {
+				const userId = getUserId()
+				if (userId) {
+					// Получаем количество непрочитанных сообщений
+					const count = await getUnreadMessagesCount(userId)
+					setUnreadCount(count)
 
-				// Загружаем сообщения (пагинация: первые 10)
-				const userMessages = await getMessagesByUserId(userId, 10, 0)
-				setMessages(
-					userMessages.map(msg => ({
-						...msg,
-						timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
-							hour: '2-digit',
-							minute: '2-digit',
-						}),
-					}))
-				)
+					// Загружаем сообщения (пагинация: первые 10)
+					const userMessages = await getMessagesByUserId(userId, 10, 0)
+					setMessages(
+						userMessages.map(msg => ({
+							...msg,
+							timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+								hour: '2-digit',
+								minute: '2-digit',
+							}),
+						}))
+					)
+				} else {
+					console.warn('User ID is not available, retrying...')
+					// Можно добавить повторную попытку или обработку
+				}
+			} catch (error) {
+				console.error('Error fetching messages:', error)
+			} finally {
+				setIsLoading(false) // Сбрасываем флаг после загрузки
 			}
 		}
 		fetchMessages()
-	}, [])
+	}, []) // Пустой массив зависимостей, так как загрузка происходит один раз при монтировании
 
 	// Обновляем is_read при открытии компонента
 	useEffect(() => {
@@ -115,10 +126,16 @@ const Message: FC = () => {
 				aria-label={isOpen ? 'Закрыть сообщения' : 'Открыть сообщения'}
 			>
 				<MessageCircle size={24} />
-				{unreadCount > 0 && (
-					<span className='absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
-						{unreadCount}
+				{isLoading ? (
+					<span className='absolute top-0 right-0 bg-gray-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+						...
 					</span>
+				) : (
+					unreadCount > 0 && (
+						<span className='absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+							{unreadCount}
+						</span>
+					)
 				)}
 			</button>
 			<AnimatePresence>
@@ -132,7 +149,9 @@ const Message: FC = () => {
 						className='absolute bottom-12 right-0 w-80 bg-white rounded-lg shadow-lg p-4 mt-2 border border-gray-200'
 					>
 						<h3 className='text-lg font-semibold mb-2 text-gray-800'>Сообщения</h3>
-						{messages.length === 0 ? (
+						{isLoading ? (
+							<p className='text-gray-500'>Загрузка...</p>
+						) : messages.length === 0 ? (
 							<p className='text-gray-500'>Нет новых сообщений</p>
 						) : (
 							<ul className='space-y-2 max-h-48 overflow-y-auto'>

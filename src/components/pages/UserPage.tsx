@@ -17,6 +17,7 @@ import UserProfile from '@components/userComponents/UserProfile'
 import EmployerProfile from '@components/employerComponents/EmployerProfile'
 import AdminProfile from '@components/adminComponents/AdminProfile'
 import { Undo2, LogOut } from 'lucide-react'
+import Message from '../Message'
 
 type TypeTask = {
 	id: number
@@ -334,6 +335,7 @@ const UserPage = () => {
 					<AdminProfile navigate={navigate} handleLogout={handleLogout} goBack={goBack} />
 				)}
 				<Notification notifications={notifications} />
+				<Message />
 			</div>
 		</>
 	)

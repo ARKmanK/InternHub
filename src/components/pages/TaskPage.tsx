@@ -22,6 +22,7 @@ import AddAnswerForm from '@components/AddAnswerForm'
 import { supabase } from '@/supabaseClient'
 import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
 import AnswerVerifyWindow from '@components/AnswerVerifyWindow' // Импортируем новый компонент
+import Message from '../Message'
 
 type TypeTasksData = {
 	id: number
@@ -461,6 +462,7 @@ const TaskPage: FC = () => {
 				</div>
 			</div>
 			<Notification notifications={notifications} />
+			<Message />
 		</>
 	)
 }

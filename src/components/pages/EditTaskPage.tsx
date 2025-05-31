@@ -18,6 +18,7 @@ import {
 	getAllTags,
 	getUserTags,
 } from '@/src/lib/API/supabaseAPI'
+import Message from '../Message'
 
 const EditTaskPage = () => {
 	const { id } = useParams<{ id: string }>()
@@ -454,6 +455,7 @@ const EditTaskPage = () => {
 				</div>
 			</div>
 			<Notification notifications={notifications} />
+			<Message />
 		</>
 	)
 }

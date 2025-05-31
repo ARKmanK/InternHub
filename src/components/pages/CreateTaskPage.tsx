@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { Undo2 } from 'lucide-react'
 import { useEffect } from 'react'
 import AddTaskForm from '../AddTaskForm'
+import Message from '../Message'
 
 const CreateTaskPage = () => {
 	const navigate = useNavigate()
@@ -49,6 +50,7 @@ const CreateTaskPage = () => {
 					</div>
 				</div>
 			</div>
+			<Message />
 		</>
 	)
 }

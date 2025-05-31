@@ -20,6 +20,7 @@ import Notification from '@components/UI/Notification/Notification'
 import { Button } from '@components/UI/Button/Button'
 import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
 import { setPage } from '@/src/data/userData'
+import Message from '../Message'
 
 type TypeTask = {
 	id: number
@@ -364,6 +365,7 @@ const TasksListPage = () => {
 				</div>
 			</div>
 			<Notification notifications={notifications} />
+			<Message />
 		</>
 	)
 }
