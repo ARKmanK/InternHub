@@ -309,7 +309,7 @@ const UserPage = () => {
 						activeCategory={activeCategory}
 						handleCategoryChange={handleCategoryChange}
 						addToFavorite={addToFavorite}
-						removeFromFavorite={removeFromFavorite} // Передаём в UserProfile
+						removeFromFavorite={removeFromFavorite}
 						navigate={navigate}
 						handleLogout={handleLogout}
 						goBack={goBack}

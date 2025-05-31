@@ -1,6 +1,6 @@
 import { FC, MouseEvent, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Heart, BadgeCheck, Star, Delete, BookCheck, Settings } from 'lucide-react'
+import { Heart, BadgeCheck, Star, Delete, Settings, BookmarkCheck } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@components/UI/Button/Button'
 import { setPage } from '../data/userData'
@@ -104,9 +104,9 @@ const TaskCard: FC<TaskCardProps> = ({
 	return (
 		<>
 			{type === 'list' && (
-				<div className='w-[700px] min-h-[250px] rounded-xl mb-10 border-2 border-gray-[#dce3eb] bg-[#96bddd] overflow-hidden relative'>
+				<div className='w-[700px] min-h-[250px] rounded-xl mb-10 border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg overflow-hidden relative'>
 					<div className='py-2 px-3 flex flex-col justify-between'>
-						<div className='flex justify-between text-gray-500 text-sm'>
+						<div className='flex justify-between text-gray-600 text-sm font-medium'>
 							<p>Сейчас отслеживают {trackingNumber}</p>
 							{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
 								<button className='p-1 rounded transition-colors' onClick={handleFavoriteClick}>
@@ -119,69 +119,72 @@ const TaskCard: FC<TaskCardProps> = ({
 								</button>
 							)}
 							{role === 'employer' && showControls && (
-								<div className='flex'>
-									<div className='text-xs text-black border-2 border-t-0 border-r-0 rounded-bl-lg rounded-tr-lg p-1 top-0 right-30 absolute'>
-										<button className='flex' onClick={handleEdit}>
-											Редактировать
-											<Settings className='ml-1' size={20} />
-										</button>
-									</div>
-									<div className='text-xs text-black border-2 border-t-0 border-r-0 rounded-tr-lg p-1 top-0 right-0 absolute'>
-										<button className='flex' onClick={onDelete}>
-											Удалить задачу
-											<Delete className='ml-1' size={20} />
-										</button>
-									</div>
+								<div className='flex space-x-2'>
+									<button
+										onClick={handleEdit}
+										className='text-xs text-white bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg p-1 px-2 shadow-md hover:from-blue-500 hover:to-blue-700 transition-all flex items-center'
+									>
+										Редактировать
+										<Settings className='ml-1' size={16} />
+									</button>
+									<button
+										onClick={onDelete}
+										className='text-xs text-white bg-gradient-to-br from-red-400 to-red-600 rounded-lg p-1 px-2 shadow-md hover:from-red-500 hover:to-red-700 transition-all flex items-center'
+									>
+										Удалить задачу
+										<Delete className='ml-1' size={16} />
+									</button>
 								</div>
 							)}
 							{role === 'employer' && isMine && !showControls && (
-								<div className='flex text-black border-2 border-t-0 border-r-0 rounded-bl-lg rounded-tr-lg p-1 top-0 right-0 absolute'>
+								<div className='flex items-center text-blue-900 text-xs font-medium bg-blue-300 rounded-lg p-1 px-2 top-0 right-0 absolute'>
 									<span>Моя задача</span>
-									<BookCheck fill='#0e8083' size={20} />
+									<BookmarkCheck className='ml-1' color='green' size={18} />
 								</div>
 							)}
 						</div>
 						<h3
-							className={`font-semibold pt-4 text-ellipsis line-clamp-1 ${
+							className={`font-bold pt-4 text-ellipsis line-clamp-1 ${
 								title.length > 40 ? 'text-lg' : 'text-xl'
-							}`}
+							} text-gray-800`}
 						>
 							{title}
 						</h3>
-						<div className='pt-4 break-words'>{truncatedDescription}</div>
+						<div className='pt-4 text-gray-700 break-words'>{truncatedDescription}</div>
 						<div className='py-2 mt-4'>
-							<p className='text-nowrap mb-2'>{`Срок до: ${deadline}`}</p>
-							<div className='flex flex-wrap gap-3' style={{ margin: '-4px 0' }}>
+							<p className='text-gray-600 font-medium mb-2'>{`Срок до: ${deadline}`}</p>
+							<div className='flex flex-wrap gap-2'>
 								{tags.map(tag => (
-									<div
+									<span
 										key={tag}
-										className='bg-[#6092bb] min-w-[40px] h-[28px] rounded-md text-center px-2 py-0.5 flex items-center justify-center'
-										style={{ margin: '4px 0' }}
+										className='bg-blue-400 text-white text-sm font-medium px-2 py-1 rounded-full'
 									>
 										{tag}
-									</div>
+									</span>
 								))}
 							</div>
 						</div>
 						<div className='flex flex-col mb-4'>
-							<p className='mb-2'>Сложность</p>
+							<p className='text-gray-600 font-medium mb-2'>Сложность</p>
 							{renderDifficultyStars(difficulty)}
 						</div>
 						<div className='flex justify-between'>
-							<Button onClick={handleNavigate}>На страницу задачи</Button>
-							<div className='flex items-center'>
+							<Button onClick={handleNavigate} className='text-sm'>
+								На страницу задачи
+							</Button>
+							<div className='flex items-center text-gray-700 font-medium'>
 								{companyName}
-								<BadgeCheck className='ml-2' fill='green' />
+								<BadgeCheck className='ml-1' fill='green' size={20} />
 							</div>
 						</div>
 					</div>
 				</div>
 			)}
 			{type === 'card' && (
-				<div className='w-[380px] min-h-[350px] bg-[#96bddd] rounded-xl border-2 border-gray-[#dce3eb] overflow-hidden'>
-					<div className='py-2 px-3 flex flex-col justify-between'>
+				<div className='w-[380px] min-h-[400px] rounded-xl border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg overflow-hidden flex flex-col justify-between relative'>
+					<div className='py-2 px-3 flex flex-col h-full'>
 						<div>
-							<div className='flex justify-between text-gray-500 text-sm'>
+							<div className='flex justify-between text-gray-600 text-sm font-medium'>
 								<p>Сейчас отслеживают {trackingNumber}</p>
 								{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
 									<button className='p-1 rounded transition-colors' onClick={handleFavoriteClick}>
@@ -193,44 +196,68 @@ const TaskCard: FC<TaskCardProps> = ({
 										/>
 									</button>
 								)}
+								{role === 'employer' && showControls && (
+									<div className='flex space-x-2'>
+										<button
+											onClick={handleEdit}
+											className='text-xs text-white bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg p-1 px-2 shadow-md hover:from-blue-500 hover:to-blue-700 transition-all flex items-center'
+										>
+											Редактировать
+											<Settings className='ml-1' size={16} />
+										</button>
+										<button
+											onClick={onDelete}
+											className='text-xs text-white bg-gradient-to-br from-red-400 to-red-600 rounded-lg p-1 px-2 shadow-md hover:from-red-500 hover:to-red-700 transition-all flex items-center'
+										>
+											Удалить задачу
+											<Delete className='ml-1' size={28} />
+										</button>
+									</div>
+								)}
+								{role === 'employer' && isMine && !showControls && (
+									<div className='flex items-center text-blue-900 text-xs font-medium bg-blue-300 rounded-lg p-1 px-2 top-0 right-0 absolute'>
+										<span>Моя задача</span>
+										<BookmarkCheck className='ml-1' color='green' size={16} />
+									</div>
+								)}
 							</div>
 							<h3
-								className={`font-semibold pt-4 text-ellipsis line-clamp-1 ${
+								className={`font-bold pt-4 text-ellipsis line-clamp-1 ${
 									title.length > 40 ? 'text-lg' : 'text-xl'
-								}`}
+								} text-gray-800`}
 							>
 								{title}
 							</h3>
-							<div className='pt-4 overflow-hidden text-ellipsis line-clamp-4 break-words'>
+							<div className='pt-4 flex-1 overflow-hidden text-ellipsis line-clamp-4 break-words text-gray-700'>
 								{truncatedDescription}
 							</div>
-							<div className='flex-1 mt-6'>
+							<div className='mt-4'>
 								<div className='flex flex-col'>
-									<p className='mb-2'>{`Срок до: ${deadline}`}</p>
-									<div className='flex flex-wrap gap-3 -my-[2px]'>
+									<p className='text-gray-600 font-medium mb-2'>{`Срок до: ${deadline}`}</p>
+									<div className='flex flex-wrap gap-2'>
 										{tags.map(tag => (
-											<div
+											<span
 												key={tag}
-												className='bg-[#6092bb] min-w-[40px] rounded-md my-[1px] text-center px-2 py-0.5 flex items-center justify-center'
+												className='bg-blue-400 text-white text-sm font-medium px-2 py-1 rounded-full'
 											>
 												{tag}
-											</div>
+											</span>
 										))}
 									</div>
 								</div>
 								<div className='mt-3'>
-									<p className='mb-2'>Сложность</p>
+									<p className='text-gray-600 font-medium mb-2'>Сложность</p>
 									{renderDifficultyStars(difficulty)}
 								</div>
 							</div>
 						</div>
-						<div className='flex flex-col items-start gap-1 md:mt-3.5'>
-							<Button onClick={handleNavigate} className='text-sm px-2 py-1'>
+						<div className='flex flex-col items-start gap-2 mt-4'>
+							<Button onClick={handleNavigate} className='text-sm px-2 py-1 w-full'>
 								На страницу задачи
 							</Button>
-							<div className='flex items-center md:my-2 md:ml-0.5'>
+							<div className='flex items-center text-gray-700 font-medium my-1'>
 								{companyName}
-								<BadgeCheck className='ml-2' fill='green' />
+								<BadgeCheck className='ml-2' fill='green' size={16} />
 							</div>
 						</div>
 					</div>
