@@ -3,7 +3,7 @@ import NavBar from '@components/NavBar'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Undo2, AppWindow, X } from 'lucide-react'
 import { setPage, TypePages } from '@/src/data/userData'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { TypeTask } from '@/src/types/TypeTask'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
@@ -17,6 +17,7 @@ import {
 	getUserByEmail,
 	getAllTags,
 	getUserTags,
+	deleteUserTag,
 } from '@/src/lib/API/supabaseAPI'
 import Message from '../Message'
 
@@ -24,16 +25,24 @@ const EditTaskPage = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
 	const { notifications, addNotification } = useNotification()
+
 	const [taskData, setTaskData] = useState<TypeTask | null>(null)
-	const [title, setTitle] = useState<string>('')
-	const [description, setDescription] = useState<string>('')
-	const [difficulty, setDifficulty] = useState<number>(0)
-	const [deadline, setDeadline] = useState<Date | null>(null)
-	const [tags, setTags] = useState<string[]>([])
-	const [newTag, setNewTag] = useState<string>('')
-	const [previewTask, setPreviewTask] = useState<TypeTask | null>(null)
+	const [formData, setFormData] = useState<{
+		title: string
+		description: string
+		difficulty: number
+		deadline: Date | null
+		tags: string[]
+	}>({
+		title: '',
+		description: '',
+		difficulty: 0,
+		deadline: null,
+		tags: [],
+	})
+	const [newTag, setNewTag] = useState('')
 	const [role, setRole] = useState<'user' | 'employer' | 'admin' | null>(null)
-	const [companyName, setCompanyName] = useState<string>('')
+	const [companyName, setCompanyName] = useState('')
 	const [userId, setUserId] = useState<number | null>(null)
 	const [commonTags, setCommonTags] = useState<string[]>([])
 	const [userTags, setUserTags] = useState<string[]>([])
@@ -62,6 +71,7 @@ const EditTaskPage = () => {
 					navigate('/login')
 					return
 				}
+
 				setRole(user.role)
 				setUserId(user.id)
 				setCompanyName(user.company_name || 'Неизвестная компания')
@@ -75,7 +85,6 @@ const EditTaskPage = () => {
 						return
 					}
 
-					// Проверяем, что задача принадлежит текущему пользователю
 					if (task.employer_id !== user.id) {
 						addNotification('error', 'Ошибка', 'У вас нет доступа к редактированию этой задачи')
 						navigate('/tasks')
@@ -83,19 +92,19 @@ const EditTaskPage = () => {
 					}
 
 					setTaskData(task)
-					setTitle(task.title)
-					setDescription(task.description)
-					setDifficulty(task.difficulty)
-					setDeadline(task.deadline ? new Date(task.deadline) : null)
-					setTags(task.tags || [])
+					setFormData({
+						title: task.title,
+						description: task.description,
+						difficulty: task.difficulty,
+						deadline: task.deadline ? new Date(task.deadline) : null,
+						tags: task.tags || [],
+					})
 
-					// Загружаем общие теги
 					const commonTagsData = await getAllTags()
 					setCommonTags(commonTagsData.map(tag => tag.name))
 
-					// Загружаем кастомные теги пользователя
 					const userTagsData = await getUserTags(user.id)
-					setUserTags(userTagsData) // Уберите .map(tag => tag.name)
+					setUserTags(userTagsData)
 				}
 			} catch (error: any) {
 				addNotification('error', 'Ошибка', error.message)
@@ -103,72 +112,64 @@ const EditTaskPage = () => {
 			}
 		}
 		fetchData()
-	}, [id, navigate, addNotification])
-
-	useEffect(() => {
-		const deadlineStr = formatDate(deadline)
-		const tempTask: TypeTask = {
-			id: taskData?.id || 0,
-			tracking_number: taskData?.tracking_number || 0,
-			title: title || 'Пример заголовка',
-			description: description || 'Пример описания...',
-			difficulty: difficulty || 1,
-			company_name: companyName || 'Пример компании',
-			deadline: deadlineStr || '2025-01-01',
-			tags: tags.length > 0 ? tags : [],
-			employer_id: userId || 0,
-		}
-		setPreviewTask(tempTask)
-	}, [title, description, difficulty, deadline, tags, companyName, taskData, userId])
+	}, [id, navigate])
 
 	const formatDate = (date: Date | null): string => {
 		if (!date) return ''
 		const year = date.getFullYear()
 		const month = String(date.getMonth() + 1).padStart(2, '0')
 		const day = String(date.getDate()).padStart(2, '0')
-		return `${year}-${month}-${day}` // Формат YYYY-MM-DD
+		return `${year}-${month}-${day}`
 	}
 
-	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const value = e.target.value
-		if (value.length <= MAX_TITLE_LENGTH) {
-			setTitle(value)
+	const previewTask = useMemo(() => {
+		const deadlineStr = formatDate(formData.deadline)
+		return {
+			id: taskData?.id || 0,
+			tracking_number: taskData?.tracking_number || 0,
+			title: formData.title || 'Пример заголовка',
+			description: formData.description || 'Пример описания...',
+			difficulty: formData.difficulty || 1,
+			company_name: companyName || 'Пример компании',
+			deadline: deadlineStr || '2025-01-01',
+			tags: formData.tags.length > 0 ? [...formData.tags] : [],
+			employer_id: userId || 0,
+		}
+	}, [formData, companyName, userId, taskData])
+
+	const handleFormChange = (field: keyof typeof formData, value: any) => {
+		setFormData(prev => ({ ...prev, [field]: value }))
+	}
+
+	const handleTextChange = (field: 'title' | 'description', value: string) => {
+		const maxLength = field === 'title' ? MAX_TITLE_LENGTH : MAX_DESCRIPTION_LENGTH
+		if (value.length <= maxLength) {
+			handleFormChange(field, value)
 		} else {
-			addNotification(
-				'warning',
-				'Ошибка',
-				`Название не может превышать ${MAX_TITLE_LENGTH} символов`
-			)
+			addNotification('warning', 'Ошибка', `Поле не может превышать ${maxLength} символов`)
 		}
 	}
 
-	const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-		const value = e.target.value
-		if (value.length <= MAX_DESCRIPTION_LENGTH) {
-			setDescription(value)
-		} else {
-			addNotification(
-				'warning',
-				'Ошибка',
-				`Описание не может превышать ${MAX_DESCRIPTION_LENGTH} символов`
-			)
-		}
+	const handleDifficultyChange = (value: number) => {
+		handleFormChange('difficulty', value)
+	}
+
+	const handleDeadlineChange = (date: Date | null) => {
+		handleFormChange('deadline', date)
 	}
 
 	const handleTagChange = (tag: string) => {
-		if (tags.includes(tag)) {
-			setTags(tags.filter(t => t !== tag))
+		const newTags = formData.tags.includes(tag)
+			? formData.tags.filter(t => t !== tag)
+			: [...formData.tags, tag]
+		if (newTags.length <= MAX_TAGS) {
+			handleFormChange('tags', newTags)
 		} else {
-			if (tags.length >= MAX_TAGS) {
-				addNotification('warning', 'Ошибка', `Нельзя выбрать больше ${MAX_TAGS} тегов`)
-				return
-			}
-			setTags([...tags, tag])
+			addNotification('warning', 'Ошибка', `Нельзя выбрать больше ${MAX_TAGS} тегов`)
 		}
 	}
 
-	const handleNewTagChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const value = e.target.value
+	const handleNewTagChange = (value: string) => {
 		if (value.length <= MAX_TAG_LENGTH) {
 			setNewTag(value)
 		} else {
@@ -176,54 +177,72 @@ const EditTaskPage = () => {
 		}
 	}
 
-	const addCustomTag = () => {
+	const addCustomTag = async () => {
 		const trimmedTag = newTag.trim()
 		if (!trimmedTag) {
 			addNotification('warning', 'Ошибка', 'Тег не может быть пустым')
 			return
 		}
 		if (
-			tags.includes(trimmedTag) ||
+			formData.tags.includes(trimmedTag) ||
 			commonTags.includes(trimmedTag) ||
 			userTags.includes(trimmedTag)
 		) {
 			addNotification('warning', 'Ошибка', 'Такой тег уже существует')
 			return
 		}
-		if (tags.length >= MAX_TAGS) {
+		if (formData.tags.length >= MAX_TAGS) {
 			addNotification('warning', 'Ошибка', `Нельзя добавить больше ${MAX_TAGS} тегов`)
 			return
 		}
-		setTags([...tags, trimmedTag])
-		setUserTags([...userTags, trimmedTag])
-		setNewTag('')
+
+		if (userId) {
+			try {
+				await supabase.from('user_tags').insert({ user_id: userId, name: trimmedTag })
+				handleFormChange('tags', [...formData.tags, trimmedTag])
+				setUserTags([...userTags, trimmedTag])
+				setNewTag('')
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', error.message)
+			}
+		}
 	}
 
-	const removeCustomTag = (tagToRemove: string) => {
-		setTags(tags.filter(tag => tag !== tagToRemove))
-		setUserTags(userTags.filter(tag => tag !== tagToRemove))
+	const removeCustomTag = async (tagToRemove: string) => {
+		if (userId && userTags.includes(tagToRemove)) {
+			try {
+				await deleteUserTag(userId, tagToRemove)
+				handleFormChange(
+					'tags',
+					formData.tags.filter(tag => tag !== tagToRemove)
+				)
+				setUserTags(userTags.filter(tag => tag !== tagToRemove))
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', error.message)
+			}
+		}
 	}
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 
-		if (!title.trim()) {
+		if (!formData.title.trim()) {
 			addNotification('error', 'Ошибка', 'Заголовок — обязательное поле')
 			return
 		}
-		if (!description.trim()) {
+		if (!formData.description.trim()) {
 			addNotification('error', 'Ошибка', 'Описание — обязательное поле')
 			return
 		}
-		if (!difficulty) {
+		if (!formData.difficulty) {
 			addNotification('error', 'Ошибка', 'Сложность — обязательное поле')
 			return
 		}
-		if (!deadline) {
+		if (!formData.deadline) {
 			addNotification('error', 'Ошибка', 'Дата — обязательное поле')
 			return
 		}
-		if (!tags.length) {
+		if (!formData.tags.length) {
 			addNotification('error', 'Ошибка', 'Теги — обязательное поле')
 			return
 		}
@@ -232,16 +251,16 @@ const EditTaskPage = () => {
 			return
 		}
 
-		const deadlineStr = formatDate(deadline)
+		const deadlineStr = formatDate(formData.deadline)
 		const updatedTask: TypeTask = {
 			id: taskData?.id || 0,
 			tracking_number: taskData?.tracking_number || 0,
-			title,
-			description,
-			difficulty,
+			title: formData.title,
+			description: formData.description,
+			difficulty: formData.difficulty,
 			company_name: companyName,
 			deadline: deadlineStr,
-			tags,
+			tags: formData.tags,
 			employer_id: userId,
 		}
 
@@ -256,17 +275,11 @@ const EditTaskPage = () => {
 
 	const goBack = () => {
 		const data = localStorage.getItem('prevPage')
-		let prevPage = '/tasks'
-		if (data) {
-			const parsedData: TypePages = JSON.parse(data)
-			prevPage = parsedData.prevPage || '/tasks'
-		}
+		const prevPage = data ? (JSON.parse(data) as TypePages).prevPage || '/tasks' : '/tasks'
 		navigate(prevPage)
 	}
 
-	if (!taskData) {
-		return <div>Загрузка...</div>
-	}
+	if (!taskData) return <div>Загрузка...</div>
 
 	return (
 		<>
@@ -302,9 +315,9 @@ const EditTaskPage = () => {
 														<input
 															type='text'
 															placeholder='Заголовок'
-															value={title}
+															value={formData.title}
 															className='outline-0 w-full text-lg'
-															onChange={handleTitleChange}
+															onChange={e => handleTextChange('title', e.target.value)}
 															autoFocus
 															maxLength={MAX_TITLE_LENGTH}
 														/>
@@ -315,16 +328,16 @@ const EditTaskPage = () => {
 													<textarea
 														className='h-[150px] w-[380px] border rounded-xl p-2 resize-none outline-0'
 														placeholder='...'
-														value={description}
-														onChange={handleDescriptionChange}
+														value={formData.description}
+														onChange={e => handleTextChange('description', e.target.value)}
 														maxLength={MAX_DESCRIPTION_LENGTH}
-													></textarea>
+													/>
 												</div>
 												<div className='md:flex md:flex-col'>
 													<span>Выберите сложность задачи</span>
 													<select
-														value={difficulty}
-														onChange={e => setDifficulty(Number(e.target.value))}
+														value={formData.difficulty}
+														onChange={e => handleDifficultyChange(Number(e.target.value))}
 														className='outline-0 text-lg w-[380px] border'
 													>
 														<option value={0} disabled>
@@ -338,8 +351,8 @@ const EditTaskPage = () => {
 												<div className='md:flex md:flex-col'>
 													<span>Выберите дату сдачи</span>
 													<DatePicker
-														selected={deadline}
-														onChange={(date: Date | null) => setDeadline(date)}
+														selected={formData.deadline}
+														onChange={handleDeadlineChange}
 														dateFormat='dd.MM.yyyy'
 														className='outline-0 w-[380px] text-lg border pl-1'
 														placeholderText='Выберите дату'
@@ -348,17 +361,17 @@ const EditTaskPage = () => {
 												<div>
 													<span>Выберите ключевые теги</span>
 													<div className='flex flex-wrap gap-2 mt-2'>
-														{commonTags.map((tag: string) => (
+														{commonTags.map(tag => (
 															<label key={tag} className='inline-flex items-center'>
 																<input
 																	type='checkbox'
-																	checked={tags.includes(tag)}
+																	checked={formData.tags.includes(tag)}
 																	onChange={() => handleTagChange(tag)}
 																	className='hidden'
 																/>
 																<span
 																	className={`px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors ${
-																		tags.includes(tag)
+																		formData.tags.includes(tag)
 																			? 'bg-blue-500 text-white'
 																			: 'bg-gray-200 text-gray-700 hover:bg-gray-300'
 																	}`}
@@ -367,18 +380,18 @@ const EditTaskPage = () => {
 																</span>
 															</label>
 														))}
-														{userTags.map((tag: string) => (
+														{userTags.map(tag => (
 															<div key={tag} className='inline-flex items-center'>
 																<label className='inline-flex items-center'>
 																	<input
 																		type='checkbox'
-																		checked={tags.includes(tag)}
+																		checked={formData.tags.includes(tag)}
 																		onChange={() => handleTagChange(tag)}
 																		className='hidden'
 																	/>
 																	<span
 																		className={`px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors ${
-																			tags.includes(tag)
+																			formData.tags.includes(tag)
 																				? 'bg-blue-500 text-white'
 																				: 'bg-gray-200 text-gray-700 hover:bg-gray-300'
 																		}`}
@@ -405,7 +418,7 @@ const EditTaskPage = () => {
 															placeholder='Введите новый тег'
 															value={newTag}
 															className='block w-[380px] pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
-															onChange={handleNewTagChange}
+															onChange={e => handleNewTagChange(e.target.value)}
 															maxLength={MAX_TAG_LENGTH}
 														/>
 														<button
@@ -441,7 +454,7 @@ const EditTaskPage = () => {
 											companyName={previewTask.company_name}
 											type='list'
 											deadline={previewTask.deadline}
-											tags={previewTask.tags ?? []}
+											tags={previewTask.tags}
 											isFavorite={false}
 											isMine={role === 'employer'}
 											role={role}

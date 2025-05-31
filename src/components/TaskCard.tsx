@@ -1,5 +1,4 @@
-// components/TaskCard.tsx
-import { FC, MouseEvent } from 'react'
+import { FC, MouseEvent, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart, BadgeCheck, Star, Delete, BookCheck, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -64,12 +63,11 @@ const TaskCard: FC<TaskCardProps> = ({
 		}
 	}
 
-	// Обработчик для переключения состояния избранного
 	const handleFavoriteClick = () => {
 		if (isFavorite && removeFromFavorite) {
-			removeFromFavorite(id) // Удаляем из избранного
+			removeFromFavorite(id)
 		} else if (!isFavorite && addToFavorite) {
-			addToFavorite(id) // Добавляем в избранное
+			addToFavorite(id)
 		}
 	}
 
@@ -109,10 +107,7 @@ const TaskCard: FC<TaskCardProps> = ({
 						<div className='flex justify-between text-gray-500 text-sm'>
 							<p>Сейчас отслеживают {trackingNumber}</p>
 							{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
-								<button
-									className='p-1 rounded transition-colors'
-									onClick={handleFavoriteClick} // Используем handleFavoriteClick
-								>
+								<button className='p-1 rounded transition-colors' onClick={handleFavoriteClick}>
 									<Heart
 										fill={isFavorite ? 'red' : 'gray'}
 										color={isFavorite ? 'red' : 'red'}
@@ -187,10 +182,7 @@ const TaskCard: FC<TaskCardProps> = ({
 							<div className='flex justify-between text-gray-500 text-sm'>
 								<p>Сейчас отслеживают {trackingNumber}</p>
 								{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
-									<button
-										className='p-1 rounded transition-colors'
-										onClick={handleFavoriteClick} // Используем handleFavoriteClick
-									>
+									<button className='p-1 rounded transition-colors' onClick={handleFavoriteClick}>
 										<Heart
 											fill={isFavorite ? 'red' : 'gray'}
 											color={isFavorite ? 'red' : 'red'}
@@ -246,4 +238,4 @@ const TaskCard: FC<TaskCardProps> = ({
 	)
 }
 
-export default TaskCard
+export default memo(TaskCard)

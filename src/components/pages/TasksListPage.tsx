@@ -212,8 +212,9 @@ const TasksListPage = () => {
 
 		fetchUserAndTasks()
 
-		const subscription = supabase
-			.channel('tasks-changes')
+		const channel = supabase.channel('tasks-changes')
+
+		channel
 			.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, payload => {
 				setTasks(prev =>
 					prev.map(task =>
@@ -223,10 +224,17 @@ const TasksListPage = () => {
 					)
 				)
 			})
-			.subscribe()
+			.subscribe((status: string) => {
+				if (status === 'SUBSCRIBED') {
+				} else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+					setTimeout(() => {
+						channel.subscribe()
+					}, 5000) // Пытаемся переподключиться через 5 секунд
+				}
+			})
 
 		return () => {
-			subscription.unsubscribe()
+			channel.unsubscribe()
 		}
 	}, [])
 
