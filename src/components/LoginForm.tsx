@@ -5,9 +5,10 @@ interface LoginFormProps {
 	onSubmit: (e: FormEvent) => void
 	rememberMe: boolean
 	setRememberMe: (value: boolean) => void
+	savedEmail: string
 }
 
-const LoginForm: FC<LoginFormProps> = ({ onSubmit, rememberMe, setRememberMe }) => {
+const LoginForm: FC<LoginFormProps> = ({ onSubmit, rememberMe, setRememberMe, savedEmail }) => {
 	return (
 		<form onSubmit={onSubmit} className='space-y-4'>
 			<div>
@@ -17,7 +18,7 @@ const LoginForm: FC<LoginFormProps> = ({ onSubmit, rememberMe, setRememberMe }) 
 					name='email'
 					className='mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 					placeholder='Введите почту'
-					defaultValue=''
+					defaultValue={savedEmail}
 				/>
 			</div>
 			<div>
@@ -45,8 +46,8 @@ const LoginForm: FC<LoginFormProps> = ({ onSubmit, rememberMe, setRememberMe }) 
 							transition={{ duration: 0.3 }}
 						>
 							<motion.div
-								className='w-5 h-5 bg-white rounded-full shadow-md' // Шарик теперь того же размера, что и высота ползунка
-								animate={{ x: rememberMe ? 20 : 0 }} // Двигается от края до края
+								className='w-5 h-5 bg-white rounded-full shadow-md'
+								animate={{ x: rememberMe ? 20 : 0 }}
 								transition={{ type: 'spring', stiffness: 300, damping: 20 }}
 							/>
 						</motion.div>

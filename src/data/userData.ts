@@ -35,11 +35,12 @@ const syncWithLocalStorage = (newData: UserData) => {
 	localStorage.setItem('userData', JSON.stringify(newData))
 }
 
-/* export type TypePages = {
+export type TypePages = {
 	prevPage: string
 	currentPage: string
 }
 
+/*
 export const setPage = (page: string): void => {
 	// Получаем текущие данные из localStorage
 	const data = localStorage.getItem('pageHistory')
@@ -73,7 +74,7 @@ export const setPage = (page: string): void => {
 	localStorage.setItem('pageHistory', JSON.stringify(pageData))
 } */
 
-export const setRole = (role: 'employer' | 'user') => {
+/* export const setRole = (role: 'employer' | 'user') => {
 	const newData: UserData = {}
 	if (role === 'user') {
 		newData.user = {
@@ -87,9 +88,9 @@ export const setRole = (role: 'employer' | 'user') => {
 		}
 	}
 	syncWithLocalStorage(newData)
-}
+} */
 
-export const getRole = (): 'employer' | 'user' | '' => {
+/* export const getRole = (): 'employer' | 'user' | '' => {
 	const jsonData = initUserData()
 	if (jsonData.user) {
 		return 'user'
@@ -98,10 +99,10 @@ export const getRole = (): 'employer' | 'user' | '' => {
 	}
 	console.warn('No user or employer found in userData:', jsonData)
 	return ''
-}
+} */
 
 // USER
-export const addToFavorite = (id: number) => {
+/* export const addToFavorite = (id: number) => {
 	if (!jsonData.user) {
 		jsonData.user = {
 			favoriteTasks: { id: [] },
@@ -113,15 +114,15 @@ export const addToFavorite = (id: number) => {
 		jsonData.user.favoriteTasks.id.push(id)
 		syncWithLocalStorage(jsonData)
 	}
-}
+} */
 
-export const removeTaskFromFavorite = (id: number) => {
+/* export const removeTaskFromFavorite = (id: number) => {
 	if (!jsonData.user) {
 		return
 	}
 	jsonData.user.favoriteTasks.id = jsonData.user.favoriteTasks.id.filter(taskId => taskId !== id)
 	syncWithLocalStorage(jsonData)
-}
+} */
 
 export const addToStarted = (id: number) => {
 	if (!jsonData.user) {
@@ -137,15 +138,15 @@ export const addToStarted = (id: number) => {
 	}
 }
 
-export const removeTaskFromStarted = (id: number) => {
+/* export const removeTaskFromStarted = (id: number) => {
 	if (!jsonData.user) {
 		return
 	}
 	jsonData.user.startedTasks.id = jsonData.user.startedTasks.id.filter(taskId => taskId !== id)
 	syncWithLocalStorage(jsonData)
-}
+} */
 
-export const addToFinished = (id: number) => {
+/* export const addToFinished = (id: number) => {
 	if (!jsonData.user) {
 		jsonData.user = {
 			favoriteTasks: { id: [] },
@@ -157,18 +158,18 @@ export const addToFinished = (id: number) => {
 		jsonData.user.finishedTasks.id.push(id)
 		syncWithLocalStorage(jsonData)
 	}
-}
-
+} */
+/* 
 export const removeTaskFromFinished = (id: number) => {
 	if (!jsonData.user) {
 		return
 	}
 	jsonData.user.finishedTasks.id = jsonData.user.finishedTasks.id.filter(taskId => taskId !== id)
 	syncWithLocalStorage(jsonData)
-}
+} */
 
 // EMPLOYER
-export const addTaskToEmployer = (taskId: number) => {
+/* export const addTaskToEmployer = (taskId: number) => {
 	if (!jsonData.employer) {
 		jsonData.employer = { tasks: [] }
 	}
@@ -176,15 +177,15 @@ export const addTaskToEmployer = (taskId: number) => {
 		jsonData.employer.tasks.push(taskId)
 		syncWithLocalStorage(jsonData)
 	}
-}
+} */
 
-export const removeTaskFromEmployer = (taskId: number) => {
+/* export const removeTaskFromEmployer = (taskId: number) => {
 	if (!jsonData.employer) {
 		return
 	}
 	jsonData.employer.tasks = jsonData.employer.tasks.filter(id => id !== taskId)
 	syncWithLocalStorage(jsonData)
-}
+} */
 
 export type PageHistory = string[]
 

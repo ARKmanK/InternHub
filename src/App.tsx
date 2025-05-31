@@ -7,6 +7,7 @@ import { MantineProvider } from '@mantine/core'
 import CreateTaskPage from '@/src/components/pages/CreateTaskPage'
 import LoginPage from '@/src/components/pages/LoginPage'
 import EditTaskPage from './components/pages/EditTaskPage'
+import Message from '@components/Message'
 
 const RootRedirect = () => {
 	const navigate = useNavigate()
@@ -74,6 +75,7 @@ const App: FC = () => {
 		<>
 			<MantineProvider>
 				<RouterProvider router={router}></RouterProvider>
+				<Message />
 			</MantineProvider>
 		</>
 	)

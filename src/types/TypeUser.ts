@@ -1,7 +1,7 @@
 export type TypeUser = {
 	id: number
 	email: string
-	role: 'user' | 'employer'
+	role: 'user' | 'employer' | 'admin'
 	first_name?: string
 	last_name?: string
 	student_group?: string

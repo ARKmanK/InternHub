@@ -1,6 +1,6 @@
 import Header from '@components/Header'
 import NavBar from '@components/NavBar'
-import { FC, FormEvent, useState } from 'react'
+import { FC, FormEvent, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
@@ -9,12 +9,78 @@ import RegisterForm from '@components/RegisterForm'
 import { supabase } from '@/supabaseClient'
 import { createUser, getUserByEmail } from '@/src/lib/API/supabaseAPI'
 import { debounce } from 'lodash'
+import { setPage } from '@data/userData'
 
 const LoginPage: FC = () => {
 	const navigate = useNavigate()
 	const { notifications, addNotification } = useNotification()
 	const [isLogin, setIsLogin] = useState(true)
 	const [rememberMe, setRememberMe] = useState(false)
+	const [savedEmail, setSavedEmail] = useState<string>('')
+
+	// Проверяем сохраненную сессию при загрузке страницы
+	useEffect(() => {
+		const checkSavedSession = async () => {
+			const savedSession = localStorage.getItem('supabaseSession')
+			const sessionExpiry = localStorage.getItem('sessionExpiry')
+			const savedRememberMe = localStorage.getItem('rememberMe')
+			const savedEmail = localStorage.getItem('email')
+
+			if (savedSession && sessionExpiry && savedRememberMe === 'true') {
+				const expiryTime = parseInt(sessionExpiry, 10)
+				const currentTime = Date.now()
+
+				if (currentTime < expiryTime) {
+					// Сессия еще действительна, восстанавливаем её
+					try {
+						const session = JSON.parse(savedSession)
+						const { error } = await supabase.auth.setSession({
+							access_token: session.access_token,
+							refresh_token: session.refresh_token,
+						})
+						if (error) throw error
+
+						// Получаем данные пользователя
+						const {
+							data: { user },
+						} = await supabase.auth.getUser()
+						if (user) {
+							const userFromDb = await getUserByEmail(user.email!)
+							if (userFromDb) {
+								localStorage.setItem('userId', userFromDb.id.toString())
+								localStorage.setItem('role', userFromDb.role)
+								setPage('/tasks')
+								navigate('/tasks')
+							}
+						}
+					} catch (error: any) {
+						console.error('Ошибка восстановления сессии:', error.message)
+						clearSessionData()
+					}
+				} else {
+					// Сессия истекла, очищаем данные
+					clearSessionData()
+				}
+			}
+
+			// Устанавливаем сохраненный email, если он есть
+			if (savedEmail && savedRememberMe === 'true') {
+				setSavedEmail(savedEmail)
+				setRememberMe(true)
+			}
+		}
+
+		checkSavedSession()
+	}, [navigate])
+
+	const clearSessionData = () => {
+		localStorage.removeItem('supabaseSession')
+		localStorage.removeItem('sessionExpiry')
+		localStorage.removeItem('rememberMe')
+		localStorage.removeItem('email')
+		localStorage.removeItem('userId')
+		localStorage.removeItem('role')
+	}
 
 	const handleLogin = async (e: FormEvent) => {
 		e.preventDefault()
@@ -29,14 +95,14 @@ const LoginPage: FC = () => {
 
 		try {
 			const {
-				data: { user },
+				data: { user, session },
 				error,
 			} = await supabase.auth.signInWithPassword({
 				email,
 				password,
 			})
 			if (error) throw error
-			if (!user) {
+			if (!user || !session) {
 				addNotification('error', 'Ошибка', 'Не удалось войти')
 				return
 			}
@@ -52,16 +118,23 @@ const LoginPage: FC = () => {
 			localStorage.setItem('userId', userFromDb.id.toString())
 			localStorage.setItem('role', userFromDb.role)
 
-			// Сохранение состояния "Запомнить меня" в localStorage
+			// Сохранение сессии и данных "Запомнить меня"
 			if (rememberMe) {
+				// Сохраняем сессию и время истечения (6 часов = 6 * 60 * 60 * 1000 мс)
+				const expiryTime = Date.now() + 6 * 60 * 60 * 1000
+				localStorage.setItem('supabaseSession', JSON.stringify(session))
+				localStorage.setItem('sessionExpiry', expiryTime.toString())
 				localStorage.setItem('rememberMe', 'true')
 				localStorage.setItem('email', email)
 			} else {
-				localStorage.removeItem('rememberMe')
-				localStorage.removeItem('email')
+				clearSessionData()
+				// Сохраняем только userId и role, так как они нужны для работы приложения
+				localStorage.setItem('userId', userFromDb.id.toString())
+				localStorage.setItem('role', userFromDb.role)
 			}
 
 			addNotification('success', 'Успешно', 'Вход выполнен')
+			setPage('/tasks')
 			navigate('/tasks')
 		} catch (error: any) {
 			addNotification('error', 'Ошибка', `Не удалось войти: ${error.message}`)
@@ -112,7 +185,22 @@ const LoginPage: FC = () => {
 			localStorage.setItem('userId', userFromDb.id.toString())
 			localStorage.setItem('role', userFromDb.role)
 
+			// Сохранение сессии, если rememberMe включено
+			if (rememberMe) {
+				const {
+					data: { session },
+				} = await supabase.auth.getSession()
+				if (session) {
+					const expiryTime = Date.now() + 6 * 60 * 60 * 1000
+					localStorage.setItem('supabaseSession', JSON.stringify(session))
+					localStorage.setItem('sessionExpiry', expiryTime.toString())
+					localStorage.setItem('rememberMe', 'true')
+					localStorage.setItem('email', data.email)
+				}
+			}
+
 			addNotification('success', 'Успешно', 'Регистрация завершена')
+			setPage('/tasks')
 			navigate('/tasks')
 		} catch (error: any) {
 			addNotification('error', 'Ошибка', `Не удалось зарегистрироваться: ${error.message}`)
@@ -152,6 +240,7 @@ const LoginPage: FC = () => {
 							onSubmit={handleLogin}
 							rememberMe={rememberMe}
 							setRememberMe={setRememberMe}
+							savedEmail={savedEmail}
 						/>
 					) : (
 						<RegisterForm onSubmit={handleRegister} />

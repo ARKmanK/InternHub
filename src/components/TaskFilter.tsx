@@ -1,27 +1,79 @@
-import { FC, useState } from 'react'
+import { FC, useState, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { companyNames } from '../data/companyNames'
-import { availableTags } from '../data/tags'
+import { supabase } from '@/supabaseClient'
+import { getAllTags, getUserTags } from '../lib/API/supabaseAPI'
+import useNotification from '@hooks/useNotification'
 
 type TypeFilter = {
 	companies: string | null
 	difficulty: number | null
-	tracking: boolean | null
+	tracking: '0' | '1-5' | '6-10' | '15-20' | '20+' | null
 	tags: string[] | null
 }
 
 interface TaskFilterProps {
 	filter: TypeFilter
 	setFilter: React.Dispatch<React.SetStateAction<TypeFilter>>
+	companies: string[] // Динамический список компаний
 }
 
-const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter }) => {
+const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 	const [openSection, setOpenSection] = useState({
 		companies: false,
 		difficulty: false,
 		tracking: false,
 		tags: false,
 	})
+	const [allTags, setAllTags] = useState<string[]>([]) // Состояние для объединенного списка тегов
+	const { addNotification } = useNotification()
+
+	useEffect(() => {
+		const fetchTags = async () => {
+			try {
+				// Получаем общие теги
+				const commonTags = await getAllTags()
+
+				// Извлекаем имена тегов
+				const commonTagNames = commonTags.map(tag => tag.name)
+
+				// Получаем userId для загрузки кастомных тегов
+				const {
+					data: { session },
+				} = await supabase.auth.getSession()
+				if (!session?.user) {
+					addNotification('warning', 'Внимание', 'Авторизуйтесь, чтобы увидеть кастомные теги')
+					setAllTags([...new Set(commonTagNames)])
+					return
+				}
+
+				const { data: userData, error: userError } = await supabase
+					.from('users')
+					.select('id')
+					.eq('email', session.user.email)
+					.single()
+
+				if (userError || !userData) {
+					addNotification('error', 'Ошибка', 'Не удалось загрузить данные пользователя')
+					setAllTags([...new Set(commonTagNames)])
+					return
+				}
+
+				const userId = userData.id
+
+				// Получаем кастомные теги пользователя
+				const userTags = await getUserTags(userId)
+
+				// Объединяем теги и удаляем дубликаты
+				const uniqueTags = [...new Set([...commonTagNames, ...userTags])]
+				setAllTags(uniqueTags)
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', `Не удалось загрузить теги: ${error.message}`)
+				setAllTags([])
+			}
+		}
+
+		fetchTags()
+	}, [addNotification])
 
 	const toggleSection = (section: keyof typeof openSection) => {
 		setOpenSection(prev => ({
@@ -53,7 +105,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter }) => {
 		})
 	}
 
-	const handleTrackingChange = (value: boolean | null) => {
+	const handleTrackingChange = (value: '0' | '1-5' | '6-10' | '15-20' | '20+' | null) => {
 		setFilter({
 			...filter,
 			tracking: filter.tracking === value ? null : value,
@@ -98,7 +150,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter }) => {
 					}`}
 				>
 					<ul className='space-y-2'>
-						{companyNames.map(company => (
+						{companies.map(company => (
 							<li key={company} className='flex items-center space-x-2'>
 								<input
 									type='radio'
@@ -166,26 +218,18 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter }) => {
 					}`}
 				>
 					<ul className='space-y-2'>
-						<li className='flex items-center space-x-2'>
-							<input
-								type='radio'
-								name='tracking'
-								checked={filter.tracking === true}
-								onChange={() => handleTrackingChange(true)}
-								className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500'
-							/>
-							<span>Да</span>
-						</li>
-						<li className='flex items-center space-x-2'>
-							<input
-								type='radio'
-								name='tracking'
-								checked={filter.tracking === false}
-								onChange={() => handleTrackingChange(false)}
-								className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500'
-							/>
-							<span>Нет</span>
-						</li>
+						{(['0', '1-5', '6-10', '15-20', '20+'] as const).map(range => (
+							<li key={range} className='flex items-center space-x-2'>
+								<input
+									type='radio'
+									name='tracking'
+									checked={filter.tracking === range}
+									onChange={() => handleTrackingChange(range)}
+									className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500'
+								/>
+								<span>{range}</span>
+							</li>
+						))}
 					</ul>
 				</div>
 			</div>
@@ -208,7 +252,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter }) => {
 					}`}
 				>
 					<ul className='space-y-2'>
-						{availableTags.map(tag => (
+						{allTags.map(tag => (
 							<li key={tag} className='flex items-center space-x-2'>
 								<input
 									type='checkbox'
@@ -222,6 +266,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter }) => {
 					</ul>
 				</div>
 			</div>
+
 			<div className='p-4'>
 				<button
 					onClick={resetFilters}

@@ -1,12 +1,5 @@
-import Header from '@components/Header'
-import NavBar from '@components/NavBar'
-import TaskCard from '@components/TaskCard'
 import { useNavigate } from 'react-router-dom'
-import { List, BookCopy, Undo2, LogOut } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
 import { supabase } from '@/supabaseClient'
 import {
 	clearAuthData,
@@ -15,10 +8,15 @@ import {
 	getUserFavorites,
 	removeTaskFromFavorite,
 } from '@/src/lib/API/supabaseAPI'
-import EmptyCard from '@components/EmptyCard'
-import { Button } from '@components/UI/Button/Button'
-import DeleteConfirmation from '@components/DeleteConfirmation'
+import useNotification from '@hooks/useNotification'
+import Notification from '@components/UI/Notification/Notification'
 import { setPage, goBack } from '@data/userData'
+import Header from '@components/Header'
+import NavBar from '@components/NavBar'
+import UserProfile from '@components/userComponents/UserProfile'
+import EmployerProfile from '@components/employerComponents/EmployerProfile'
+import AdminProfile from '@components/adminComponents/AdminProfile'
+import { Undo2, LogOut } from 'lucide-react'
 
 type TypeTask = {
 	id: number
@@ -33,7 +31,7 @@ type TypeTask = {
 }
 
 const UserPage = () => {
-	const [role, setRole] = useState<'employer' | 'user' | null>(null)
+	const [role, setRole] = useState<'employer' | 'user' | 'admin' | null>(null)
 	const [listType, setListType] = useState<'list' | 'card'>('list')
 	const [visibleTasks, setVisibleTasks] = useState<TypeTask[]>([])
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
@@ -49,7 +47,7 @@ const UserPage = () => {
 	const navigate = useNavigate()
 
 	useEffect(() => {
-		setPage('/user') // Устанавливаем текущую страницу
+		setPage('/user')
 		const fetchUser = async () => {
 			const {
 				data: { session },
@@ -59,11 +57,13 @@ const UserPage = () => {
 				if (user) {
 					setUserId(user.id)
 					setRole(user.role)
-					await loadFavoriteTasks(user.id)
-					await loadStartedTasks(user.id)
-					await loadFinishedTasks(user.id)
-					if (user.role === 'employer') {
-						await loadEmployerTasks(user.id)
+					if (user.role !== 'admin') {
+						await loadFavoriteTasks(user.id)
+						await loadStartedTasks(user.id)
+						await loadFinishedTasks(user.id)
+						if (user.role === 'employer') {
+							await loadEmployerTasks(user.id)
+						}
 					}
 				}
 			}
@@ -104,11 +104,7 @@ const UserPage = () => {
 			if (error) throw error
 			setFinishedTasks(data.map(item => item.task_id))
 		} catch (error: any) {
-			addNotification(
-				'error',
-				'Ошибка',
-				`Не удалось загрузить завершенные задачи: ${error.message}`
-			)
+			addNotification('error', 'Ошибка', `Не удалось загрузить Одобренные задачи: ${error.message}`)
 		}
 	}
 
@@ -127,7 +123,7 @@ const UserPage = () => {
 	}
 
 	const loadTasks = async () => {
-		if (!role || !userId) return
+		if (!role || !userId || role === 'admin') return
 
 		try {
 			const allTasks = await getAllTasks()
@@ -156,7 +152,7 @@ const UserPage = () => {
 	}
 
 	useEffect(() => {
-		if (role && userId) {
+		if (role && userId && role !== 'admin') {
 			loadTasks()
 		}
 	}, [category, role, userId, favoriteTasks, startedTasks, finishedTasks])
@@ -278,44 +274,24 @@ const UserPage = () => {
 		setTaskToDelete(null)
 	}
 
-	const taskCard = visibleTasks.map(task => (
-		<AnimatePresence key={task.id}>
-			<motion.div
-				initial={{ opacity: 0, y: -20 }}
-				animate={{ opacity: 1, y: 0 }}
-				exit={{ opacity: 0, y: -20 }}
-				transition={{ duration: 0.5 }}
-			>
-				<TaskCard
-					id={task.id}
-					trackingNumber={task.tracking_number}
-					title={task.title}
-					description={task.description}
-					difficulty={task.difficulty}
-					companyName={task.company_name}
-					type={listType}
-					addToFavorite={role === 'user' ? addToFavorite : undefined}
-					isFavorite={favoriteTasks.includes(task.id)}
-					deadline={task.deadline}
-					tags={task.tags ?? []}
-					role={role}
-					onDelete={role === 'employer' ? () => handleDelete(task.id) : undefined}
-					showControls={role === 'employer'}
-				/>
-			</motion.div>
-		</AnimatePresence>
-	))
-
-	const handleClick = (type: 'favorite' | 'started' | 'finished') => {
-		setCategory(type)
-		setActiveCategory(type)
+	const handleLogout = async () => {
+		try {
+			await supabase.auth.signOut()
+			clearAuthData()
+			localStorage.removeItem('pageHistory')
+			localStorage.removeItem('supabaseSession')
+			localStorage.removeItem('sessionExpiry')
+			addNotification('success', 'Успешно', 'Вы вышли из системы')
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось выйти из системы: ${error.message}`)
+		} finally {
+			navigate('/login')
+		}
 	}
 
-	const handleLogout = async () => {
-		await supabase.auth.signOut()
-		clearAuthData()
-		localStorage.removeItem('pageHistory') // Очищаем историю при выходе
-		navigate('/login')
+	const handleCategoryChange = (type: 'favorite' | 'started' | 'finished') => {
+		setCategory(type)
+		setActiveCategory(type)
 	}
 
 	return (
@@ -323,101 +299,40 @@ const UserPage = () => {
 			<Header />
 			<NavBar />
 			<div className='relative'>
-				<div className='md:flex md:justify-center md:py-[20px] md:px-[10px]'>
-					<div className='md:min-h-[730px] md:w-[980px]'>
-						<div className='md:flex md:flex-col'>
-							<div className='md:py-4 md:flex md:justify-end items-center'>
-								<button
-									className='md:p-1 hover:bg-gray-300'
-									onClick={() => goBack(navigate)}
-									aria-label='Вернуться назад'
-								>
-									<Undo2 size={30} />
-								</button>
-								<button
-									className='md:flex gap-x-2 border rounded-xl py-1 px-2 ml-4 bg-blue-400 hover:bg-gray-400'
-									onClick={handleLogout}
-								>
-									<LogOut /> <span>Выйти</span>
-								</button>
-							</div>
-							<div className='md:flex md:justify-end'>
-								<button
-									className='md:mr-4 md:p-1 hover:bg-gray-300'
-									onClick={() => setListType('list')}
-								>
-									<List size={30} />
-								</button>
-								<button className='md:p-1 hover:bg-gray-300' onClick={() => setListType('card')}>
-									<BookCopy size={30} />
-								</button>
-							</div>
-							<div className='md:flex mt-7'>
-								<div className='md:w-[80%]'>
-									<h1 className='text-2xl font-bold mb-14'>Страница профиля</h1>
-									{role === 'user' && (
-										<div className='md:flex md:justify-start md:gap-x-3 md:mb-10'>
-											<Button
-												className={`focus:bg-amber-700 ${
-													activeCategory === 'favorite' ? 'bg-amber-700' : ''
-												}`}
-												onClick={() => handleClick('favorite')}
-											>
-												<span>Избранное</span>
-											</Button>
-											<Button
-												className={`focus:bg-amber-700 ${
-													activeCategory === 'started' ? 'bg-amber-700' : ''
-												}`}
-												onClick={() => handleClick('started')}
-											>
-												<span>Начатые задачи</span>
-											</Button>
-											<Button
-												className={`focus:bg-amber-700 ${
-													activeCategory === 'finished' ? 'bg-amber-700' : ''
-												}`}
-												onClick={() => handleClick('finished')}
-											>
-												<span>Завершенные задачи</span>
-											</Button>
-										</div>
-									)}
-									{role === 'employer' && (
-										<div className='md:mb-10'>
-											<h2 className='text-xl font-semibold'>Мои задачи</h2>
-										</div>
-									)}
-									{visibleTasks.length === 0 ? (
-										<EmptyCard
-											role={role}
-											listType={
-												role === 'employer'
-													? 'Мои задачи'
-													: category === 'favorite'
-													? 'Избранное'
-													: category === 'started'
-													? 'Начатые задачи'
-													: 'Завершенные задачи'
-											}
-										/>
-									) : listType === 'card' ? (
-										<div className='md:grid md:gap-4 md:grid-cols-2'>{taskCard}</div>
-									) : (
-										<>{taskCard}</>
-									)}
-								</div>
-							</div>
-						</div>
-					</div>
-					{showDeleteForm && (
-						<DeleteConfirmation
-							taskId={taskToDelete || 0}
-							onConfirm={confirmDelete}
-							onCancel={cancelDelete}
-						/>
-					)}
-				</div>
+				{role === 'user' && (
+					<UserProfile
+						listType={listType}
+						setListType={setListType}
+						visibleTasks={visibleTasks}
+						favoriteTasks={favoriteTasks}
+						category={category}
+						activeCategory={activeCategory}
+						handleCategoryChange={handleCategoryChange}
+						addToFavorite={addToFavorite}
+						removeFromFavorite={removeFromFavorite} // Передаём в UserProfile
+						navigate={navigate}
+						handleLogout={handleLogout}
+						goBack={goBack}
+					/>
+				)}
+				{role === 'employer' && (
+					<EmployerProfile
+						listType={listType}
+						setListType={setListType}
+						visibleTasks={visibleTasks}
+						handleDelete={handleDelete}
+						showDeleteForm={showDeleteForm}
+						taskToDelete={taskToDelete}
+						confirmDelete={confirmDelete}
+						cancelDelete={cancelDelete}
+						navigate={navigate}
+						handleLogout={handleLogout}
+						goBack={goBack}
+					/>
+				)}
+				{role === 'admin' && (
+					<AdminProfile navigate={navigate} handleLogout={handleLogout} goBack={goBack} />
+				)}
 				<Notification notifications={notifications} />
 			</div>
 		</>

@@ -8,7 +8,8 @@ import {
 	getUserByEmail,
 	getUserFavorites,
 	addTaskToFavorites,
-	removeTaskFromFavorite, // Добавляем функцию для удаления из избранного
+	removeTaskFromFavorite,
+	getUniqueCompanies,
 } from '@/src/lib/API/supabaseAPI'
 import { supabase } from '@/supabaseClient'
 import { List, BookCopy, CircleUserRound } from 'lucide-react'
@@ -18,7 +19,7 @@ import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import { Button } from '@components/UI/Button/Button'
 import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
-import { setPage, goBack } from '@/src/data/userData'
+import { setPage } from '@/src/data/userData'
 
 type TypeTask = {
 	id: number
@@ -34,13 +35,13 @@ type TypeTask = {
 type TypeFilter = {
 	companies: string | null
 	difficulty: number | null
-	tracking: boolean | null
+	tracking: '0' | '1-5' | '6-10' | '15-20' | '20+' | null
 	tags: string[] | null
 }
 
 const TasksListPage = () => {
 	const [listType, setListType] = useState('list')
-	const [role, setRole] = useState<'user' | 'employer' | null>(null)
+	const [role, setRole] = useState<'user' | 'employer' | 'admin' | null>(null)
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [tasks, setTasks] = useState<TypeTask[]>([])
 	const [employerTaskIds, setEmployerTaskIds] = useState<number[]>([])
@@ -53,6 +54,7 @@ const TasksListPage = () => {
 	})
 	const [userId, setUserId] = useState<number | null>(null)
 	const [loading, setLoading] = useState(true)
+	const [companies, setCompanies] = useState<string[]>([])
 	const navigate = useNavigate()
 
 	const addToFavorite = async (id: number) => {
@@ -60,74 +62,64 @@ const TasksListPage = () => {
 			addNotification('warning', '', 'Пользователь не авторизован')
 			return
 		}
+		if (favoriteTasks.includes(id)) {
+			return // Не добавляем, если уже в избранном
+		}
 		try {
-			if (favoriteTasks.includes(id)) {
-				// Удаляем из избранного
-				await removeTaskFromFavorite(userId, id)
-
-				// Получаем текущее значение tracking_number
-				const { data: taskData, error: fetchError } = await supabase
-					.from('tasks')
-					.select('tracking_number')
-					.eq('id', id)
-					.single()
-
-				if (fetchError) throw fetchError
-				if (!taskData) throw new Error('Task not found')
-
-				// Уменьшаем tracking_number на 1, но не ниже 0
-				const newTrackingNumber = Math.max(taskData.tracking_number - 1, 0)
-
-				// Обновляем tracking_number
-				const { error: updateError } = await supabase
-					.from('tasks')
-					.update({ tracking_number: newTrackingNumber })
-					.eq('id', id)
-
-				if (updateError) throw updateError
-
-				setFavoriteTasks(favoriteTasks.filter(task => task !== id))
-				setTasks(prev =>
-					prev.map(task =>
-						task.id === id ? { ...task, tracking_number: newTrackingNumber } : task
-					)
-				)
-				addNotification('warning', '', 'Задача убрана из избранного')
-			} else {
-				// Добавляем в избранное
-				await addTaskToFavorites(userId, id)
-
-				// Получаем текущее значение tracking_number
-				const { data: taskData, error: fetchError } = await supabase
-					.from('tasks')
-					.select('tracking_number')
-					.eq('id', id)
-					.single()
-
-				if (fetchError) throw fetchError
-				if (!taskData) throw new Error('Task not found')
-
-				// Увеличиваем tracking_number на 1
-				const newTrackingNumber = taskData.tracking_number + 1
-
-				// Обновляем tracking_number
-				const { error: updateError } = await supabase
-					.from('tasks')
-					.update({ tracking_number: newTrackingNumber })
-					.eq('id', id)
-
-				if (updateError) throw updateError
-
-				setFavoriteTasks([...favoriteTasks, id])
-				setTasks(prev =>
-					prev.map(task =>
-						task.id === id ? { ...task, tracking_number: newTrackingNumber } : task
-					)
-				)
-				addNotification('success', 'Успешно', 'Задача добавлена в избранное')
-			}
+			await addTaskToFavorites(userId, id)
+			const { data: taskData, error: fetchError } = await supabase
+				.from('tasks')
+				.select('tracking_number')
+				.eq('id', id)
+				.single()
+			if (fetchError) throw fetchError
+			if (!taskData) throw new Error('Task not found')
+			const newTrackingNumber = taskData.tracking_number + 1
+			const { error: updateError } = await supabase
+				.from('tasks')
+				.update({ tracking_number: newTrackingNumber })
+				.eq('id', id)
+			if (updateError) throw updateError
+			setFavoriteTasks([...favoriteTasks, id])
+			setTasks(prev =>
+				prev.map(task => (task.id === id ? { ...task, tracking_number: newTrackingNumber } : task))
+			)
+			addNotification('success', 'Успешно', 'Задача добавлена в избранное')
 		} catch (error: any) {
-			addNotification('error', 'Ошибка', `Не удалось обновить избранное: ${error.message}`)
+			addNotification('error', 'Ошибка', `Не удалось добавить задачу в избранное: ${error.message}`)
+		}
+	}
+
+	const removeFromFavorite = async (id: number) => {
+		if (!role || !userId) {
+			addNotification('warning', '', 'Пользователь не авторизован')
+			return
+		}
+		if (!favoriteTasks.includes(id)) {
+			return // Не удаляем, если не в избранном
+		}
+		try {
+			await removeTaskFromFavorite(userId, id)
+			const { data: taskData, error: fetchError } = await supabase
+				.from('tasks')
+				.select('tracking_number')
+				.eq('id', id)
+				.single()
+			if (fetchError) throw fetchError
+			if (!taskData) throw new Error('Task not found')
+			const newTrackingNumber = Math.max(taskData.tracking_number - 1, 0)
+			const { error: updateError } = await supabase
+				.from('tasks')
+				.update({ tracking_number: newTrackingNumber })
+				.eq('id', id)
+			if (updateError) throw updateError
+			setFavoriteTasks(favoriteTasks.filter(task => task !== id))
+			setTasks(prev =>
+				prev.map(task => (task.id === id ? { ...task, tracking_number: newTrackingNumber } : task))
+			)
+			addNotification('warning', '', 'Задача убрана из избранного')
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось убрать задачу из избранного: ${error.message}`)
 		}
 	}
 
@@ -173,7 +165,7 @@ const TasksListPage = () => {
 				const storedRole = getRole()
 
 				let finalUserId = storedUserId
-				let finalRole = storedRole
+				let finalRole: 'user' | 'employer' | 'admin' | null = storedRole
 
 				if (!storedUserId || !storedRole) {
 					const user = await getUserByEmail(session.user.email!)
@@ -184,13 +176,15 @@ const TasksListPage = () => {
 					}
 					finalUserId = user.id
 					finalRole = user.role
-
 					localStorage.setItem('userId', finalUserId.toString())
 					localStorage.setItem('role', finalRole)
 				}
 
 				setUserId(finalUserId)
-				setRole(finalRole)
+				setRole(finalRole as 'user' | 'employer' | 'admin' | null)
+
+				const uniqueCompanies = await getUniqueCompanies()
+				setCompanies(uniqueCompanies)
 
 				if (finalUserId) {
 					await loadFavoriteTasks(finalUserId)
@@ -198,6 +192,8 @@ const TasksListPage = () => {
 
 				if (finalRole === 'employer' && finalUserId) {
 					await loadEmployerTasks(finalUserId)
+				} else if (finalRole === 'admin' && finalUserId) {
+					setEmployerTaskIds([])
 				}
 
 				const tasksData = await getAllTasks()
@@ -215,7 +211,6 @@ const TasksListPage = () => {
 
 		fetchUserAndTasks()
 
-		// Подписка на изменения в таблице tasks
 		const subscription = supabase
 			.channel('tasks-changes')
 			.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, payload => {
@@ -243,9 +238,23 @@ const TasksListPage = () => {
 			filteredTasks = filteredTasks.filter(task => task.difficulty === filter.difficulty)
 		}
 		if (filter.tracking !== null) {
-			filteredTasks = filteredTasks.filter(task =>
-				filter.tracking ? task.tracking_number > 0 : task.tracking_number === 0
-			)
+			filteredTasks = filteredTasks.filter(task => {
+				const num = task.tracking_number
+				switch (filter.tracking) {
+					case '0':
+						return num === 0
+					case '1-5':
+						return num >= 1 && num <= 5
+					case '6-10':
+						return num >= 6 && num <= 10
+					case '15-20':
+						return num >= 15 && num <= 20
+					case '20+':
+						return num > 20
+					default:
+						return true
+				}
+			})
 		}
 		if (filter.tags && filter.tags.length > 0) {
 			filteredTasks = filteredTasks.filter(task =>
@@ -283,7 +292,8 @@ const TasksListPage = () => {
 						difficulty={task.difficulty}
 						companyName={task.company_name}
 						type={listType}
-						addToFavorite={addToFavorite}
+						addToFavorite={addToFavorite} // Передаём addToFavorite
+						removeFromFavorite={removeFromFavorite} // Передаём removeFromFavorite
 						isFavorite={favoriteTasks.includes(task.id)}
 						deadline={task.deadline}
 						tags={task.tags}
@@ -340,7 +350,7 @@ const TasksListPage = () => {
 						</div>
 						<div className='md:flex mt-7'>
 							<div className='md:w-[25%] md:mr-10'>
-								<TaskFilter filter={filter} setFilter={setFilter} />
+								<TaskFilter filter={filter} setFilter={setFilter} companies={companies} />
 							</div>
 							<div className='md:w-[80%]'>
 								{listType === 'card' ? (

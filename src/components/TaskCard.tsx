@@ -1,12 +1,10 @@
-import { FC } from 'react'
+// components/TaskCard.tsx
+import { FC, MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart, BadgeCheck, Star, Delete, BookCheck, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@components/UI/Button/Button'
-import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
 
-// Определяем тип для задачи, аналогичный TypeTask из TasksListPage
 type TaskCardProps = {
 	id: number
 	trackingNumber: number
@@ -16,13 +14,16 @@ type TaskCardProps = {
 	companyName: string
 	type: string
 	addToFavorite?: (id: number) => void
+	removeFromFavorite?: (id: number) => void
 	isFavorite?: boolean
 	deadline: string
 	tags: string[]
-	role?: 'user' | 'employer' | null // Обновляем тип role, чтобы включить null
+	role?: 'user' | 'employer' | 'admin' | null
 	isMine?: boolean
 	onDelete?: () => void
 	showControls?: boolean
+	onClick?: () => void
+	showFavoriteButton?: boolean
 }
 
 const TaskCard: FC<TaskCardProps> = ({
@@ -34,6 +35,7 @@ const TaskCard: FC<TaskCardProps> = ({
 	companyName,
 	type,
 	addToFavorite,
+	removeFromFavorite,
 	isFavorite = false,
 	deadline,
 	tags,
@@ -41,8 +43,9 @@ const TaskCard: FC<TaskCardProps> = ({
 	isMine,
 	onDelete,
 	showControls = false,
+	onClick,
+	showFavoriteButton = true,
 }) => {
-	const { notifications, addNotification } = useNotification()
 	const navigate = useNavigate()
 
 	const handleClick = (id: string) => {
@@ -51,6 +54,23 @@ const TaskCard: FC<TaskCardProps> = ({
 
 	const handleEdit = () => {
 		navigate(`/edit-task/${id}`)
+	}
+
+	const handleNavigate = (e: MouseEvent<HTMLButtonElement>) => {
+		if (onClick) {
+			onClick()
+		} else {
+			handleClick(id.toString())
+		}
+	}
+
+	// Обработчик для переключения состояния избранного
+	const handleFavoriteClick = () => {
+		if (isFavorite && removeFromFavorite) {
+			removeFromFavorite(id) // Удаляем из избранного
+		} else if (!isFavorite && addToFavorite) {
+			addToFavorite(id) // Добавляем в избранное
+		}
 	}
 
 	const renderDifficultyStars = (difficulty: number) => {
@@ -78,7 +98,6 @@ const TaskCard: FC<TaskCardProps> = ({
 		)
 	}
 
-	// Обрезаем описание для типа card до 150 символов
 	const truncatedDescription =
 		type === 'card' && description.length > 150 ? description.slice(0, 150) + '...' : description
 
@@ -89,10 +108,10 @@ const TaskCard: FC<TaskCardProps> = ({
 					<div className='py-2 px-3 flex flex-col justify-between'>
 						<div className='flex justify-between text-gray-500 text-sm'>
 							<p>Сейчас отслеживают {trackingNumber}</p>
-							{role === 'user' && (
+							{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
 								<button
 									className='p-1 rounded transition-colors'
-									onClick={() => addToFavorite && addToFavorite(id)}
+									onClick={handleFavoriteClick} // Используем handleFavoriteClick
 								>
 									<Heart
 										fill={isFavorite ? 'red' : 'gray'}
@@ -152,7 +171,7 @@ const TaskCard: FC<TaskCardProps> = ({
 							{renderDifficultyStars(difficulty)}
 						</div>
 						<div className='flex justify-between'>
-							<Button onClick={() => handleClick(id.toString())}>На страницу задачи</Button>
+							<Button onClick={handleNavigate}>На страницу задачи</Button>
 							<div className='flex items-center'>
 								{companyName}
 								<BadgeCheck className='ml-2' fill='green' />
@@ -167,10 +186,10 @@ const TaskCard: FC<TaskCardProps> = ({
 						<div>
 							<div className='flex justify-between text-gray-500 text-sm'>
 								<p>Сейчас отслеживают {trackingNumber}</p>
-								{role === 'user' && (
+								{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
 									<button
 										className='p-1 rounded transition-colors'
-										onClick={() => addToFavorite && addToFavorite(id)}
+										onClick={handleFavoriteClick} // Используем handleFavoriteClick
 									>
 										<Heart
 											fill={isFavorite ? 'red' : 'gray'}
@@ -212,7 +231,7 @@ const TaskCard: FC<TaskCardProps> = ({
 							</div>
 						</div>
 						<div className='flex flex-col items-start gap-1 md:mt-3.5'>
-							<Button onClick={() => handleClick(id.toString())} className='text-sm px-2 py-1'>
+							<Button onClick={handleNavigate} className='text-sm px-2 py-1'>
 								На страницу задачи
 							</Button>
 							<div className='flex items-center md:my-2 md:ml-0.5'>
@@ -223,7 +242,6 @@ const TaskCard: FC<TaskCardProps> = ({
 					</div>
 				</div>
 			)}
-			<Notification notifications={notifications} />
 		</>
 	)
 }
