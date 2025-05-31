@@ -5,7 +5,7 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
-import { getAllTags, getUserTags } from '@/src/lib/API/supabaseAPI'
+import { deleteUserTag, getAllTags, getUserTags } from '@/src/lib/API/supabaseAPI'
 import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
 import { supabase } from '@/supabaseClient'
 import TaskCard from '@components/TaskCard'
@@ -131,12 +131,10 @@ const AddTaskForm = () => {
 
 		try {
 			// Добавляем новый тег в user_tags
-			const { error } = await supabase
-				.from('user_tags')
-				.insert({ user_id: userId, name: trimmedTag })
-
-			if (error) {
-				throw new Error(`Не удалось создать тег: ${error.message}`)
+			if (userId) {
+				await supabase.from('user_tags').insert({ user_id: userId, name: trimmedTag })
+			} else {
+				throw new Error('Пользователь не авторизован')
 			}
 
 			setTags([...tags, trimmedTag])
@@ -147,9 +145,18 @@ const AddTaskForm = () => {
 		}
 	}
 
-	const removeCustomTag = (tagToRemove: string) => {
-		setTags(tags.filter(tag => tag !== tagToRemove))
-		setUserTags(userTags.filter(tag => tag !== tagToRemove))
+	const removeCustomTag = async (tagToRemove: string) => {
+		try {
+			// Удаляем тег из базы данных
+			if (userId) {
+				await deleteUserTag(userId, tagToRemove)
+			}
+			// Обновляем локальное состояние
+			setTags(tags.filter(tag => tag !== tagToRemove))
+			setUserTags(userTags.filter(tag => tag !== tagToRemove))
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', error.message)
+		}
 	}
 
 	const formatDate = (date: Date | null): string => {

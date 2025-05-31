@@ -4,6 +4,7 @@ import { TypeTask } from '@/src/types/TypeTask'
 import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
 import { TypeTaskSubmission } from '@/src/types/TypeTaskSubmission'
 import { TypeTag } from '@/src/types/TypeTag'
+import { PostgrestError } from '@supabase/supabase-js'
 /* import { TypeTasksData } from '@/src/data/tasksData' */
 
 // Функции для работы с таблицей users
@@ -615,11 +616,12 @@ export const getPendingTaskSubmissions = async (): Promise<TypeTaskSubmission[]>
 
 // Одобрение задачи (перенос из task_submissions в tasks)
 export const approveTaskSubmission = async (submissionId: number): Promise<void> => {
-	const { data: submission, error: fetchError } = await supabase
-		.from('task_submissions')
-		.select('*')
-		.eq('id', submissionId)
-		.single()
+	const result = await supabase.from('task_submissions').select('*').eq('id', submissionId).single()
+
+	const { data: submission, error: fetchError } = result as {
+		data: TypeTaskSubmission | null
+		error: PostgrestError | null
+	}
 
 	if (fetchError) {
 		throw new Error(`Failed to fetch submission: ${fetchError.message}`)
@@ -653,42 +655,65 @@ export const approveTaskSubmission = async (submissionId: number): Promise<void>
 	const taskId = taskData.id
 
 	if (submission.tags && submission.tags.length > 0) {
-		for (const tagName of submission.tags) {
-			// Проверяем, существует ли тег в tags
-			let { data: existingTag, error: tagError } = await supabase
-				.from('tags')
-				.select('id')
-				.eq('name', tagName)
-				.single()
+		// Получаем существующие общие теги
+		const { data: existingCommonTags, error: fetchCommonTagsError } = await supabase
+			.from('tags')
+			.select('id, name')
+			.in('name', submission.tags)
 
-			if (tagError && tagError.code !== 'PGRST116') {
-				throw new Error(`Failed to fetch tag: ${tagError.message}`)
-			}
+		if (fetchCommonTagsError) {
+			throw new Error(`Failed to fetch common tags: ${fetchCommonTagsError.message}`)
+		}
 
-			let tagId: number
-			if (!existingTag) {
-				// Создаем новый тег в tags
-				const { data: newTag, error: createTagError } = await supabase
-					.from('tags')
-					.insert({ name: tagName })
-					.select()
-					.single()
+		const commonTagNames = existingCommonTags.map(tag => tag.name)
+		const commonTagsMap = new Map(existingCommonTags.map(tag => [tag.name, tag.id]))
 
-				if (createTagError) {
-					throw new Error(`Failed to create tag: ${createTagError.message}`)
+		// Получаем существующие кастомные теги пользователя
+		const { data: existingUserTags, error: fetchUserTagsError } = await supabase
+			.from('user_tags')
+			.select('id, name')
+			.eq('user_id', submission.employer_id)
+			.in('name', submission.tags)
+
+		if (fetchUserTagsError) {
+			throw new Error(`Failed to fetch user tags: ${fetchUserTagsError.message}`)
+		}
+
+		const userTagNames = existingUserTags.map(tag => tag.name)
+		const userTagsMap = new Map(existingUserTags.map(tag => [tag.name, tag.id]))
+
+		// Связываем теги с задачей через task_tags
+		const taskTags = submission.tags
+			.map((tag: string) => {
+				if (commonTagNames.includes(tag)) {
+					// Тег уже существует в tags, связываем как общий
+					return {
+						task_id: taskId,
+						tag_id: commonTagsMap.get(tag)!,
+						tag_type: 'common',
+					}
+				} else if (userTagNames.includes(tag)) {
+					// Тег существует в user_tags, связываем как кастомный
+					return {
+						task_id: taskId,
+						tag_id: userTagsMap.get(tag)!,
+						tag_type: 'user',
+					}
+				} else {
+					// Это новый тег, но он уже должен быть в user_tags
+					return null
 				}
-				tagId = newTag.id
-			} else {
-				tagId = existingTag.id
-			}
+			})
+			.filter(
+				(
+					tag: { task_id: number; tag_id: number; tag_type: string } | null
+				): tag is { task_id: number; tag_id: number; tag_type: string } => tag !== null
+			)
 
-			// Связываем тег с задачей в task_tags, используем tag_type вместо type
-			const { error: taskTagError } = await supabase
-				.from('task_tags')
-				.insert({ task_id: taskId, tag_id: tagId, tag_type: 'common' }) // Заменили type на tag_type
-
+		if (taskTags.length > 0) {
+			const { error: taskTagError } = await supabase.from('task_tags').insert(taskTags)
 			if (taskTagError) {
-				throw new Error(`Failed to link tag to task: ${taskTagError.message}`)
+				throw new Error(`Failed to link tags to task: ${taskTagError.message}`)
 			}
 		}
 	}
@@ -829,4 +854,16 @@ export const getUserUuidById = async (userId: number): Promise<string | null> =>
 	}
 
 	return data?.uuid || null
+}
+
+export const deleteUserTag = async (userId: number, tagName: string): Promise<void> => {
+	const { error } = await supabase
+		.from('user_tags')
+		.delete()
+		.eq('user_id', userId)
+		.eq('name', tagName)
+
+	if (error) {
+		throw new Error(`Не удалось удалить пользовательский тег: ${error.message}`)
+	}
 }
