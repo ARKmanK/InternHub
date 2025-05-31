@@ -224,17 +224,11 @@ const TasksListPage = () => {
 					)
 				)
 			})
-			.subscribe((status: string) => {
-				if (status === 'SUBSCRIBED') {
-				} else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-					setTimeout(() => {
-						channel.subscribe()
-					}, 5000) // Пытаемся переподключиться через 5 секунд
-				}
-			})
+			.subscribe()
 
 		return () => {
 			channel.unsubscribe()
+			supabase.removeChannel(channel) // Полностью удаляем канал
 		}
 	}, [])
 

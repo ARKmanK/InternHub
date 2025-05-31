@@ -2,7 +2,7 @@ import Header from '@components/Header'
 import NavBar from '@components/NavBar'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Undo2, AppWindow, X } from 'lucide-react'
-import { setPage, TypePages } from '@/src/data/userData'
+import { setPage, TypePages, goBack } from '@/src/data/userData'
 import { useEffect, useState, useMemo } from 'react'
 import { TypeTask } from '@/src/types/TypeTask'
 import DatePicker from 'react-datepicker'
@@ -53,7 +53,7 @@ const EditTaskPage = () => {
 	const MAX_TAGS = 5
 
 	useEffect(() => {
-		setPage('/edit-task')
+		setPage(`/edit-task/${id}`)
 		const fetchData = async () => {
 			try {
 				const {
@@ -273,10 +273,8 @@ const EditTaskPage = () => {
 		}
 	}
 
-	const goBack = () => {
-		const data = localStorage.getItem('prevPage')
-		const prevPage = data ? (JSON.parse(data) as TypePages).prevPage || '/tasks' : '/tasks'
-		navigate(prevPage)
+	const handleGoBack = () => {
+		goBack(navigate)
 	}
 
 	if (!taskData) return <div>Загрузка...</div>
@@ -291,7 +289,7 @@ const EditTaskPage = () => {
 						<div className='md:py-4 md:flex md:justify-end items-center'>
 							<button
 								className='md:p-1 hover:bg-gray-300'
-								onClick={goBack}
+								onClick={handleGoBack}
 								aria-label='Вернуться к задачам'
 							>
 								<Undo2 size={30} />

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Heart, BadgeCheck, Star, Delete, BookCheck, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@components/UI/Button/Button'
+import { setPage } from '../data/userData'
 
 type TaskCardProps = {
 	id: number
@@ -52,6 +53,7 @@ const TaskCard: FC<TaskCardProps> = ({
 	}
 
 	const handleEdit = () => {
+		setPage(`/edit-task/${id}`)
 		navigate(`/edit-task/${id}`)
 	}
 

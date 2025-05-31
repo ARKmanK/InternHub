@@ -45,6 +45,10 @@ const EmployerProfile = ({
 	handleLogout,
 	goBack,
 }: EmployerProfileProps) => {
+	// Находим taskTitle для текущей задачи, если она выбрана для удаления
+	const taskToDeleteData = visibleTasks.find(task => task.id === taskToDelete)
+	const taskTitle = taskToDeleteData?.title || ''
+
 	const taskCard = visibleTasks.map(task => (
 		<AnimatePresence key={task.id}>
 			<motion.div
@@ -125,6 +129,7 @@ const EmployerProfile = ({
 			{showDeleteForm && (
 				<DeleteConfirmation
 					taskId={taskToDelete || 0}
+					taskTitle={taskTitle} // Передаём taskTitle
 					onConfirm={confirmDelete}
 					onCancel={cancelDelete}
 				/>
