@@ -169,9 +169,12 @@ const TaskCard: FC<TaskCardProps> = ({
 							{renderDifficultyStars(difficulty)}
 						</div>
 						<div className='flex justify-between'>
-							<Button onClick={handleNavigate} className='text-sm'>
+							<button
+								className='py-2 px-3 text-sm text-white font-semibold bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg shadow-md hover:from-blue-500 hover:to-blue-700 transition-all'
+								onClick={handleNavigate}
+							>
 								На страницу задачи
-							</Button>
+							</button>
 							<div className='flex items-center text-gray-700 font-medium'>
 								{companyName}
 								<BadgeCheck className='ml-1' fill='green' size={20} />
@@ -252,7 +255,10 @@ const TaskCard: FC<TaskCardProps> = ({
 							</div>
 						</div>
 						<div className='flex flex-col items-start gap-2 mt-4'>
-							<Button onClick={handleNavigate} className='text-sm px-2 py-1 w-full'>
+							<Button
+								onClick={handleNavigate}
+								className='py-2 px-3 w-full text-sm text-white font-semibold bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg shadow-md hover:from-blue-500 hover:to-blue-700 transition-all'
+							>
 								На страницу задачи
 							</Button>
 							<div className='flex items-center text-gray-700 font-medium my-1'>

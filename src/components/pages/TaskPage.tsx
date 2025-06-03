@@ -14,6 +14,7 @@ import {
 } from '@/src/lib/API/supabaseAPI'
 import { setPage, goBack } from '@data/userData'
 import { BadgeCheck, Star, CircleCheckBig, Hourglass, Heart, Undo2 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import Header from '@components/Header'
@@ -50,6 +51,9 @@ const TaskPage: FC = () => {
 	const [selectedActivity, setSelectedActivity] = useState<TypeTaskActivity | null>(null)
 	const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
 	const modalRefs = useRef<Map<number, HTMLDivElement>>(new Map())
+
+	// Создаём экземпляр функции goBack с привязкой к navigate
+	const handleGoBack = goBack(navigate)
 
 	const loadData = async () => {
 		setIsLoading(true)
@@ -301,13 +305,16 @@ const TaskPage: FC = () => {
 				<div className='md:min-h-[1200px] md:w-[980px]'>
 					<div className='md:flex md:flex-col'>
 						<div className='md:py-4 md:flex md:justify-end md:items-center md:gap-4'>
-							<button
-								className='md:p-1 hover:bg-gray-300 rounded-full transition-colors'
-								onClick={() => goBack(navigate)}
+							<motion.button
+								whileHover={{ scale: 1.1 }}
+								whileTap={{ scale: 0.9 }}
+								className='p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2'
+								onClick={handleGoBack}
 								aria-label='Вернуться назад'
 							>
-								<Undo2 size={30} />
-							</button>
+								<Undo2 size={24} />
+								<span className='text-sm font-semibold'>Назад</span>
+							</motion.button>
 							{role === 'user' && (
 								<button className='p-1 rounded-full transition-colors' onClick={handleFavorite}>
 									<Heart
@@ -367,13 +374,115 @@ const TaskPage: FC = () => {
 						)}
 
 						{showAddAnswerForm && (
-							<AddAnswerForm
-								taskId={taskId || ''}
-								onClose={() => {
-									setShowAddAnswerForm(false)
-									loadData()
-								}}
-							/>
+							<div className='md:flex md:flex-row md:gap-6'>
+								<div className='md:flex-1'>
+									<AddAnswerForm
+										taskId={taskId || ''}
+										onClose={() => setShowAddAnswerForm(false)}
+										loadData={loadData}
+									/>
+								</div>
+								<div className='md:flex-1'>
+									{!showAddAnswerForm && (
+										<div className='md:min-w-[300px] md:min-h-[250px] md:rounded-xl md:mb-10 bg-white shadow-xl border border-gray-200'>
+											<div className='bg-gradient-to-r from-blue-500 to-blue-600 md:rounded-t-xl'>
+												<div
+													className={`grid ${
+														isEmployerTaskOwner ? 'grid-cols-4' : 'grid-cols-3'
+													} md:items-center md:w-full md:rounded-t-xl`}
+												>
+													<div className='border-r border-blue-400 md:py-3 md:flex md:justify-center'>
+														<span className='text-white font-semibold'>Статус</span>
+													</div>
+													<div className='border-r border-blue-400 md:py-3 md:flex md:justify-center'>
+														<span className='text-white font-semibold'>Пользователь</span>
+													</div>
+													<div
+														className={`${
+															isEmployerTaskOwner ? 'border-r' : ''
+														} border-blue-400 md:py-3 md:flex md:justify-center`}
+													>
+														<span className='text-white font-semibold'>Дата</span>
+													</div>
+													{isEmployerTaskOwner && (
+														<div className='md:py-3 md:flex md:justify-center'>
+															<span className='text-white font-semibold'>Действие</span>
+														</div>
+													)}
+												</div>
+											</div>
+											<div className='md:min-h-[150px]'>
+												{activityData && activityData.length > 0 ? (
+													activityData.map((activity, index) => (
+														<div
+															key={index}
+															className={`relative grid ${
+																isEmployerTaskOwner ? 'grid-cols-4' : 'grid-cols-3'
+															} md:mb-2 md:border-b border-gray-200 last:border-b-0 last:mb-0 md:w-full items-center md:py-4 md:px-6 hover:bg-gray-50 transition-colors`}
+															ref={el => {
+																if (el) modalRefs.current.set(activity.id, el)
+															}}
+														>
+															<div className='flex items-center md:justify-center'>
+																<div className='mr-3'>
+																	{activity.status === 'done' ? (
+																		<CircleCheckBig size={20} className='text-green-500' />
+																	) : activity.status === 'rejected' ? (
+																		<span className='text-red-500'>✗</span>
+																	) : (
+																		<Hourglass size={20} className='text-yellow-500' />
+																	)}
+																</div>
+																<span className='text-sm text-gray-700'>
+																	{activity.status === 'verifying'
+																		? 'Верифицируется'
+																		: activity.status === 'done'
+																		? 'Готово'
+																		: 'Отклонено'}
+																</span>
+															</div>
+															<div className='md:text-center text-sm text-gray-700 truncate'>
+																{activity.username || 'Неизвестно'}
+															</div>
+															<div className='md:text-center text-sm text-gray-700'>
+																<span>
+																	{activity.activity_date ||
+																		new Date(activity.created_at).toLocaleDateString()}
+																</span>
+															</div>
+															{isEmployerTaskOwner && (
+																<div className='md:flex md:justify-center'>
+																	<button
+																		className='text-blue-600 hover:underline text-sm font-medium'
+																		onClick={() => handleOpenModal(activity)}
+																	>
+																		Просмотреть
+																	</button>
+																</div>
+															)}
+															{isEmployerTaskOwner && (
+																<AnswerVerifyWindow
+																	activity={selectedActivity || activity}
+																	isOpen={isModalOpen && selectedActivity?.id === activity.id}
+																	onClose={handleCloseModal}
+																	onApprove={handleApprove}
+																	onReject={handleReject}
+																/>
+															)}
+														</div>
+													))
+												) : (
+													<div className='flex items-center justify-center h-[150px]'>
+														<span className='text-3xl text-gray-400 opacity-70 font-semibold'>
+															Нет данных
+														</span>
+													</div>
+												)}
+											</div>
+										</div>
+									)}
+								</div>
+							</div>
 						)}
 
 						{!showAddAnswerForm && (

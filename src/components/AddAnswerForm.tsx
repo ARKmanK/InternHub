@@ -1,5 +1,6 @@
 import { CircleX, FileArchive, Link, SendHorizontal, FileImage, Check } from 'lucide-react'
 import { FC, MouseEventHandler, useState } from 'react'
+import { motion } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import { getUserId, uploadFileAndCreateRecord } from '@/src/lib/API/supabaseAPI'
@@ -11,9 +12,10 @@ import { supabase } from '@/supabaseClient'
 type TypeAddAnswerForm = {
 	onClose: MouseEventHandler<HTMLButtonElement>
 	taskId: string
+	loadData: () => Promise<void>
 }
 
-const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
+const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId, loadData }) => {
 	const [url, setUrl] = useState('')
 	const [comment, setComment] = useState('')
 	const [zip, setZip] = useState<File[]>([])
@@ -132,7 +134,8 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 
 			addToStarted(Number(taskId))
 			addNotification('success', 'Успешно', 'Решение отправлено на модерацию')
-			window.location.reload()
+			await loadData() // Обновляем таблицу активности
+			onClose(e as any) // Закрываем форму после успешной отправки
 		} catch (error: any) {
 			addNotification(
 				'error',
@@ -146,29 +149,39 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 			setImages([])
 			setZipAdded(false)
 			setImagesAdded(false)
-			onClose(e as any)
 		}
 	}
 
 	return (
 		<>
-			<div className='md:bg-[#96bddd] md:border-2 md:rounded-2xl h-[565px] md:flex md:flex-col px-2'>
-				<div className='h-[45px] md:flex md:justify-between mt-0.5'>
-					<p className='font-medium text-lg mt-3 ml-2'>Добавить решение</p>
-					<button onClick={onClose}>
-						<CircleX size={33} />
-					</button>
+			<motion.div
+				className='p-6 bg-gradient-to-br from-blue-50 to-gray-300 rounded-xl shadow-xl flex flex-col w-[650px] mx-auto'
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				exit={{ opacity: 0, y: 20 }}
+			>
+				<div className='h-[45px] flex justify-between items-center mb-6'>
+					<p className='font-medium text-lg text-gray-900 mt-3 ml-2'>Добавить решение</p>
+					<motion.button
+						whileHover={{ scale: 1.1 }}
+						whileTap={{ scale: 0.9 }}
+						onClick={onClose}
+						className='p-1 bg-gradient-to-br from-red-300 to-red-500 text-white rounded-lg shadow-md hover:from-red-400 hover:to-red-600 transition-all flex items-center gap-1'
+					>
+						<CircleX size={20} />
+						<span className='text-sm'>Закрыть</span>
+					</motion.button>
 				</div>
-				<form className='mt-3 ml-2' onSubmit={handleSubmit}>
+				<form className='mt-3 ml-2 space-y-6' onSubmit={handleSubmit}>
 					<div className='flex flex-col'>
-						<p className='mt-4'>Ссылка на репозиторий GitHub *</p>
-						<div className='md:flex border-1 max-w-[380px] md:rounded-lg'>
-							<Link className='m-1' size={28} />
+						<p className='mt-4 text-sm font-medium text-gray-900'>Ссылка на репозиторий GitHub *</p>
+						<div className='flex items-center border border-gray-400 rounded-md max-w-[380px] shadow-sm bg-white'>
+							<Link className='m-2 text-gray-500' size={24} />
 							<input
 								type='text'
 								placeholder='url'
 								value={url}
-								className='outline-0 w-full text-lg'
+								className='w-full px-3 py-2 text-lg text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition-all'
 								onChange={e => setUrl(e.target.value)}
 								autoFocus
 								required
@@ -176,20 +189,24 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 						</div>
 					</div>
 					<div className='flex flex-col'>
-						<p className='mt-4'>Комментарий (опционально)</p>
+						<p className='mt-4 text-sm font-medium text-gray-900'>Комментарий (опционально)</p>
 						<textarea
-							className='h-[150px] w-[480px] border rounded-xl p-2 resize-none outline-0'
+							className='w-[480px] h-[150px] px-3 py-2 border border-gray-400 rounded-md text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 outline-none resize-y bg-white shadow-sm'
 							placeholder='Введите комментарий...'
 							value={comment}
 							onChange={e => setComment(e.target.value)}
-						></textarea>
+						/>
 					</div>
 					<div className='flex flex-col'>
-						<p className='mt-4'>Архив проекта (опционально)</p>
-						<div className='md:flex'>
-							<label className='py-2 px-3 border-1 rounded-lg md:bg-[#69859c] cursor-pointer flex items-center w-[180px]'>
-								<FileArchive className='mr-2' />
-								<span>Выбрать архив</span>
+						<p className='mt-4 text-sm font-medium text-gray-900'>Архив проекта (опционально)</p>
+						<div className='flex items-center'>
+							<motion.label
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								className='py-2 px-3 border border-gray-400 rounded-md bg-gradient-to-br from-blue-300 to-blue-500 text-gray-900 cursor-pointer flex items-center w-[180px] hover:from-blue-400 hover:to-blue-600 transition-all shadow-md'
+							>
+								<FileArchive className='mr-2' size={20} />
+								<span className='text-sm font-medium'>Выбрать архив</span>
 								<input
 									type='file'
 									accept='.zip,.rar,.7z,.tar,.gz'
@@ -202,20 +219,24 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 										}
 									}}
 								/>
-							</label>
+							</motion.label>
 							{zipAdded && (
-								<div className='md:flex md:items-center md:ml-3'>
-									<Check size={29} />
-								</div>
+								<motion.div whileHover={{ scale: 1.1 }} className='flex items-center ml-3'>
+									<Check size={24} className='text-green-600' />
+								</motion.div>
 							)}
 						</div>
 					</div>
 					<div className='flex flex-col'>
-						<p className='mt-4'>Фото (опционально)</p>
-						<div className='md:flex'>
-							<label className='mt-1 py-2 px-3 border-1 rounded-lg md:bg-[#69859c] cursor-pointer flex items-center w-[180px]'>
-								<FileImage className='mr-2' />
-								<span>Выбрать фото</span>
+						<p className='mt-4 text-sm font-medium text-gray-900'>Фото (опционально)</p>
+						<div className='flex items-center'>
+							<motion.label
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								className='py-2 px-3 border border-gray-400 rounded-md bg-gradient-to-br from-blue-300 to-blue-500 text-gray-900 cursor-pointer flex items-center w-[180px] hover:from-blue-400 hover:to-blue-600 transition-all shadow-md'
+							>
+								<FileImage className='mr-2' size={20} />
+								<span className='text-sm font-medium'>Выбрать фото</span>
 								<input
 									type='file'
 									accept='image/*'
@@ -229,25 +250,27 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId }) => {
 										}
 									}}
 								/>
-							</label>
+							</motion.label>
 							{imagesAdded && (
-								<div className='md:flex md:items-center md:ml-3'>
-									<Check size={29} />
-								</div>
+								<motion.div whileHover={{ scale: 1.1 }} className='flex items-center ml-3'>
+									<Check size={24} className='text-green-600' />
+								</motion.div>
 							)}
 						</div>
 					</div>
-					<div className='md:flex md:items-end mt-4'>
-						<button
-							className='p-1 cursor-pointer hover:bg-amber-300 md:flex border-2 rounded-xl py-1 px-2'
+					<div className='mt-6 flex justify-center'>
+						<motion.button
+							whileHover={{ scale: 1.1 }}
+							whileTap={{ scale: 0.9 }}
 							type='submit'
+							className='w-1/2 py-2 text-white font-semibold bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg shadow-md hover:from-blue-500 hover:to-blue-700 transition-all flex items-center justify-center gap-2'
 						>
-							<span className='mr-2'>Отправить</span>
-							<SendHorizontal />
-						</button>
+							<span className='text-sm'>Отправить</span>
+							<SendHorizontal size={18} />
+						</motion.button>
 					</div>
 				</form>
-			</div>
+			</motion.div>
 			<Notification notifications={notifications} />
 		</>
 	)

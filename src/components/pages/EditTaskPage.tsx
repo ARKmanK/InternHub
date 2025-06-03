@@ -2,8 +2,8 @@ import Header from '@components/Header'
 import NavBar from '@components/NavBar'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Undo2, AppWindow, X } from 'lucide-react'
-import { setPage, TypePages, goBack } from '@/src/data/userData'
-import { useEffect, useState, useMemo } from 'react'
+import { setPage, goBack } from '@/src/data/userData'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { TypeTask } from '@/src/types/TypeTask'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
@@ -20,6 +20,7 @@ import {
 	deleteUserTag,
 } from '@/src/lib/API/supabaseAPI'
 import Message from '../Message'
+import { motion } from 'framer-motion'
 
 const EditTaskPage = () => {
 	const { id } = useParams<{ id: string }>()
@@ -51,6 +52,12 @@ const EditTaskPage = () => {
 	const MAX_DESCRIPTION_LENGTH = 250
 	const MAX_TAG_LENGTH = 20
 	const MAX_TAGS = 5
+
+	// Ref для textarea
+	const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+	// Экземпляр функции goBack
+	const handleGoBack = goBack(navigate)
 
 	useEffect(() => {
 		setPage(`/edit-task/${id}`)
@@ -113,6 +120,15 @@ const EditTaskPage = () => {
 		}
 		fetchData()
 	}, [id, navigate])
+
+	// Динамическая высота textarea
+	useEffect(() => {
+		const textarea = textareaRef.current
+		if (textarea) {
+			textarea.style.height = 'auto'
+			textarea.style.height = `${textarea.scrollHeight}px`
+		}
+	}, [formData.description])
 
 	const formatDate = (date: Date | null): string => {
 		if (!date) return ''
@@ -273,10 +289,6 @@ const EditTaskPage = () => {
 		}
 	}
 
-	const handleGoBack = () => {
-		goBack(navigate)
-	}
-
 	if (!taskData) return <div>Загрузка...</div>
 
 	return (
@@ -287,80 +299,109 @@ const EditTaskPage = () => {
 				<div className='md:min-h-[1200px] md:w-[980px]'>
 					<div className='md:flex md:flex-col'>
 						<div className='md:py-4 md:flex md:justify-end items-center'>
-							<button
-								className='md:p-1 hover:bg-gray-300'
+							<motion.button
+								whileHover={{ scale: 1.1 }}
+								whileTap={{ scale: 0.9 }}
+								className='p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2'
 								onClick={handleGoBack}
-								aria-label='Вернуться к задачам'
+								aria-label='Вернуться назад'
 							>
-								<Undo2 size={30} />
-							</button>
+								<Undo2 size={24} />
+								<span className='text-sm font-semibold'>Назад</span>
+							</motion.button>
 						</div>
 						<div className='md:flex mt-7'>
 							<div className='md:w-[80%]'>
-								<h1 className='text-2xl font-bold mb-14'>Редактирование задачи</h1>
-								<div className='md:bg-[#96bddd] md:border-2 md:rounded-2xl h-[755px] md:flex md:flex-col px-2'>
-									<div className='md:flex md:flex-col mt-0.5 h-full'>
-										<p className='font-medium text-lg mt-3 ml-2'>Редактировать карточку</p>
-										<form
-											className='px-2 mt-7 flex flex-col justify-between h-full'
-											onSubmit={handleSubmit}
-										>
-											<div className='flex flex-col gap-4'>
-												<div>
-													<p>Заголовок (максимум {MAX_TITLE_LENGTH} символов)</p>
-													<div className='md:flex border-1 max-w-[380px] md:rounded-lg'>
-														<AppWindow className='m-1' size={26} />
-														<input
-															type='text'
-															placeholder='Заголовок'
-															value={formData.title}
-															className='outline-0 w-full text-lg'
-															onChange={e => handleTextChange('title', e.target.value)}
-															autoFocus
-															maxLength={MAX_TITLE_LENGTH}
-														/>
-													</div>
-												</div>
-												<div>
-													<p>Описание задачи (максимум {MAX_DESCRIPTION_LENGTH} символов)</p>
-													<textarea
-														className='h-[150px] w-[380px] border rounded-xl p-2 resize-none outline-0'
-														placeholder='...'
-														value={formData.description}
-														onChange={e => handleTextChange('description', e.target.value)}
-														maxLength={MAX_DESCRIPTION_LENGTH}
+								<h1 className='text-2xl font-bold mb-14 text-gray-800'>Редактирование задачи</h1>
+								<div className='md:bg-gradient-to-br from-blue-100 to-blue-200 md:border-2 md:rounded-2xl md:p-6 shadow-lg'>
+									<div className='md:flex md:flex-col'>
+										<form className='flex flex-col gap-6' onSubmit={handleSubmit}>
+											<div>
+												<p className='text-lg font-medium text-gray-600 mb-2'>
+													Заголовок (максимум {MAX_TITLE_LENGTH} символов)
+												</p>
+												<div className='flex items-center bg-white border border-gray-300 rounded-lg p-2 shadow-sm'>
+													<AppWindow className='text-gray-500 mr-2' size={20} />
+													<input
+														type='text'
+														placeholder='Заголовок'
+														value={formData.title}
+														className='outline-0 w-full text-gray-800'
+														onChange={e => handleTextChange('title', e.target.value)}
+														autoFocus
+														maxLength={MAX_TITLE_LENGTH}
 													/>
 												</div>
-												<div className='md:flex md:flex-col'>
-													<span>Выберите сложность задачи</span>
-													<select
-														value={formData.difficulty}
-														onChange={e => handleDifficultyChange(Number(e.target.value))}
-														className='outline-0 text-lg w-[380px] border'
-													>
-														<option value={0} disabled>
-															Выберите сложность
-														</option>
-														<option value={1}>1</option>
-														<option value={2}>2</option>
-														<option value={3}>3</option>
-													</select>
-												</div>
-												<div className='md:flex md:flex-col'>
-													<span>Выберите дату сдачи</span>
-													<DatePicker
-														selected={formData.deadline}
-														onChange={handleDeadlineChange}
-														dateFormat='dd.MM.yyyy'
-														className='outline-0 w-[380px] text-lg border pl-1'
-														placeholderText='Выберите дату'
-													/>
-												</div>
-												<div>
-													<span>Выберите ключевые теги</span>
-													<div className='flex flex-wrap gap-2 mt-2'>
-														{commonTags.map(tag => (
-															<label key={tag} className='inline-flex items-center'>
+											</div>
+											<div>
+												<p className='text-lg font-medium text-gray-600 mb-2'>
+													Описание задачи (максимум {MAX_DESCRIPTION_LENGTH} символов)
+												</p>
+												<textarea
+													ref={textareaRef}
+													className='w-full min-h-[150px] bg-white border border-gray-300 rounded-lg p-3 resize-y shadow-sm text-gray-800 outline-0'
+													placeholder='...'
+													value={formData.description}
+													onChange={e => handleTextChange('description', e.target.value)}
+													maxLength={MAX_DESCRIPTION_LENGTH}
+												/>
+											</div>
+											<div>
+												<p className='text-lg font-medium text-gray-600 mb-2'>
+													Выберите сложность задачи
+												</p>
+												<select
+													value={formData.difficulty}
+													onChange={e => handleDifficultyChange(Number(e.target.value))}
+													className='w-full bg-white border border-gray-300 rounded-lg p-2 shadow-sm text-lg text-gray-800 outline-0'
+												>
+													<option value={0} disabled>
+														Выберите сложность
+													</option>
+													<option value={1}>1</option>
+													<option value={2}>2</option>
+													<option value={3}>3</option>
+												</select>
+											</div>
+											<div>
+												<p className='text-lg font-medium text-gray-600 mb-2'>
+													Выберите дату сдачи
+												</p>
+												<DatePicker
+													selected={formData.deadline}
+													onChange={handleDeadlineChange}
+													dateFormat='dd.MM.yyyy'
+													className='w-full bg-white border border-gray-300 rounded-lg p-2 shadow-sm text-lg text-gray-800 pl-3 outline-0'
+													placeholderText='Выберите дату'
+												/>
+											</div>
+											<div>
+												<p className='text-lg font-medium text-gray-600 mb-2'>
+													Выберите ключевые теги
+												</p>
+												<div className='flex flex-wrap gap-2'>
+													{commonTags.map(tag => (
+														<label key={tag} className='inline-flex items-center'>
+															<input
+																type='checkbox'
+																checked={formData.tags.includes(tag)}
+																onChange={() => handleTagChange(tag)}
+																className='hidden'
+															/>
+															<span
+																className={`px-3.5 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-colors ${
+																	formData.tags.includes(tag)
+																		? 'bg-blue-500 text-white'
+																		: 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+																}`}
+															>
+																{tag}
+															</span>
+														</label>
+													))}
+													{userTags.map(tag => (
+														<div key={tag} className='inline-flex items-center'>
+															<label className='inline-flex items-center'>
 																<input
 																	type='checkbox'
 																	checked={formData.tags.includes(tag)}
@@ -368,7 +409,7 @@ const EditTaskPage = () => {
 																	className='hidden'
 																/>
 																<span
-																	className={`px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors ${
+																	className={`px-3.5 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-colors ${
 																		formData.tags.includes(tag)
 																			? 'bg-blue-500 text-white'
 																			: 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -377,71 +418,54 @@ const EditTaskPage = () => {
 																	{tag}
 																</span>
 															</label>
-														))}
-														{userTags.map(tag => (
-															<div key={tag} className='inline-flex items-center'>
-																<label className='inline-flex items-center'>
-																	<input
-																		type='checkbox'
-																		checked={formData.tags.includes(tag)}
-																		onChange={() => handleTagChange(tag)}
-																		className='hidden'
-																	/>
-																	<span
-																		className={`px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors ${
-																			formData.tags.includes(tag)
-																				? 'bg-blue-500 text-white'
-																				: 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-																		}`}
-																	>
-																		{tag}
-																	</span>
-																</label>
-																<button
-																	type='button'
-																	onClick={() => removeCustomTag(tag)}
-																	className='ml-2 text-red-500 hover:text-red-700'
-																>
-																	<X size={16} />
-																</button>
-															</div>
-														))}
-													</div>
-												</div>
-												<div>
-													<span>Создать новый тег</span>
-													<div className='mt-1 flex items-center gap-2'>
-														<input
-															type='text'
-															placeholder='Введите новый тег'
-															value={newTag}
-															className='block w-[380px] pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
-															onChange={e => handleNewTagChange(e.target.value)}
-															maxLength={MAX_TAG_LENGTH}
-														/>
-														<button
-															type='button'
-															onClick={addCustomTag}
-															className='bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-														>
-															Добавить
-														</button>
-													</div>
+															<button
+																type='button'
+																onClick={() => removeCustomTag(tag)}
+																className='ml-2 text-red-500 hover:text-red-700'
+															>
+																<X size={16} />
+															</button>
+														</div>
+													))}
 												</div>
 											</div>
-											<div className='md:flex md:justify-center md:my-3'>
-												<button
+											<div>
+												<p className='text-lg font-medium text-gray-600 mb-2'>Создать новый тег</p>
+												<div className='flex items-center gap-2'>
+													<input
+														type='text'
+														placeholder='Введите новый тег'
+														value={newTag}
+														className='block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm text-gray-800 leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+														onChange={e => handleNewTagChange(e.target.value)}
+														maxLength={MAX_TAG_LENGTH}
+													/>
+													<motion.button
+														whileHover={{ scale: 1.05 }}
+														whileTap={{ scale: 0.95 }}
+														type='button'
+														onClick={addCustomTag}
+														className='bg-gradient-to-br from-blue-500 to-blue-600 text-white py-2 px-4 rounded-lg shadow-md hover:from-blue-600 hover:to-blue-700 transition-all'
+													>
+														Добавить
+													</motion.button>
+												</div>
+											</div>
+											<div className='md:flex md:justify-center mt-6'>
+												<motion.button
+													whileHover={{ scale: 1.05 }}
+													whileTap={{ scale: 0.95 }}
 													type='submit'
-													className='mt-4 px-4 py-2 bg-[#0c426f] text-white rounded-lg w-[250px]'
+													className='px-6 py-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-md hover:from-blue-600 hover:to-blue-700 transition-all text-lg'
 												>
 													Сохранить
-												</button>
+												</motion.button>
 											</div>
 										</form>
 									</div>
 								</div>
 								<div className='mt-10'>
-									<p className='font-medium text-lg mb-4'>Что получится</p>
+									<p className='font-medium text-lg mb-4 text-gray-700'>Что получится</p>
 									{previewTask && (
 										<TaskCard
 											id={previewTask.id}
