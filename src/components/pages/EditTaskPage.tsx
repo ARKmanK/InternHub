@@ -21,6 +21,7 @@ import {
 } from '@/src/lib/API/supabaseAPI'
 import Message from '../Message'
 import { motion } from 'framer-motion'
+import LoadingAnimation from '../LoadingAnimation'
 
 const EditTaskPage = () => {
 	const { id } = useParams<{ id: string }>()
@@ -289,14 +290,14 @@ const EditTaskPage = () => {
 		}
 	}
 
-	if (!taskData) return <div>Загрузка...</div>
+	if (!taskData) return <LoadingAnimation loading={true} />
 
 	return (
 		<>
 			<Header />
 			<NavBar />
 			<div className='md:flex md:justify-center md:py-[20px] md:px-[10px]'>
-				<div className='md:min-h-[1200px] md:w-[980px]'>
+				<div className='md:min-h-[900px] md:w-[980px]'>
 					<div className='md:flex md:flex-col'>
 						<div className='md:py-4 md:flex md:justify-end items-center'>
 							<motion.button

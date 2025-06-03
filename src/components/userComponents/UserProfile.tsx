@@ -5,7 +5,9 @@ import EmptyCard from '@components/EmptyCard'
 import { Button } from '@components/UI/Button/Button'
 import { setPage } from '@data/userData'
 import { NavigateFunction } from 'react-router-dom'
+import { useState, useEffect, memo } from 'react'
 
+// Типы для задач
 type TypeTask = {
 	id: number
 	tracking_number: number
@@ -30,8 +32,90 @@ type UserProfileProps = {
 	removeFromFavorite: (id: number) => void
 	navigate: NavigateFunction
 	handleLogout: () => void
-	goBack: () => void // Исправляем тип
+	goBack: () => void
 }
+
+// Компонент анимации загрузки (светящиеся частицы)
+const LoadingSpinner = memo(() => (
+	<motion.div
+		className='flex justify-center items-center h-64'
+		initial={{ opacity: 0 }}
+		animate={{ opacity: 1 }}
+		exit={{ opacity: 0, transition: { duration: 0.5 } }}
+	>
+		<motion.svg
+			width='300'
+			height='300'
+			viewBox='0 0 300 300'
+			fill='none'
+			xmlns='http://www.w3.org/2000/svg'
+		>
+			{/* Парящие частицы */}
+			<motion.circle
+				cx='150'
+				cy='100'
+				r='5'
+				fill='#60a5fa'
+				animate={{
+					y: [100, 150, 100],
+					opacity: [0.8, 0, 0.8],
+					scale: [1, 1.5, 1],
+					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+				}}
+			/>
+			<motion.circle
+				cx='180'
+				cy='120'
+				r='5'
+				fill='#3b82f6'
+				animate={{
+					y: [120, 170, 120],
+					opacity: [0.8, 0, 0.8],
+					scale: [1, 1.5, 1],
+					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.5 },
+				}}
+			/>
+			<motion.circle
+				cx='120'
+				cy='180'
+				r='5'
+				fill='#60a5fa'
+				animate={{
+					y: [180, 130, 180],
+					opacity: [0.8, 0, 0.8],
+					scale: [1, 1.5, 1],
+					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 1 },
+				}}
+			/>
+			<motion.circle
+				cx='200'
+				cy='200'
+				r='5'
+				fill='#3b82f6'
+				animate={{
+					y: [200, 150, 200],
+					opacity: [0.8, 0, 0.8],
+					scale: [1, 1.5, 1],
+					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 1.5 },
+				}}
+			/>
+			{/* Центральный узел (сбор частиц) */}
+			<motion.circle
+				cx='150'
+				cy='150'
+				r='20'
+				fill='none'
+				stroke='#60a5fa'
+				strokeWidth='2'
+				animate={{
+					scale: [0.5, 1, 0.5],
+					opacity: [0.3, 1, 0.3],
+					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+				}}
+			/>
+		</motion.svg>
+	</motion.div>
+))
 
 const UserProfile = ({
 	listType,
@@ -47,6 +131,23 @@ const UserProfile = ({
 	handleLogout,
 	goBack,
 }: UserProfileProps) => {
+	const [isLoading, setIsLoading] = useState(true)
+	const [showContent, setShowContent] = useState(false)
+
+	useEffect(() => {
+		setIsLoading(true)
+		setShowContent(false)
+
+		const timer = setTimeout(() => {
+			setIsLoading(false)
+			setTimeout(() => {
+				setShowContent(true)
+			}, 500) // Задержка перед отображением контента
+		}, 2000) // Загрузка длится минимум 2 секунды
+
+		return () => clearTimeout(timer)
+	}, [category])
+
 	const taskCard = visibleTasks.map(task => (
 		<AnimatePresence key={task.id}>
 			<motion.div
@@ -129,7 +230,7 @@ const UserProfile = ({
 								<motion.button
 									whileHover={{ scale: 1.1 }}
 									whileTap={{ scale: 0.9 }}
-									className={`p-2 rounded-lg shadow-md transition-all ${
+									className={`p-2 rounded-lg shadow-md transition-all flex items-center justify-center min-w-[120px] h-[40px] ${
 										activeCategory === 'favorite'
 											? 'bg-gradient-to-br from-blue-300 to-blue-500 text-white'
 											: 'bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 hover:from-blue-300 hover:to-blue-500'
@@ -141,7 +242,7 @@ const UserProfile = ({
 								<motion.button
 									whileHover={{ scale: 1.1 }}
 									whileTap={{ scale: 0.9 }}
-									className={`p-2 rounded-lg shadow-md transition-all ${
+									className={`p-2 rounded-lg shadow-md transition-all flex items-center justify-center min-w-[120px] h-[40px] ${
 										activeCategory === 'started'
 											? 'bg-gradient-to-br from-blue-300 to-blue-500 text-white'
 											: 'bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 hover:from-blue-300 hover:to-blue-500'
@@ -153,7 +254,7 @@ const UserProfile = ({
 								<motion.button
 									whileHover={{ scale: 1.1 }}
 									whileTap={{ scale: 0.9 }}
-									className={`p-2 rounded-lg shadow-md transition-all ${
+									className={`p-2 rounded-lg shadow-md transition-all flex items-center justify-center min-w-[120px] h-[40px] ${
 										activeCategory === 'finished'
 											? 'bg-gradient-to-br from-blue-300 to-blue-500 text-white'
 											: 'bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 hover:from-blue-300 hover:to-blue-500'
@@ -163,22 +264,53 @@ const UserProfile = ({
 									<span className='text-sm font-semibold'>Одобренные задачи</span>
 								</motion.button>
 							</div>
-							{visibleTasks.length === 0 ? (
-								<EmptyCard
-									role='user'
-									listType={
-										category === 'favorite'
-											? 'Избранное'
-											: category === 'started'
-											? 'Начатые задачи'
-											: 'Одобренные задачи'
-									}
-								/>
-							) : listType === 'card' ? (
-								<div className='md:grid md:gap-4 md:grid-cols-2'>{taskCard}</div>
-							) : (
-								<>{taskCard}</>
-							)}
+							<AnimatePresence>
+								{isLoading ? (
+									<LoadingSpinner key={`spinner-${category}`} />
+								) : showContent ? (
+									visibleTasks.length === 0 ? (
+										<motion.div
+											key={`empty-${category}`}
+											initial={{ opacity: 0 }}
+											animate={{ opacity: 1 }}
+											exit={{ opacity: 0 }}
+											transition={{ duration: 0.5 }}
+										>
+											<EmptyCard
+												role='user'
+												listType={
+													category === 'favorite'
+														? 'Избранное'
+														: category === 'started'
+														? 'Начатые задачи'
+														: 'Одобренные задачи'
+												}
+											/>
+										</motion.div>
+									) : listType === 'card' ? (
+										<motion.div
+											key={`cards-${category}`}
+											initial={{ opacity: 0 }}
+											animate={{ opacity: 1 }}
+											exit={{ opacity: 0 }}
+											transition={{ duration: 0.5 }}
+											className='md:grid md:gap-4 md:grid-cols-2'
+										>
+											{taskCard}
+										</motion.div>
+									) : (
+										<motion.div
+											key={`list-${category}`}
+											initial={{ opacity: 0 }}
+											animate={{ opacity: 1 }}
+											exit={{ opacity: 0 }}
+											transition={{ duration: 0.5 }}
+										>
+											{taskCard}
+										</motion.div>
+									)
+								) : null}
+							</AnimatePresence>
 						</div>
 					</div>
 				</div>

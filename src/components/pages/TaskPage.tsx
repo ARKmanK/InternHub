@@ -24,6 +24,7 @@ import { supabase } from '@/supabaseClient'
 import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
 import AnswerVerifyWindow from '@components/AnswerVerifyWindow'
 import Message from '../Message'
+import LoadingAnimation from '../LoadingAnimation'
 
 type TypeTasksData = {
 	id: number
@@ -291,7 +292,7 @@ const TaskPage: FC = () => {
 	}
 
 	if (!task || isLoading) {
-		return <div>{isLoading ? 'Загрузка...' : 'Задача не найдена'}</div>
+		return isLoading ? <LoadingAnimation loading={true} /> : <div>Задача не найдена</div>
 	}
 
 	const isEmployerTaskOwner = role === 'employer' && task.employer_id === userId
@@ -301,7 +302,7 @@ const TaskPage: FC = () => {
 			<Header />
 			<NavBar />
 			<div className='md:flex md:justify-center md:py-[20px] md:px-[10px]'>
-				<div className='md:min-h-[1200px] md:w-[980px]'>
+				<div className='md:min-h-[900px] md:w-[980px]'>
 					<div className='md:flex md:flex-col'>
 						<div className='md:py-4 md:flex md:justify-end md:items-center md:gap-4'>
 							<motion.button

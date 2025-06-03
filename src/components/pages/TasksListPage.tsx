@@ -21,6 +21,7 @@ import Notification from '@components/UI/Notification/Notification'
 import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
 import { setPage } from '@/src/data/userData'
 import Message from '../Message'
+import LoadingAnimation from '../LoadingAnimation'
 
 type TypeTask = {
 	id: number
@@ -336,11 +337,7 @@ const TasksListPage: FC = () => {
 	}, [visibleTasks, listType, role, favoriteTasks, employerTaskIds])
 
 	if (loading) {
-		return (
-			<div className='flex justify-center items-center h-screen'>
-				<div className='text-white'>Загрузка...</div>
-			</div>
-		)
+		return <LoadingAnimation loading={true} />
 	}
 
 	if (!role) {

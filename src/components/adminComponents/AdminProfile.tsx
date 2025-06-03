@@ -66,7 +66,6 @@ const AdminProfile: FC<AdminProfileProps> = ({ navigate, goBack, handleLogout })
 			addNotification('error', 'Ошибка', `Не удалось одобрить задачу: ${error.message}`)
 		}
 	}
-
 	const handleReject = async (submissionId: number) => {
 		try {
 			const submission = pendingTasks.find(task => task.id === submissionId)
@@ -137,16 +136,16 @@ const AdminProfile: FC<AdminProfileProps> = ({ navigate, goBack, handleLogout })
 										animate={{ opacity: 1, y: 0 }}
 										exit={{ opacity: 0, y: -20 }}
 										transition={{ duration: 0.5 }}
-										className='md:flex md:items-center md:justify-between md:min-w-[300px] md:min-h-[100px] rounded-xl md:mb-4 border-2 border-gray-[#dce3eb] bg-gradient-to-br from-blue-50 to-gray-300 p-4 shadow-md'
+										className='md:flex md:items-center md:justify-between md:min-w-[300px] md:min-h-[100px] rounded-xl md:mb-4 border-2 border-blue-200 bg-gradient-to-br from-blue-100 to-blue-200 p-4 shadow-md'
 									>
 										<div className='flex-1'>
 											<h3 className='text-lg font-semibold text-gray-800'>{task.title}</h3>
-											<p className='text-sm text-gray-600'>{task.description}</p>
+											<p className='text-sm text-gray-600 mt-4'>{task.description}</p>
 											<div className='flex gap-2 mt-2'>
 												{task.tags?.map(tag => (
 													<span
 														key={tag}
-														className='bg-blue-200 rounded-md px-2 py-0.5 text-sm text-gray-800'
+														className='bg-blue-300 rounded-md px-2 py-0.5 text-sm text-gray-800'
 													>
 														{tag}
 													</span>
