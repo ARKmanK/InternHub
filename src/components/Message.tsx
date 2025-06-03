@@ -120,24 +120,26 @@ const Message: FC = () => {
 
 	return (
 		<div className='fixed bottom-[60px] right-4 z-50'>
-			<button
+			<motion.button
+				whileHover={{ scale: 1.1 }}
+				whileTap={{ scale: 0.9 }}
+				className='relative p-3 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-full shadow-md hover:from-blue-300 hover:to-blue-500 transition-all focus:outline-none'
 				onClick={toggleMenu}
-				className='relative bg-blue-500 text-white rounded-full p-3 shadow-lg hover:bg-blue-600 transition-colors focus:outline-none'
 				aria-label={isOpen ? 'Закрыть сообщения' : 'Открыть сообщения'}
 			>
 				<MessageCircle size={24} />
 				{isLoading ? (
-					<span className='absolute top-0 right-0 bg-gray-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+					<span className='absolute top-0 right-0 bg-gradient-to-br from-gray-300 to-gray-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
 						...
 					</span>
 				) : (
 					unreadCount > 0 && (
-						<span className='absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+						<span className='absolute top-0 right-0 bg-gradient-to-br from-red-300 to-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
 							{unreadCount}
 						</span>
 					)
 				)}
-			</button>
+			</motion.button>
 			<AnimatePresence>
 				{isOpen && (
 					<motion.div
@@ -166,13 +168,15 @@ const Message: FC = () => {
 											<p className='text-sm text-gray-800'>{message.text}</p>
 											<span className='text-xs text-gray-400'>{message.timestamp}</span>
 										</div>
-										<button
+										<motion.button
+											whileHover={{ scale: 1.1 }}
+											whileTap={{ scale: 0.9 }}
 											onClick={() => handleDelete(message.id)}
 											className='ml-2 text-red-500 hover:text-red-700 transition-colors'
 											aria-label='Удалить сообщение'
 										>
 											<Trash2 size={16} />
-										</button>
+										</motion.button>
 									</li>
 								))}
 							</ul>

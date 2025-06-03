@@ -29,7 +29,7 @@ type EmployerProfileProps = {
 	cancelDelete: () => void
 	navigate: NavigateFunction
 	handleLogout: () => void
-	goBack: (navigate: NavigateFunction) => void
+	goBack: () => void // Исправляем тип
 }
 
 const EmployerProfile = ({
@@ -45,7 +45,6 @@ const EmployerProfile = ({
 	handleLogout,
 	goBack,
 }: EmployerProfileProps) => {
-	// Находим taskTitle для текущей задачи, если она выбрана для удаления
 	const taskToDeleteData = visibleTasks.find(task => task.id === taskToDelete)
 	const taskTitle = taskToDeleteData?.title || ''
 
@@ -84,30 +83,43 @@ const EmployerProfile = ({
 			<div className='md:min-h-[730px] md:w-[980px]'>
 				<div className='md:flex md:flex-col'>
 					<div className='md:py-4 md:flex md:justify-end items-center'>
-						<button
-							className='md:p-1 hover:bg-gray-300'
-							onClick={() => goBack(navigate)}
+						<motion.button
+							whileHover={{ scale: 1.1 }}
+							whileTap={{ scale: 0.9 }}
+							className='md:mr-4 p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2'
+							onClick={goBack}
 							aria-label='Вернуться назад'
 						>
-							<Undo2 size={30} />
-						</button>
-						<button
-							className='md:flex gap-x-2 border rounded-xl py-1 px-2 ml-4 bg-blue-400 hover:bg-gray-400'
+							<Undo2 size={24} />
+							<span className='text-sm font-semibold'>Назад</span>
+						</motion.button>
+						<motion.button
+							whileHover={{ scale: 1.1 }}
+							whileTap={{ scale: 0.9 }}
+							className='p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2'
 							onClick={handleLogout}
 						>
-							<LogOut /> <span>Выйти</span>
-						</button>
+							<LogOut size={24} />
+							<span className='text-sm font-semibold'>Выйти</span>
+						</motion.button>
 					</div>
 					<div className='md:flex md:justify-end'>
-						<button
-							className='md:mr-4 md:p-1 hover:bg-gray-300'
+						<motion.button
+							whileHover={{ scale: 1.1 }}
+							whileTap={{ scale: 0.9 }}
+							className='md:mr-4 p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all'
 							onClick={() => setListType('list')}
 						>
-							<List size={30} />
-						</button>
-						<button className='md:p-1 hover:bg-gray-300' onClick={() => setListType('card')}>
-							<BookCopy size={30} />
-						</button>
+							<List size={24} />
+						</motion.button>
+						<motion.button
+							whileHover={{ scale: 1.1 }}
+							whileTap={{ scale: 0.9 }}
+							className='p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all'
+							onClick={() => setListType('card')}
+						>
+							<BookCopy size={24} />
+						</motion.button>
 					</div>
 					<div className='md:flex mt-7'>
 						<div className='md:w-[80%]'>
@@ -129,7 +141,7 @@ const EmployerProfile = ({
 			{showDeleteForm && (
 				<DeleteConfirmation
 					taskId={taskToDelete || 0}
-					taskTitle={taskTitle} // Передаём taskTitle
+					taskTitle={taskTitle}
 					onConfirm={confirmDelete}
 					onCancel={cancelDelete}
 				/>

@@ -45,6 +45,7 @@ const UserPage = () => {
 	const [userId, setUserId] = useState<number | null>(null)
 
 	const navigate = useNavigate()
+	const handleGoBack = goBack(navigate) // goBack теперь возвращает () => void
 
 	useEffect(() => {
 		setPage('/user')
@@ -312,7 +313,7 @@ const UserPage = () => {
 						removeFromFavorite={removeFromFavorite}
 						navigate={navigate}
 						handleLogout={handleLogout}
-						goBack={goBack}
+						goBack={handleGoBack} // Передаём обработчик
 					/>
 				)}
 				{role === 'employer' && (
@@ -327,11 +328,15 @@ const UserPage = () => {
 						cancelDelete={cancelDelete}
 						navigate={navigate}
 						handleLogout={handleLogout}
-						goBack={goBack}
+						goBack={handleGoBack} // Передаём обработчик
 					/>
 				)}
 				{role === 'admin' && (
-					<AdminProfile navigate={navigate} handleLogout={handleLogout} goBack={goBack} />
+					<AdminProfile
+						navigate={navigate}
+						handleLogout={handleLogout}
+						goBack={handleGoBack} // Передаём обработчик
+					/>
 				)}
 				<Notification notifications={notifications} />
 				<Message />

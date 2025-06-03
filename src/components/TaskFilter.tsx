@@ -124,11 +124,11 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 	}
 
 	return (
-		<div className='w-full max-w-md mx-auto bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg shadow-lg p-4 mr-10'>
+		<div className='w-full max-w-md mx-auto bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg shadow-lg p-2 mr-10'>
 			{/* Секция "Компания" */}
 			<div className='border-b border-gray-300 mb-2'>
 				<button
-					className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 font-semibold hover:bg-blue-300 rounded-lg transition-colors'
+					className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 font-semibold hover:bg-blue-300 rounded-lg transition-colors mb-2'
 					onClick={() => toggleSection('companies')}
 				>
 					<span>Компания</span>
@@ -170,7 +170,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 			{/* Секция "Сложность" */}
 			<div className='border-b border-gray-300 mb-2'>
 				<button
-					className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 font-semibold hover:bg-blue-300 rounded-lg transition-colors'
+					className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 font-semibold hover:bg-blue-300 rounded-lg transition-colors mb-2'
 					onClick={() => toggleSection('difficulty')}
 				>
 					<span>Сложность</span>
@@ -214,7 +214,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 			{/* Секция "Отслеживают" */}
 			<div className='border-b border-gray-300 mb-2'>
 				<button
-					className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 font-semibold hover:bg-blue-300 rounded-lg transition-colors'
+					className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 font-semibold hover:bg-blue-300 rounded-lg transition-colors mb-2'
 					onClick={() => toggleSection('tracking')}
 				>
 					<span>Отслеживают</span>
@@ -256,7 +256,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 			{/* Секция "Теги" */}
 			<div className='border-b border-gray-300 mb-2'>
 				<button
-					className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 font-semibold hover:bg-blue-300 rounded-lg transition-colors'
+					className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 font-semibold hover:bg-blue-300 rounded-lg transition-colors mb-2'
 					onClick={() => toggleSection('tags')}
 				>
 					<span>Теги</span>
@@ -294,7 +294,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 				</AnimatePresence>
 			</div>
 
-			<div className='p-4'>
+			<div className='p-2'>
 				<button
 					onClick={resetFilters}
 					className='w-full py-2 text-white font-semibold bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg shadow-md hover:from-blue-500 hover:to-blue-700 transition-all'

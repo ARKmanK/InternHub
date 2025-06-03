@@ -11,10 +11,10 @@ import {
 	addTaskToFavorites,
 	removeTaskFromFavorite,
 	getUniqueCompanies,
-	getTaskSubmissionsCount, // Импортируем новую функцию
+	getTaskSubmissionsCount,
 } from '@/src/lib/API/supabaseAPI'
 import { supabase } from '@/supabaseClient'
-import { List, BookCopy, CircleUserRound } from 'lucide-react'
+import { List, BookCopy, CircleUserRound, Plus } from 'lucide-react' // Добавили Plus для иконки
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
@@ -47,8 +47,8 @@ const TasksListPage: FC = () => {
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [tasks, setTasks] = useState<TypeTask[]>([])
 	const [employerTaskIds, setEmployerTaskIds] = useState<number[]>([])
-	const [submissionsCount, setSubmissionsCount] = useState<number>(0) // Состояние для количества записей
-	const [submissionsLoading, setSubmissionsLoading] = useState<boolean>(true) // Состояние загрузки для submissions
+	const [submissionsCount, setSubmissionsCount] = useState<number>(0)
+	const [submissionsLoading, setSubmissionsLoading] = useState<boolean>(true)
 	const { notifications, addNotification } = useNotification()
 	const [filter, setFilter] = useState<TypeFilter>({
 		companies: null,
@@ -210,7 +210,7 @@ const TasksListPage: FC = () => {
 					await loadEmployerTasks(finalUserId)
 				} else if (finalRole === 'admin' && finalUserId) {
 					setEmployerTaskIds([])
-					await loadSubmissionsCount() // Загружаем количество записей для админа
+					await loadSubmissionsCount()
 				}
 
 				const tasksData = await getAllTasks()
@@ -346,38 +346,56 @@ const TasksListPage: FC = () => {
 					<div className='md:flex md:flex-col'>
 						<div className='md:py-4 md:flex md:justify-end items-center'>
 							{role === 'employer' && (
-								<Button onClick={openCreateTaskPage}>Разместить задачу</Button>
+								<motion.button
+									whileHover={{ scale: 1.1 }}
+									whileTap={{ scale: 0.9 }}
+									className='mr-4 p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2'
+									onClick={openCreateTaskPage}
+								>
+									<Plus size={24} />
+									<span className='text-sm font-semibold'>Разместить задачу</span>
+								</motion.button>
 							)}
-							<button
-								className='md:ml-7 md:p-1 hover:bg-gray-300 relative'
+							<motion.button
+								whileHover={{ scale: 1.1 }}
+								whileTap={{ scale: 0.9 }}
+								className='md:ml-4 p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2'
 								onClick={openProfile}
 								aria-label='Открыть профиль'
 							>
-								<CircleUserRound size={30} />
+								<CircleUserRound size={24} />
+								<span className='text-sm font-semibold'>Профиль</span>
 								{role === 'admin' &&
 									(submissionsLoading ? (
-										<span className='absolute top-0 right-0 bg-gray-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+										<span className='absolute top-0 right-0 bg-gradient-to-br from-gray-300 to-gray-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
 											...
 										</span>
 									) : (
 										submissionsCount > 0 && (
-											<span className='absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+											<span className='absolute top-0 right-0 bg-gradient-to-br from-red-300 to-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
 												{submissionsCount}
 											</span>
 										)
 									))}
-							</button>
+							</motion.button>
 						</div>
 						<div className='md:flex md:justify-end'>
-							<button
-								className='md:mr-4 md:p-1 hover:bg-gray-300'
+							<motion.button
+								whileHover={{ scale: 1.1 }}
+								whileTap={{ scale: 0.9 }}
+								className='md:mr-4 p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all'
 								onClick={() => setListType('list')}
 							>
-								<List size={30} />
-							</button>
-							<button className='md:p-1 hover:bg-gray-300' onClick={() => setListType('card')}>
-								<BookCopy size={30} />
-							</button>
+								<List size={24} />
+							</motion.button>
+							<motion.button
+								whileHover={{ scale: 1.1 }}
+								whileTap={{ scale: 0.9 }}
+								className='p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all'
+								onClick={() => setListType('card')}
+							>
+								<BookCopy size={24} />
+							</motion.button>
 						</div>
 						<div className='md:flex mt-7'>
 							<div className='md:w-[25%] md:mr-10'>

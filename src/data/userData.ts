@@ -216,27 +216,29 @@ export const setPage = (page: string): void => {
 	localStorage.setItem('pageHistory', JSON.stringify(pageHistory))
 }
 
-export const goBack = (navigate: NavigateFunction): void => {
-	const data = localStorage.getItem('pageHistory')
-	let pageHistory: string[] = []
+export const goBack = (navigate: NavigateFunction): (() => void) => {
+	return () => {
+		const data = localStorage.getItem('pageHistory')
+		let pageHistory: string[] = []
 
-	if (data) {
-		try {
-			pageHistory = JSON.parse(data)
-			if (!Array.isArray(pageHistory) || !pageHistory.every(item => typeof item === 'string')) {
+		if (data) {
+			try {
+				pageHistory = JSON.parse(data)
+				if (!Array.isArray(pageHistory) || !pageHistory.every(item => typeof item === 'string')) {
+					pageHistory = []
+				}
+			} catch (error) {
 				pageHistory = []
 			}
-		} catch (error) {
-			pageHistory = []
 		}
+
+		const prevPage = pageHistory.length > 1 ? pageHistory[pageHistory.length - 2] : '/user'
+
+		if (pageHistory.length > 0) {
+			pageHistory.pop()
+			localStorage.setItem('pageHistory', JSON.stringify(pageHistory))
+		}
+
+		navigate(prevPage) // navigate соответствует типу NavigateFunction
 	}
-
-	const prevPage = pageHistory.length > 1 ? pageHistory[pageHistory.length - 2] : '/user'
-
-	if (pageHistory.length > 0) {
-		pageHistory.pop()
-		localStorage.setItem('pageHistory', JSON.stringify(pageHistory))
-	}
-
-	navigate(prevPage) // Теперь navigate соответствует типу NavigateFunction
 }
