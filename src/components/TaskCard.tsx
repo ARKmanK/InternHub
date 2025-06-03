@@ -105,7 +105,7 @@ const TaskCard: FC<TaskCardProps> = ({
 		<>
 			{type === 'list' && (
 				<div className='w-[700px] min-h-[250px] rounded-xl mb-10 border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg overflow-hidden relative'>
-					<div className='py-2 px-3 flex flex-col justify-between'>
+					<div className='py-3 px-4 flex flex-col justify-between'>
 						<div className='flex justify-between text-gray-600 text-sm font-medium'>
 							<p>Сейчас отслеживают {trackingNumber}</p>
 							{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
