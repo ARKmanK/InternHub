@@ -52,7 +52,6 @@ const TaskPage: FC = () => {
 	const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
 	const modalRefs = useRef<Map<number, HTMLDivElement>>(new Map())
 
-	// Создаём экземпляр функции goBack с привязкой к navigate
 	const handleGoBack = goBack(navigate)
 
 	const loadData = async () => {
@@ -418,7 +417,7 @@ const TaskPage: FC = () => {
 															key={index}
 															className={`relative grid ${
 																isEmployerTaskOwner ? 'grid-cols-4' : 'grid-cols-3'
-															} md:mb-2 md:border-b border-gray-200 last:border-b-0 last:mb-0 md:w-full items-center md:py-4 md:px-6 hover:bg-gray-50 transition-colors`}
+															} md:mb-2 md:border-b border-gray-200 last:border-b-0 last:mb-0 md:w-full items-center md:py-4 hover:bg-gray-50 transition-colors`}
 															ref={el => {
 																if (el) modalRefs.current.set(activity.id, el)
 															}}
@@ -520,22 +519,23 @@ const TaskPage: FC = () => {
 												key={index}
 												className={`relative grid ${
 													isEmployerTaskOwner ? 'grid-cols-4' : 'grid-cols-3'
-												} md:mb-2 md:border-b border-gray-200 last:border-b-0 last:mb-0 md:w-full items-center md:py-4 md:px-6 hover:bg-gray-50 transition-colors`}
+												} md:mb-2 md:border-b border-gray-200 last:border-b-0 last:mb-0 md:w-full items-center md:py-4 hover:bg-gray-50 transition-colors`}
+												style={{ minHeight: '60px' }}
 												ref={el => {
 													if (el) modalRefs.current.set(activity.id, el)
 												}}
 											>
-												<div className='flex items-center md:justify-center'>
-													<div className='mr-3'>
+												<div className='flex items-center justify-center'>
+													<div className='mr-3 flex items-center'>
 														{activity.status === 'done' ? (
 															<CircleCheckBig size={20} className='text-green-500' />
 														) : activity.status === 'rejected' ? (
-															<span className='text-red-500'>✗</span>
+															<span className='text-red-500 text-xl'>✗</span>
 														) : (
 															<Hourglass size={20} className='text-yellow-500' />
 														)}
 													</div>
-													<span className='text-sm text-gray-700'>
+													<span className='text-sm text-gray-700 flex items-center'>
 														{activity.status === 'verifying'
 															? 'Верифицируется'
 															: activity.status === 'done'
@@ -543,19 +543,19 @@ const TaskPage: FC = () => {
 															: 'Отклонено'}
 													</span>
 												</div>
-												<div className='md:text-center text-sm text-gray-700 truncate'>
+												<div className='md:text-center text-sm text-gray-700 truncate flex items-center justify-center'>
 													{activity.username || 'Неизвестно'}
 												</div>
-												<div className='md:text-center text-sm text-gray-700'>
+												<div className='md:text-center text-sm text-gray-700 flex items-center justify-center'>
 													<span>
 														{activity.activity_date ||
 															new Date(activity.created_at).toLocaleDateString()}
 													</span>
 												</div>
 												{isEmployerTaskOwner && (
-													<div className='md:flex md:justify-center'>
+													<div className='flex items-center justify-center'>
 														<button
-															className='text-blue-600 hover:underline text-sm font-medium'
+															className='text-blue-600 hover:underline text-sm font-medium py-1'
 															onClick={() => handleOpenModal(activity)}
 														>
 															Просмотреть
@@ -591,4 +591,5 @@ const TaskPage: FC = () => {
 		</>
 	)
 }
+
 export default TaskPage

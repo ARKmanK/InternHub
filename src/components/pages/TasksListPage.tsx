@@ -1,9 +1,9 @@
 import { FC, useState, useEffect, useMemo } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Header from '@components/Header'
 import NavBar from '@components/NavBar'
 import TaskCard from '@components/TaskCard'
 import TaskFilter from '@components/TaskFilter'
-import { useNavigate } from 'react-router-dom'
 import {
 	getAllTasks,
 	getUserByEmail,
@@ -14,11 +14,10 @@ import {
 	getTaskSubmissionsCount,
 } from '@/src/lib/API/supabaseAPI'
 import { supabase } from '@/supabaseClient'
-import { List, BookCopy, CircleUserRound, Plus } from 'lucide-react' // Добавили Plus для иконки
+import { List, BookCopy, CircleUserRound, Plus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
-import { Button } from '@components/UI/Button/Button'
 import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
 import { setPage } from '@/src/data/userData'
 import Message from '../Message'
@@ -60,6 +59,17 @@ const TasksListPage: FC = () => {
 	const [loading, setLoading] = useState(true)
 	const [companies, setCompanies] = useState<string[]>([])
 	const navigate = useNavigate()
+	const location = useLocation()
+
+	// Обработка уведомления при переходе с AddTaskForm
+	useEffect(() => {
+		// Проверяем, есть ли состояние и не было ли уведомление уже показано
+		if (location.state?.showSuccessNotification) {
+			addNotification('success', 'Успешно', 'Задача отправлена на модерацию')
+			// Очищаем состояние маршрута, чтобы предотвратить повторные уведомления
+			navigate(location.pathname, { replace: true, state: {} })
+		}
+	}, []) // Пустой массив зависимостей, чтобы эффект сработал только при монтировании
 
 	const addToFavorite = async (id: number) => {
 		if (!role || !userId) {
@@ -359,7 +369,7 @@ const TasksListPage: FC = () => {
 							<motion.button
 								whileHover={{ scale: 1.1 }}
 								whileTap={{ scale: 0.9 }}
-								className='md:ml-4 p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2'
+								className='md:ml-4 p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2 relative'
 								onClick={openProfile}
 								aria-label='Открыть профиль'
 							>
@@ -367,12 +377,12 @@ const TasksListPage: FC = () => {
 								<span className='text-sm font-semibold'>Профиль</span>
 								{role === 'admin' &&
 									(submissionsLoading ? (
-										<span className='absolute top-0 right-0 bg-gradient-to-br from-gray-300 to-gray-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+										<span className='absolute top-[-10px] right-[-10px] bg-gradient-to-br from-gray-300 to-gray-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
 											...
 										</span>
 									) : (
 										submissionsCount > 0 && (
-											<span className='absolute top-0 right-0 bg-gradient-to-br from-red-300 to-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+											<span className='absolute top-[-10px] right-[-10px] bg-gradient-to-br from-red-300 to-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
 												{submissionsCount}
 											</span>
 										)

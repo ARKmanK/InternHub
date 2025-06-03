@@ -226,7 +226,7 @@ const AddTaskForm = () => {
 		const deadlineStr = formatDate(deadline)
 		const submissionData = {
 			user_id: userId,
-			submission_url: null, // В данном случае поле необязательное
+			submission_url: null,
 			zip_file_url: null,
 			comment: null,
 			photos: null,
@@ -245,14 +245,15 @@ const AddTaskForm = () => {
 				throw new Error(`Не удалось создать задачу: ${error.message}`)
 			}
 
-			addNotification('success', 'Успешно', 'Задача отправлена на модерацию')
+			// Удаляем уведомление из AddTaskForm
 			setTitle('')
 			setDescription('')
 			setDifficulty(0)
 			setDeadline(null)
 			setTags([])
 			setNewTag('')
-			navigate('/tasks')
+			// Передаём состояние для уведомления
+			navigate('/tasks', { state: { showSuccessNotification: true } })
 		} catch (error: any) {
 			addNotification('error', 'Ошибка', `Не удалось создать задачу: ${error.message}`)
 		}

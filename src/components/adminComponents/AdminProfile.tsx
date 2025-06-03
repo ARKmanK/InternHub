@@ -7,13 +7,14 @@ import {
 	getPendingTaskSubmissions,
 	approveTaskSubmission,
 	rejectTaskSubmission,
+	addMessage,
 } from '@/src/lib/API/supabaseAPI'
 import { Undo2, LogOut } from 'lucide-react'
 import { NavigateFunction } from 'react-router-dom'
 
 interface AdminProfileProps {
 	navigate: NavigateFunction
-	goBack: () => void // Исправляем тип
+	goBack: () => void
 	handleLogout: () => void
 }
 
@@ -44,9 +45,23 @@ const AdminProfile: FC<AdminProfileProps> = ({ navigate, goBack, handleLogout })
 
 	const handleApprove = async (submissionId: number) => {
 		try {
+			const submission = pendingTasks.find(task => task.id === submissionId)
+			if (!submission) {
+				addNotification('error', 'Ошибка', 'Задача не найдена')
+				return
+			}
+
 			await approveTaskSubmission(submissionId)
 			setPendingTasks(prev => prev.filter(task => task.id !== submissionId))
-			addNotification('success', 'Успешно', 'Задача одобрена и добавлена в общий список')
+
+			// Send message to the task owner
+			if (submission.employer_id) {
+				await addMessage(
+					submission.employer_id,
+					`Ваша задача "${submission.title}" прошла модерацию`
+				)
+			}
+			addNotification('success', 'Успешно', 'Задача одобрена')
 		} catch (error: any) {
 			addNotification('error', 'Ошибка', `Не удалось одобрить задачу: ${error.message}`)
 		}
@@ -54,9 +69,24 @@ const AdminProfile: FC<AdminProfileProps> = ({ navigate, goBack, handleLogout })
 
 	const handleReject = async (submissionId: number) => {
 		try {
+			const submission = pendingTasks.find(task => task.id === submissionId)
+			if (!submission) {
+				addNotification('error', 'Ошибка', 'Задача не найдена')
+				return
+			}
+
 			await rejectTaskSubmission(submissionId)
 			setPendingTasks(prev => prev.filter(task => task.id !== submissionId))
-			addNotification('warning', 'Внимание', 'Задача отклонена и удалена')
+
+			// Send message to the task owner
+			if (submission.employer_id) {
+				await addMessage(
+					submission.employer_id,
+					`Ваша задача "${submission.title}" не прошла модерацию`
+				)
+			}
+
+			addNotification('warning', 'Внимание', 'Задача отклонена')
 		} catch (error: any) {
 			addNotification('error', 'Ошибка', `Не удалось отклонить задачу: ${error.message}`)
 		}
@@ -107,20 +137,23 @@ const AdminProfile: FC<AdminProfileProps> = ({ navigate, goBack, handleLogout })
 										animate={{ opacity: 1, y: 0 }}
 										exit={{ opacity: 0, y: -20 }}
 										transition={{ duration: 0.5 }}
-										className='md:flex md:items-center md:justify-between md:min-w-[300px] md:min-h-[100px] rounded-xl md:mb-4 border-2 border-gray-[#dce3eb] bg-[#96bddd] p-4'
+										className='md:flex md:items-center md:justify-between md:min-w-[300px] md:min-h-[100px] rounded-xl md:mb-4 border-2 border-gray-[#dce3eb] bg-gradient-to-br from-blue-50 to-gray-300 p-4 shadow-md'
 									>
 										<div className='flex-1'>
-											<h3 className='text-lg font-semibold'>{task.title}</h3>
+											<h3 className='text-lg font-semibold text-gray-800'>{task.title}</h3>
 											<p className='text-sm text-gray-600'>{task.description}</p>
 											<div className='flex gap-2 mt-2'>
 												{task.tags?.map(tag => (
-													<span key={tag} className='bg-[#6092bb] rounded-md px-2 py-0.5 text-sm'>
+													<span
+														key={tag}
+														className='bg-blue-200 rounded-md px-2 py-0.5 text-sm text-gray-800'
+													>
 														{tag}
 													</span>
 												))}
 											</div>
-											<p className='text-sm mt-2'>Компания: {task.company_name}</p>
-											<p className='text-sm'>Крайний срок: {task.deadline}</p>
+											<p className='text-sm mt-2 text-gray-700'>Компания: {task.company_name}</p>
+											<p className='text-sm text-gray-700'>Крайний срок: {task.deadline}</p>
 										</div>
 										<div className='flex gap-2 mt-4 md:mt-0'>
 											<motion.button

@@ -21,21 +21,19 @@ const Message: FC = () => {
 	const [isOpen, setIsOpen] = useState(false)
 	const [messages, setMessages] = useState<Message[]>([])
 	const [unreadCount, setUnreadCount] = useState<number>(0)
-	const [isLoading, setIsLoading] = useState(true) // Состояние загрузки
+	const [isLoading, setIsLoading] = useState(true)
 	const messageRef = useRef<HTMLDivElement>(null)
+	const buttonRef = useRef<HTMLButtonElement>(null) // Добавляем реф для кнопки-иконки
 
 	// Загружаем сообщения и количество непрочитанных
 	useEffect(() => {
 		const fetchMessages = async () => {
-			setIsLoading(true) // Устанавливаем флаг загрузки
+			setIsLoading(true)
 			try {
 				const userId = getUserId()
 				if (userId) {
-					// Получаем количество непрочитанных сообщений
 					const count = await getUnreadMessagesCount(userId)
 					setUnreadCount(count)
-
-					// Загружаем сообщения (пагинация: первые 10)
 					const userMessages = await getMessagesByUserId(userId, 10, 0)
 					setMessages(
 						userMessages.map(msg => ({
@@ -47,17 +45,16 @@ const Message: FC = () => {
 						}))
 					)
 				} else {
-					console.warn('User ID is not available, retrying...')
-					// Можно добавить повторную попытку или обработку
+					console.warn('User ID is not available')
 				}
 			} catch (error) {
 				console.error('Error fetching messages:', error)
 			} finally {
-				setIsLoading(false) // Сбрасываем флаг после загрузки
+				setIsLoading(false)
 			}
 		}
 		fetchMessages()
-	}, []) // Пустой массив зависимостей, так как загрузка происходит один раз при монтировании
+	}, [])
 
 	// Обновляем is_read при открытии компонента
 	useEffect(() => {
@@ -73,7 +70,7 @@ const Message: FC = () => {
 						is_read: true,
 					}))
 				)
-				setUnreadCount(0) // Сбрасываем счётчик непрочитанных
+				setUnreadCount(0)
 			}
 		}
 	}, [isOpen])
@@ -81,7 +78,13 @@ const Message: FC = () => {
 	// Закрытие при клике вне области
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
-			if (messageRef.current && !messageRef.current.contains(event.target as Node)) {
+			// Проверяем, что клик произошёл вне messageRef и не по кнопке-иконке
+			if (
+				messageRef.current &&
+				!messageRef.current.contains(event.target as Node) &&
+				buttonRef.current &&
+				!buttonRef.current.contains(event.target as Node)
+			) {
 				setIsOpen(false)
 			}
 		}
@@ -96,22 +99,19 @@ const Message: FC = () => {
 	}, [isOpen])
 
 	const toggleMenu = () => {
-		setIsOpen(!isOpen)
+		setIsOpen(prev => !prev)
 	}
 
 	const handleDelete = async (messageId: number) => {
 		try {
-			// Проверяем, было ли сообщение непрочитанным
 			const messageToDelete = messages.find(msg => msg.id === messageId)
 			const wasUnread = messageToDelete && !messageToDelete.is_read
 
-			// Удаляем сообщение
 			await deleteMessage(messageId)
 			setMessages(prev => prev.filter(msg => msg.id !== messageId))
 
-			// Уменьшаем счётчик непрочитанных, если сообщение было непрочитанным
 			if (wasUnread) {
-				setUnreadCount(prev => Math.max(0, prev - 1)) // Уменьшаем на 1, но не ниже 0
+				setUnreadCount(prev => Math.max(0, prev - 1))
 			}
 		} catch (error) {
 			console.error('Error deleting message:', error)
@@ -121,6 +121,7 @@ const Message: FC = () => {
 	return (
 		<div className='fixed bottom-[60px] right-4 z-50'>
 			<motion.button
+				ref={buttonRef} // Привязываем реф к кнопке
 				whileHover={{ scale: 1.1 }}
 				whileTap={{ scale: 0.9 }}
 				className='relative p-3 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-full shadow-md hover:from-blue-300 hover:to-blue-500 transition-all focus:outline-none'
@@ -148,7 +149,7 @@ const Message: FC = () => {
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: 20 }}
 						transition={{ duration: 0.2 }}
-						className='absolute bottom-12 right-0 w-80 bg-white rounded-lg shadow-lg p-4 mt-2 border border-gray-200'
+						className='absolute bottom-12 right-0 w-80 bg-gradient-to-br from-blue-50 to-gray-300 rounded-lg shadow-xl p-4 mt-2 border border-gray-200'
 					>
 						<h3 className='text-lg font-semibold mb-2 text-gray-800'>Сообщения</h3>
 						{isLoading ? (
