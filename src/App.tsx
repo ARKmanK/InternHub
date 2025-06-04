@@ -7,6 +7,7 @@ import { MantineProvider } from '@mantine/core'
 import CreateTaskPage from '@/src/components/pages/CreateTaskPage'
 import LoginPage from '@/src/components/pages/LoginPage'
 import EditTaskPage from './components/pages/EditTaskPage'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const RootRedirect = () => {
 	const navigate = useNavigate()
@@ -23,6 +24,8 @@ const RootRedirect = () => {
 	}, [navigate])
 	return null
 }
+
+const queryClient = new QueryClient()
 
 const App: FC = () => {
 	const router = createBrowserRouter(
@@ -71,9 +74,11 @@ const App: FC = () => {
 		}
 	)
 	return (
-		<MantineProvider>
-			<RouterProvider router={router}></RouterProvider>
-		</MantineProvider>
+		<QueryClientProvider client={queryClient}>
+			<MantineProvider>
+				<RouterProvider router={router}></RouterProvider>
+			</MantineProvider>
+		</QueryClientProvider>
 	)
 }
 

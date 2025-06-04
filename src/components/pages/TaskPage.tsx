@@ -13,7 +13,15 @@ import {
 	getUserUuidById,
 } from '@/src/lib/API/supabaseAPI'
 import { setPage, goBack } from '@data/userData'
-import { BadgeCheck, Star, CircleCheckBig, Hourglass, Heart, Undo2 } from 'lucide-react'
+import {
+	BadgeCheck,
+	Star,
+	CircleCheckBig,
+	Hourglass,
+	Heart,
+	Undo2,
+	FileArchive,
+} from 'lucide-react'
 import { motion } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
@@ -25,6 +33,7 @@ import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
 import AnswerVerifyWindow from '@components/AnswerVerifyWindow'
 import Message from '../Message'
 import LoadingAnimation from '../LoadingAnimation'
+import TaskNotFound from '../TaskNotFound'
 
 type TypeTasksData = {
 	id: number
@@ -36,6 +45,7 @@ type TypeTasksData = {
 	deadline: string
 	tags: string[]
 	employer_id: number
+	zip_file_url?: string | null // Добавляем поле для URL архива
 }
 
 const TaskPage: FC = () => {
@@ -77,6 +87,7 @@ const TaskPage: FC = () => {
 				navigate('/tasks')
 				return
 			}
+
 			setTask({
 				id: foundTask.id,
 				tracking_number: foundTask.tracking_number,
@@ -87,6 +98,7 @@ const TaskPage: FC = () => {
 				deadline: foundTask.deadline,
 				tags: foundTask.tags ?? [],
 				employer_id: foundTask.employer_id,
+				zip_file_url: foundTask.zip_file_url, // Прямое использование из foundTask
 			} as TypeTasksData)
 
 			const favorites = await getUserFavorites(userId)
@@ -273,6 +285,14 @@ const TaskPage: FC = () => {
 		}
 	}
 
+	const handleDownloadArchive = () => {
+		if (task?.zip_file_url) {
+			window.open(task.zip_file_url, '_blank')
+		} else {
+			addNotification('warning', 'Ошибка', 'Архив не прикреплен к задаче')
+		}
+	}
+
 	const renderDifficultyStars = (difficulty: number) => {
 		const starsCount = difficulty >= 1 && difficulty <= 3 ? difficulty : 1
 		const starColorClass =
@@ -292,7 +312,7 @@ const TaskPage: FC = () => {
 	}
 
 	if (!task || isLoading) {
-		return isLoading ? <LoadingAnimation loading={true} /> : <div>Задача не найдена</div>
+		return isLoading ? <LoadingAnimation loading={true} /> : <TaskNotFound />
 	}
 
 	const isEmployerTaskOwner = role === 'employer' && task.employer_id === userId
@@ -353,11 +373,26 @@ const TaskPage: FC = () => {
 									<p className='md:mb-2 text-gray-600 font-medium'>Сложность</p>
 									{renderDifficultyStars(task.difficulty)}
 								</div>
-								<div className='md:flex md:justify-end'>
+								<div className='md:flex md:justify-between md:items-center'>
 									<div className='md:flex items-center text-gray-700 font-medium'>
 										{task.company_name}
 										<BadgeCheck className='ml-2' fill='green' />
 									</div>
+									{task.zip_file_url && (
+										<div className='border-2 border-blue-300 rounded-lg p-2 bg-white shadow-md flex flex-col items-center'>
+											<span className='text-gray-800 text-sm font-semibold mb-2 whitespace-nowrap'>
+												Доп. материалы
+											</span>
+											<motion.button
+												whileTap={{ scale: 0.95 }}
+												className='w-full md:w-auto md:py-2 md:px-4 border border-gray-400 rounded-md bg-gradient-to-br from-blue-300 to-blue-500 text-gray-900 cursor-pointer flex items-center justify-center hover:from-blue-400 hover:to-blue-600 transition-all shadow-md'
+												onClick={handleDownloadArchive}
+											>
+												<FileArchive className='mr-2' size={20} />
+												<span className='text-sm font-medium'>Скачать архив</span>
+											</motion.button>
+										</div>
+									)}
 								</div>
 							</div>
 						</div>

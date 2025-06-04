@@ -4,6 +4,7 @@ import { getUserId } from '@/src/lib/API/supabaseAPI'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import { motion } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query' // Импортируем useQueryClient
 
 type DeleteConfirmationProps = {
 	taskId: number
@@ -21,6 +22,7 @@ const DeleteConfirmation: FC<DeleteConfirmationProps> = ({
 	const [inputText, setInputText] = useState('')
 	const { notifications, addNotification } = useNotification()
 	const userId = getUserId()
+	const queryClient = useQueryClient() // Получаем экземпляр queryClient
 
 	const words = taskTitle.trim().split(/\s+/)
 	const firstTwoWordsLength = words.slice(0, 2).map(word => word.length)
@@ -44,6 +46,8 @@ const DeleteConfirmation: FC<DeleteConfirmationProps> = ({
 			try {
 				await deleteTask(taskId, userId)
 				addNotification('success', 'Успешно', 'Задача успешно удалена!')
+				// Инвалидация кэша для запроса allTasks
+				await queryClient.invalidateQueries({ queryKey: ['allTasks'] })
 				onConfirm()
 			} catch (error: any) {
 				addNotification('error', 'Ошибка', `Не удалось удалить задачу: ${error.message}`)

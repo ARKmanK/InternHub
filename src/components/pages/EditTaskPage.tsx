@@ -1,7 +1,7 @@
 import Header from '@components/Header'
 import NavBar from '@components/NavBar'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Undo2, AppWindow, X } from 'lucide-react'
+import { Undo2, AppWindow, X, FileArchive, Check } from 'lucide-react'
 import { setPage, goBack } from '@/src/data/userData'
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { TypeTask } from '@/src/types/TypeTask'
@@ -48,16 +48,16 @@ const EditTaskPage = () => {
 	const [userId, setUserId] = useState<number | null>(null)
 	const [commonTags, setCommonTags] = useState<string[]>([])
 	const [userTags, setUserTags] = useState<string[]>([])
+	const [zipFile, setZipFile] = useState<File | null>(null)
+	const [zipAdded, setZipAdded] = useState<boolean>(false)
 
 	const MAX_TITLE_LENGTH = 50
 	const MAX_DESCRIPTION_LENGTH = 250
 	const MAX_TAG_LENGTH = 20
 	const MAX_TAGS = 5
 
-	// Ref для textarea
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-	// Экземпляр функции goBack
 	const handleGoBack = goBack(navigate)
 
 	useEffect(() => {
@@ -107,6 +107,7 @@ const EditTaskPage = () => {
 						deadline: task.deadline ? new Date(task.deadline) : null,
 						tags: task.tags || [],
 					})
+					setZipAdded(!!task.zip_file_url)
 
 					const commonTagsData = await getAllTags()
 					setCommonTags(commonTagsData.map(tag => tag.name))
@@ -122,7 +123,6 @@ const EditTaskPage = () => {
 		fetchData()
 	}, [id, navigate])
 
-	// Динамическая высота textarea
 	useEffect(() => {
 		const textarea = textareaRef.current
 		if (textarea) {
@@ -240,6 +240,28 @@ const EditTaskPage = () => {
 		}
 	}
 
+	const handleZipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0]
+		if (file) {
+			const validTypes = ['.zip', '.rar', '.7z', '.tar', '.gz']
+			const fileExt = `.${file.name.split('.').pop()?.toLowerCase()}`
+			if (!validTypes.includes(fileExt)) {
+				addNotification(
+					'warning',
+					'Ошибка',
+					'Поддерживаются только архивы (.zip, .rar, .7z, .tar, .gz)'
+				)
+				return
+			}
+			if (file.size > 10 * 1024 * 1024) {
+				addNotification('warning', 'Ошибка', 'Размер архива не должен превышать 10MB')
+				return
+			}
+			setZipFile(file)
+			setZipAdded(true)
+		}
+	}
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 
@@ -269,6 +291,59 @@ const EditTaskPage = () => {
 		}
 
 		const deadlineStr = formatDate(formData.deadline)
+		let zipFileUrl: string | null = taskData?.zip_file_url || null
+
+		if (zipFile) {
+			try {
+				// Удаляем старый файл, если он есть
+				if (taskData?.zip_file_url) {
+					const oldFilePath = taskData.zip_file_url.split('/').pop()
+					if (oldFilePath) {
+						const { error: deleteError } = await supabase.storage
+							.from('task-files')
+							.remove([`tasks_files/${oldFilePath}`])
+						if (deleteError) {
+							addNotification(
+								'error',
+								'Ошибка',
+								`Не удалось удалить старый архив: ${deleteError.message}`
+							)
+							return
+						}
+					}
+				}
+
+				// Сантизация и генерация уникального имени файла
+				const fileExt = zipFile.name.split('.').pop()?.toLowerCase() || 'zip'
+				const baseName = formData.title
+					.toLowerCase()
+					.replace(/[^a-z0-9]/g, '-') // Заменяем неалфавитно-цифровые символы на дефисы
+					.substring(0, 20) // Ограничиваем длину
+				const fileName = `${Date.now()}_${userId}_${baseName}.${fileExt}`
+				const filePath = `tasks_files/${fileName}`
+
+				// Загружаем новый файл
+				const { error: uploadError } = await supabase.storage
+					.from('task-files')
+					.upload(filePath, zipFile, {
+						cacheControl: '3600',
+						upsert: false,
+					})
+
+				if (uploadError) {
+					addNotification('error', 'Ошибка', `Не удалось загрузить архив: ${uploadError.message}`)
+					return
+				}
+
+				// Получаем новый публичный URL
+				const { data: publicUrlData } = supabase.storage.from('task-files').getPublicUrl(filePath)
+				zipFileUrl = publicUrlData.publicUrl
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', `Не удалось загрузить архив: ${error.message}`)
+				return
+			}
+		}
+
 		const updatedTask: TypeTask = {
 			id: taskData?.id || 0,
 			tracking_number: taskData?.tracking_number || 0,
@@ -279,6 +354,7 @@ const EditTaskPage = () => {
 			deadline: deadlineStr,
 			tags: formData.tags,
 			employer_id: userId,
+			zip_file_url: zipFileUrl,
 		}
 
 		try {
@@ -450,6 +526,55 @@ const EditTaskPage = () => {
 													>
 														Добавить
 													</motion.button>
+												</div>
+											</div>
+											<div className='flex flex-col'>
+												<p className='mt-4 text-lg font-medium text-gray-600'>
+													Дополнительные материалы (архив) (опционально)
+												</p>
+												<div className='flex items-center'>
+													{zipAdded ? (
+														<div className='flex items-center justify-between w-[250px] mt-3'>
+															<span className='py-2 px-3 text-gray-900 flex items-center'>
+																<FileArchive className='mr-2' size={35} />
+																<span className='text-sm font-medium'>Архив загружен</span>
+																<motion.div
+																	whileHover={{ scale: 1.1 }}
+																	className='flex items-center ml-3'
+																>
+																	<Check size={24} className='text-green-600' />
+																</motion.div>
+															</span>
+															<motion.label
+																whileHover={{ scale: 1.05 }}
+																whileTap={{ scale: 0.95 }}
+																className='py-2 px-3 border border-gray-400 rounded-md bg-gradient-to-br from-blue-300 to-blue-500 text-gray-900 cursor-pointer flex items-center hover:from-blue-400 hover:to-blue-600 transition-all shadow-md'
+															>
+																<span className='text-sm font-medium'>Заменить</span>
+																<input
+																	type='file'
+																	accept='.zip,.rar,.7z,.tar,.gz'
+																	className='hidden'
+																	onChange={handleZipChange}
+																/>
+															</motion.label>
+														</div>
+													) : (
+														<motion.label
+															whileHover={{ scale: 1.05 }}
+															whileTap={{ scale: 0.95 }}
+															className='py-2 px-3 border border-gray-400 rounded-md bg-gradient-to-br from-blue-300 to-blue-500 text-gray-900 cursor-pointer flex items-center w-[180px] hover:from-blue-400 hover:to-blue-600 transition-all shadow-md'
+														>
+															<FileArchive className='mr-2' size={20} />
+															<span className='text-sm font-medium'>Выбрать архив</span>
+															<input
+																type='file'
+																accept='.zip,.rar,.7z,.tar,.gz'
+																className='hidden'
+																onChange={handleZipChange}
+															/>
+														</motion.label>
+													)}
 												</div>
 											</div>
 											<div className='md:flex md:justify-center mt-6'>

@@ -5,6 +5,10 @@ import EmptyCard from '@components/EmptyCard'
 import DeleteConfirmation from '@components/DeleteConfirmation'
 import { setPage } from '@data/userData'
 import { NavigateFunction } from 'react-router-dom'
+import { useState, memo } from 'react'
+import { supabase } from '@/supabaseClient'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { getAllTasks } from '@/src/lib/API/supabaseAPI'
 
 type TypeTask = {
 	id: number
@@ -21,21 +25,101 @@ type TypeTask = {
 type EmployerProfileProps = {
 	listType: 'list' | 'card'
 	setListType: (type: 'list' | 'card') => void
-	visibleTasks: TypeTask[]
 	handleDelete: (id: number) => void
 	showDeleteForm: boolean
 	taskToDelete: number | null
+	tasks: TypeTask[]
 	confirmDelete: () => void
 	cancelDelete: () => void
 	navigate: NavigateFunction
 	handleLogout: () => void
-	goBack: () => void // Исправляем тип
+	goBack: () => void
 }
+
+// Компонент анимации загрузки
+const LoadingSpinner = memo(() => (
+	<motion.div
+		className='flex justify-center items-center h-[200px] overflow-hidden'
+		initial={{ opacity: 0 }}
+		animate={{ opacity: 1 }}
+		exit={{ opacity: 0, transition: { duration: 0.3 } }} // Ускорена анимация выхода
+	>
+		<motion.svg
+			width='200'
+			height='200'
+			viewBox='0 0 200 200'
+			fill='none'
+			xmlns='http://www.w3.org/2000/svg'
+			className='max-w-full'
+		>
+			<motion.circle
+				cx='100'
+				cy='70'
+				r='5'
+				fill='#60a5fa'
+				animate={{
+					y: [70, 100, 70],
+					opacity: [0.8, 0, 0.8],
+					scale: [1, 1.5, 1],
+					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+				}}
+			/>
+			<motion.circle
+				cx='120'
+				cy='80'
+				r='5'
+				fill='#3b82f6'
+				animate={{
+					y: [80, 110, 80],
+					opacity: [0.8, 0, 0.8],
+					scale: [1, 1.5, 1],
+					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.5 },
+				}}
+			/>
+			<motion.circle
+				cx='80'
+				cy='120'
+				r='5'
+				fill='#60a5fa'
+				animate={{
+					y: [120, 90, 120],
+					opacity: [0.8, 0, 0.8],
+					scale: [1, 1.5, 1],
+					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 1 },
+				}}
+			/>
+			<motion.circle
+				cx='130'
+				cy='130'
+				r='5'
+				fill='#3b82f6'
+				animate={{
+					y: [130, 100, 130],
+					opacity: [0.8, 0, 0.8],
+					scale: [1, 1.5, 1],
+					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 1.5 },
+				}}
+			/>
+			<motion.circle
+				cx='100'
+				cy='100'
+				r='15'
+				fill='none'
+				stroke='#60a5fa'
+				strokeWidth='2'
+				animate={{
+					scale: [0.5, 1, 0.5],
+					opacity: [0.3, 1, 0.3],
+					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+				}}
+			/>
+		</motion.svg>
+	</motion.div>
+))
 
 const EmployerProfile = ({
 	listType,
 	setListType,
-	visibleTasks,
 	handleDelete,
 	showDeleteForm,
 	taskToDelete,
@@ -45,37 +129,88 @@ const EmployerProfile = ({
 	handleLogout,
 	goBack,
 }: EmployerProfileProps) => {
+	const queryClient = useQueryClient()
+	const [showContent, setShowContent] = useState(
+		!!queryClient.getQueryData(['allTasks']) // Инициализация на основе наличия кэша
+	)
+
+	// Запрос сессии пользователя
+	const { data: sessionData, isLoading: isLoadingSession } = useQuery({
+		queryKey: ['session'],
+		queryFn: async () => {
+			const { data } = await supabase.auth.getSession()
+			return data
+		},
+		staleTime: 5 * 60 * 1000, // 5 минут
+		gcTime: 30 * 60 * 1000, // 30 минут
+	})
+
+	// Запрос userId по email
+	const { data: userData, isLoading: isLoadingUser } = useQuery({
+		queryKey: ['user', sessionData?.session?.user?.email],
+		queryFn: async () => {
+			if (!sessionData?.session?.user?.email) return null
+			const { data, error } = await supabase
+				.from('users')
+				.select('id')
+				.eq('email', sessionData.session.user.email)
+				.single()
+			if (error) throw error
+			return data
+		},
+		enabled: !!sessionData?.session?.user?.email,
+		staleTime: 5 * 60 * 1000, // 5 минут
+		gcTime: 30 * 60 * 1000, // 30 минут
+	})
+
+	const userId = userData?.id ?? null
+
+	// Запрос всех задач
+	const { data: allTasks = [], isLoading: isLoadingTasks } = useQuery<TypeTask[], Error>({
+		queryKey: ['allTasks'],
+		queryFn: getAllTasks,
+		staleTime: 5 * 60 * 1000, // 5 минут
+		gcTime: 30 * 60 * 1000, // 30 минут
+	})
+
+	// Фильтрация задач по employer_id
+	const visibleTasks = userId ? allTasks.filter(task => task.employer_id === userId) : []
+
+	// Обновление showContent
+	const isLoading = isLoadingSession || isLoadingUser || isLoadingTasks
+	const isFetched = !isLoading && !!queryClient.getQueryData(['allTasks']) && !!userId
+
 	const taskToDeleteData = visibleTasks.find(task => task.id === taskToDelete)
 	const taskTitle = taskToDeleteData?.title || ''
 
 	const taskCard = visibleTasks.map(task => (
-		<AnimatePresence key={task.id}>
-			<motion.div
-				initial={{ opacity: 0, y: -20 }}
-				animate={{ opacity: 1, y: 0 }}
-				exit={{ opacity: 0, y: -20 }}
-				transition={{ duration: 0.5 }}
-			>
-				<TaskCard
-					id={task.id}
-					trackingNumber={task.tracking_number}
-					title={task.title}
-					description={task.description}
-					difficulty={task.difficulty}
-					companyName={task.company_name}
-					type={listType}
-					deadline={task.deadline}
-					tags={task.tags ?? []}
-					role='employer'
-					onDelete={() => handleDelete(task.id)}
-					showControls={true}
-					onClick={() => {
-						setPage(`/task/${task.id}`)
-						navigate(`/task/${task.id}`)
-					}}
-				/>
-			</motion.div>
-		</AnimatePresence>
+		<motion.div
+			key={task.id}
+			initial={{ opacity: 0, y: -20 }}
+			animate={{ opacity: 1, y: 0 }}
+			exit={{ opacity: 0, y: -20 }}
+			transition={{ duration: 0.7 }}
+			className='max-w-full'
+		>
+			<TaskCard
+				id={task.id}
+				trackingNumber={task.tracking_number}
+				title={task.title}
+				description={task.description}
+				difficulty={task.difficulty}
+				companyName={task.company_name}
+				type={listType}
+				deadline={task.deadline}
+				tags={task.tags ?? []}
+				role='employer'
+				onDelete={() => handleDelete(task.id)}
+				showControls={true}
+				onClick={() => {
+					setPage(`/task/${task.id}`)
+					navigate(`/task/${task.id}`)
+				}}
+			/>
+		</motion.div>
 	))
 
 	return (
@@ -127,25 +262,59 @@ const EmployerProfile = ({
 							<div className='md:mb-10'>
 								<h2 className='text-xl font-semibold'>Мои задачи</h2>
 							</div>
-							{visibleTasks.length === 0 ? (
-								<EmptyCard role='employer' listType='Мои задачи' />
-							) : listType === 'card' ? (
-								<div className='md:grid md:gap-4 md:grid-cols-2'>{taskCard}</div>
-							) : (
-								<>{taskCard}</>
-							)}
+							<div className='overflow-y-auto pr-2'>
+								<AnimatePresence mode='wait'>
+									{isLoading || !isFetched ? (
+										<LoadingSpinner key='spinner' />
+									) : visibleTasks.length === 0 ? (
+										<motion.div
+											key='empty'
+											initial={{ opacity: 0 }}
+											animate={{ opacity: 1 }}
+											exit={{ opacity: 0 }}
+											transition={{ duration: 0.7 }}
+											className='max-w-full'
+										>
+											<EmptyCard role='employer' listType='Мои задачи' />
+										</motion.div>
+									) : listType === 'card' ? (
+										<motion.div
+											key='cards'
+											initial={{ opacity: 0 }}
+											animate={{ opacity: 1 }}
+											exit={{ opacity: 0 }}
+											transition={{ duration: 0.7 }}
+											className='md:grid md:gap-4 md:grid-cols-2 max-w-full'
+											style={{ gridTemplateColumns: '1fr 1fr' }}
+										>
+											{taskCard}
+										</motion.div>
+									) : (
+										<motion.div
+											key='list'
+											initial={{ opacity: 0 }}
+											animate={{ opacity: 1 }}
+											exit={{ opacity: 0 }}
+											transition={{ duration: 0.7 }}
+											className='max-w-full'
+										>
+											{taskCard}
+										</motion.div>
+									)}
+								</AnimatePresence>
+							</div>
 						</div>
 					</div>
 				</div>
+				{showDeleteForm && (
+					<DeleteConfirmation
+						taskId={taskToDelete || 0}
+						taskTitle={taskTitle}
+						onConfirm={confirmDelete}
+						onCancel={cancelDelete}
+					/>
+				)}
 			</div>
-			{showDeleteForm && (
-				<DeleteConfirmation
-					taskId={taskToDelete || 0}
-					taskTitle={taskTitle}
-					onConfirm={confirmDelete}
-					onCancel={cancelDelete}
-				/>
-			)}
 		</div>
 	)
 }

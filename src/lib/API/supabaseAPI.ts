@@ -471,6 +471,7 @@ export const updateTask = async (task: TypeTask, userId: number): Promise<void> 
 				difficulty: task.difficulty,
 				company_name: task.company_name,
 				deadline: task.deadline,
+				zip_file_url: task.zip_file_url,
 			})
 			.eq('id', task.id)
 			.eq('employer_id', userId)
@@ -640,6 +641,7 @@ export const approveTaskSubmission = async (submissionId: number): Promise<void>
 		deadline: submission.deadline,
 		employer_id: submission.employer_id,
 		created_at: new Date().toISOString(),
+		zip_file_url: submission.zip_file_url, // Добавляем zip_file_url из submission
 	}
 
 	const { data: taskData, error: taskError } = await supabase
@@ -686,21 +688,18 @@ export const approveTaskSubmission = async (submissionId: number): Promise<void>
 		const taskTags = submission.tags
 			.map((tag: string) => {
 				if (commonTagNames.includes(tag)) {
-					// Тег уже существует в tags, связываем как общий
 					return {
 						task_id: taskId,
 						tag_id: commonTagsMap.get(tag)!,
 						tag_type: 'common',
 					}
 				} else if (userTagNames.includes(tag)) {
-					// Тег существует в user_tags, связываем как кастомный
 					return {
 						task_id: taskId,
 						tag_id: userTagsMap.get(tag)!,
 						tag_type: 'user',
 					}
 				} else {
-					// Это новый тег, но он уже должен быть в user_tags
 					return null
 				}
 			})

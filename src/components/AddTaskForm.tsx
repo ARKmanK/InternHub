@@ -1,6 +1,6 @@
 import { FormEvent, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AppWindow, X } from 'lucide-react'
+import { AppWindow, X, FileArchive, Check } from 'lucide-react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import useNotification from '@hooks/useNotification'
@@ -25,16 +25,17 @@ const AddTaskForm = () => {
 	const [companyName, setCompanyName] = useState<string>('')
 	const [commonTags, setCommonTags] = useState<string[]>([])
 	const [userTags, setUserTags] = useState<string[]>([])
+	const [zipFile, setZipFile] = useState<File | null>(null)
+	const [zipAdded, setZipAdded] = useState<boolean>(false)
 
 	const role = getRole()
 	const userId = getUserId()
 
 	const MAX_TITLE_LENGTH = 50
-	const MAX_DESCRIPTION_LENGTH = 250
+	const MAX_DESCRIPTION_LENGTH = 3000
 	const MAX_TAG_LENGTH = 20
 	const MAX_TAGS = 5
 
-	// Загружаем companyName и теги при монтировании компонента
 	useEffect(() => {
 		const fetchData = async () => {
 			if (role !== 'employer' || !userId) {
@@ -44,7 +45,6 @@ const AddTaskForm = () => {
 			}
 
 			try {
-				// Получаем companyName
 				const { data: user, error: userError } = await supabase
 					.from('users')
 					.select('company_name')
@@ -57,12 +57,10 @@ const AddTaskForm = () => {
 
 				setCompanyName(user.company_name || 'Неизвестная компания')
 
-				// Получаем общие теги
-				const commonTagsData = await getAllTags() // TypeTag[]
+				const commonTagsData = await getAllTags()
 				setCommonTags(commonTagsData.map(tag => tag.name))
 
-				// Получаем кастомные теги пользователя
-				const userTagsData = await getUserTags(userId) // string[]
+				const userTagsData = await getUserTags(userId)
 				setUserTags(userTagsData)
 			} catch (error: any) {
 				addNotification('error', 'Ошибка', error.message)
@@ -73,14 +71,13 @@ const AddTaskForm = () => {
 		fetchData()
 	}, [role, userId, navigate, addNotification])
 
-	// Обновляем превью задачи
 	useEffect(() => {
 		const deadlineStr = formatDate(deadline)
 		const tempTask: TypeTask = {
 			id: 0,
 			tracking_number: 0,
 			title: title || 'Пример названия',
-			description: description || 'Пример описания...',
+			description: description || 'Пример описания...', // Передаём реальное описание
 			difficulty: difficulty || 1,
 			company_name: companyName || 'Пример компании',
 			deadline: deadlineStr || '2025-01-01',
@@ -88,7 +85,7 @@ const AddTaskForm = () => {
 			employer_id: userId || 0,
 		}
 		setPreviewTask(tempTask)
-	}, [title, description, difficulty, deadline, tags, companyName, userId])
+	}, [title, description, difficulty, deadline, tags, companyName, userId]) // Добавили description в зависимости
 
 	const handleTagChange = (tag: string) => {
 		if (tags.includes(tag)) {
@@ -131,7 +128,6 @@ const AddTaskForm = () => {
 		}
 
 		try {
-			// Добавляем новый тег в user_tags
 			if (userId) {
 				await supabase.from('user_tags').insert({ user_id: userId, name: trimmedTag })
 			} else {
@@ -148,11 +144,9 @@ const AddTaskForm = () => {
 
 	const removeCustomTag = async (tagToRemove: string) => {
 		try {
-			// Удаляем тег из базы данных
 			if (userId) {
 				await deleteUserTag(userId, tagToRemove)
 			}
-			// Обновляем локальное состояние
 			setTags(tags.filter(tag => tag !== tagToRemove))
 			setUserTags(userTags.filter(tag => tag !== tagToRemove))
 		} catch (error: any) {
@@ -165,7 +159,7 @@ const AddTaskForm = () => {
 		const year = date.getFullYear()
 		const month = String(date.getMonth() + 1).padStart(2, '0')
 		const day = String(date.getDate()).padStart(2, '0')
-		return `${year}-${month}-${day}` // Формат YYYY-MM-DD
+		return `${year}-${month}-${day}`
 	}
 
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,6 +185,28 @@ const AddTaskForm = () => {
 				'Ошибка',
 				`Описание не может превышать ${MAX_DESCRIPTION_LENGTH} символов`
 			)
+		}
+	}
+
+	const handleZipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0]
+		if (file) {
+			const validTypes = ['.zip', '.rar', '.7z', '.tar', '.gz']
+			const fileExt = `.${file.name.split('.').pop()?.toLowerCase()}`
+			if (!validTypes.includes(fileExt)) {
+				addNotification(
+					'warning',
+					'Ошибка',
+					'Поддерживаются только архивы (.zip, .rar, .7z, .tar, .gz)'
+				)
+				return
+			}
+			if (file.size > 30 * 1024 * 1024) {
+				addNotification('warning', 'Ошибка', 'Размер архива не должен превышать 30MB')
+				return
+			}
+			setZipFile(file)
+			setZipAdded(true)
 		}
 	}
 
@@ -224,10 +240,38 @@ const AddTaskForm = () => {
 		}
 
 		const deadlineStr = formatDate(deadline)
+		let zipFileUrl: string | null = null
+
+		if (zipFile) {
+			try {
+				const fileExt = zipFile.name.split('.').pop()
+				const fileName = `${Date.now()}_${userId}_${title}.${fileExt}`
+				const filePath = `tasks_files/${fileName}`
+
+				const { error: uploadError } = await supabase.storage
+					.from('task-files')
+					.upload(filePath, zipFile, {
+						cacheControl: '3600',
+						upsert: false,
+					})
+
+				if (uploadError) {
+					throw new Error(`Не удалось загрузить архив: ${uploadError.message}`)
+				}
+
+				const { data: publicUrlData } = supabase.storage.from('task-files').getPublicUrl(filePath)
+
+				zipFileUrl = publicUrlData.publicUrl
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', `Не удалось загрузить архив: ${error.message}`)
+				return
+			}
+		}
+
 		const submissionData = {
 			user_id: userId,
 			submission_url: null,
-			zip_file_url: null,
+			zip_file_url: zipFileUrl,
 			comment: null,
 			photos: null,
 			title,
@@ -245,14 +289,14 @@ const AddTaskForm = () => {
 				throw new Error(`Не удалось создать задачу: ${error.message}`)
 			}
 
-			// Удаляем уведомление из AddTaskForm
 			setTitle('')
 			setDescription('')
 			setDifficulty(0)
 			setDeadline(null)
 			setTags([])
 			setNewTag('')
-			// Передаём состояние для уведомления
+			setZipFile(null)
+			setZipAdded(false)
 			navigate('/tasks', { state: { showSuccessNotification: true } })
 		} catch (error: any) {
 			addNotification('error', 'Ошибка', `Не удалось создать задачу: ${error.message}`)
@@ -466,6 +510,32 @@ const AddTaskForm = () => {
 							</motion.button>
 						</div>
 					</div>
+					<div className='flex flex-col'>
+						<p className='mt-4 text-sm font-medium text-gray-900'>
+							Дополнительные материалы (архив) (опционально)
+						</p>
+						<div className='flex items-center'>
+							<motion.label
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								className='py-2 px-3 border border-gray-400 rounded-md bg-gradient-to-br from-blue-300 to-blue-500 text-gray-900 cursor-pointer flex items-center w-[180px] hover:from-blue-400 hover:to-blue-600 transition-all shadow-md'
+							>
+								<FileArchive className='mr-2' size={20} />
+								<span className='text-sm font-medium'>Выбрать архив</span>
+								<input
+									type='file'
+									accept='.zip,.rar,.7z,.tar,.gz'
+									className='hidden'
+									onChange={handleZipChange}
+								/>
+							</motion.label>
+							{zipAdded && (
+								<motion.div whileHover={{ scale: 1.1 }} className='flex items-center ml-3'>
+									<Check size={24} className='text-green-600' />
+								</motion.div>
+							)}
+						</div>
+					</div>
 					<div className='mt-6'>
 						<motion.button
 							whileHover={{ scale: 1.1 }}
@@ -490,7 +560,7 @@ const AddTaskForm = () => {
 						id={previewTask.id}
 						trackingNumber={previewTask.tracking_number}
 						title={previewTask.title}
-						description={previewTask.description}
+						description={previewTask.description} // Теперь отображается реальное описание
 						difficulty={previewTask.difficulty}
 						companyName={previewTask.company_name}
 						type='list'

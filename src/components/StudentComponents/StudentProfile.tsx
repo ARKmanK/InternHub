@@ -2,12 +2,12 @@ import { List, BookCopy, Undo2, LogOut } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import TaskCard from '@components/TaskCard'
 import EmptyCard from '@components/EmptyCard'
-import { Button } from '@components/UI/Button/Button'
 import { setPage } from '@data/userData'
-import { NavigateFunction } from 'react-router-dom'
-import { useState, useEffect, memo } from 'react'
+import { NavigateFunction, useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import useNotification from '@hooks/useNotification'
+import Notification from '@components/UI/Notification/Notification'
 
-// Типы для задач
 type TypeTask = {
 	id: number
 	tracking_number: number
@@ -24,6 +24,7 @@ type UserProfileProps = {
 	listType: 'list' | 'card'
 	setListType: (type: 'list' | 'card') => void
 	visibleTasks: TypeTask[]
+	setVisibleTasks: (tasks: TypeTask[]) => void
 	favoriteTasks: number[]
 	category: 'favorite' | 'started' | 'finished'
 	activeCategory: string
@@ -33,77 +34,77 @@ type UserProfileProps = {
 	navigate: NavigateFunction
 	handleLogout: () => void
 	goBack: () => void
+	isLoading: boolean
+	userId: number | null
 }
 
-// Компонент анимации загрузки (светящиеся частицы)
-const LoadingSpinner = memo(() => (
+const LoadingSpinner = () => (
 	<motion.div
-		className='flex justify-center items-center h-64'
+		className='flex justify-center items-center h-[200px] overflow-hidden'
 		initial={{ opacity: 0 }}
 		animate={{ opacity: 1 }}
-		exit={{ opacity: 0, transition: { duration: 0.5 } }}
+		exit={{ opacity: 0, transition: { duration: 1 } }}
 	>
 		<motion.svg
-			width='300'
-			height='300'
-			viewBox='0 0 300 300'
+			width='200'
+			height='200'
+			viewBox='0 0 200 200'
 			fill='none'
 			xmlns='http://www.w3.org/2000/svg'
+			className='max-w-full'
 		>
-			{/* Парящие частицы */}
 			<motion.circle
-				cx='150'
-				cy='100'
+				cx='100'
+				cy='70'
 				r='5'
 				fill='#60a5fa'
 				animate={{
-					y: [100, 150, 100],
+					y: [70, 100, 70],
 					opacity: [0.8, 0, 0.8],
 					scale: [1, 1.5, 1],
 					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
 				}}
 			/>
 			<motion.circle
-				cx='180'
-				cy='120'
+				cx='120'
+				cy='80'
 				r='5'
 				fill='#3b82f6'
 				animate={{
-					y: [120, 170, 120],
+					y: [80, 110, 80],
 					opacity: [0.8, 0, 0.8],
 					scale: [1, 1.5, 1],
 					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.5 },
 				}}
 			/>
 			<motion.circle
-				cx='120'
-				cy='180'
+				cx='80'
+				cy='120'
 				r='5'
 				fill='#60a5fa'
 				animate={{
-					y: [180, 130, 180],
+					y: [120, 90, 120],
 					opacity: [0.8, 0, 0.8],
 					scale: [1, 1.5, 1],
 					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 1 },
 				}}
 			/>
 			<motion.circle
-				cx='200'
-				cy='200'
+				cx='130'
+				cy='130'
 				r='5'
 				fill='#3b82f6'
 				animate={{
-					y: [200, 150, 200],
+					y: [130, 100, 130],
 					opacity: [0.8, 0, 0.8],
 					scale: [1, 1.5, 1],
 					transition: { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 1.5 },
 				}}
 			/>
-			{/* Центральный узел (сбор частиц) */}
 			<motion.circle
-				cx='150'
-				cy='150'
-				r='20'
+				cx='100'
+				cy='100'
+				r='15'
 				fill='none'
 				stroke='#60a5fa'
 				strokeWidth='2'
@@ -115,12 +116,13 @@ const LoadingSpinner = memo(() => (
 			/>
 		</motion.svg>
 	</motion.div>
-))
+)
 
-const UserProfile = ({
+const StudentProfile = ({
 	listType,
 	setListType,
 	visibleTasks,
+	setVisibleTasks,
 	favoriteTasks,
 	category,
 	activeCategory,
@@ -130,60 +132,51 @@ const UserProfile = ({
 	navigate,
 	handleLogout,
 	goBack,
+	isLoading,
+	userId,
 }: UserProfileProps) => {
-	const [isLoading, setIsLoading] = useState(true)
-	const [showContent, setShowContent] = useState(false)
+	const location = useLocation()
+	const { notifications, addNotification } = useNotification()
+	const [showContent, setShowContent] = useState(!isLoading)
 
-	useEffect(() => {
-		setIsLoading(true)
-		setShowContent(false)
-
-		const timer = setTimeout(() => {
-			setIsLoading(false)
-			setTimeout(() => {
-				setShowContent(true)
-			}, 500) // Задержка перед отображением контента
-		}, 2000) // Загрузка длится минимум 2 секунды
-
-		return () => clearTimeout(timer)
-	}, [category])
-
-	const taskCard = visibleTasks.map(task => (
-		<AnimatePresence key={task.id}>
-			<motion.div
-				initial={{ opacity: 0, y: -20 }}
-				animate={{ opacity: 1, y: 0 }}
-				exit={{ opacity: 0, y: -20 }}
-				transition={{ duration: 0.5 }}
-			>
-				<TaskCard
-					id={task.id}
-					trackingNumber={task.tracking_number}
-					title={task.title}
-					description={task.description}
-					difficulty={task.difficulty}
-					companyName={task.company_name}
-					type={listType}
-					addToFavorite={addToFavorite}
-					removeFromFavorite={removeFromFavorite}
-					isFavorite={favoriteTasks.includes(task.id)}
-					showFavoriteButton={category === 'favorite'}
-					deadline={task.deadline}
-					tags={task.tags ?? []}
-					role='user'
-					onClick={() => {
-						setPage(`/task/${task.id}`)
-						navigate(`/task/${task.id}`)
-					}}
-				/>
-			</motion.div>
-		</AnimatePresence>
+	// Формируем карточки задач
+	const taskCards = visibleTasks.map(task => (
+		<motion.div
+			key={task.id}
+			initial={{ opacity: 0, y: -20 }}
+			animate={{ opacity: 1, y: 0 }}
+			exit={{ opacity: 0, y: -20 }}
+			transition={{ duration: 0.5 }}
+			className='max-w-full'
+		>
+			<TaskCard
+				id={task.id}
+				trackingNumber={task.tracking_number}
+				title={task.title}
+				description={task.description}
+				difficulty={task.difficulty}
+				companyName={task.company_name}
+				type={listType}
+				addToFavorite={addToFavorite}
+				removeFromFavorite={removeFromFavorite}
+				isFavorite={favoriteTasks.includes(task.id)}
+				showFavoriteButton={category === 'favorite'}
+				deadline={task.deadline}
+				tags={task.tags ?? []}
+				role='user'
+				onClick={() => {
+					setPage(`/task/${task.id}`)
+					navigate(`/task/${task.id}`, { state: { fromBack: false } })
+				}}
+			/>
+		</motion.div>
 	))
 
 	return (
 		<div className='md:flex md:justify-center md:py-[20px] md:px-[10px]'>
-			<div className='md:min-h-[730px] md:w-[980px]'>
+			<div className='md:min-h-[1130px] md:w-[980px]'>
 				<div className='md:flex md:flex-col'>
+					{/* Кнопки "Назад" и "Выйти" */}
 					<div className='md:py-4 md:flex md:justify-end items-center'>
 						<motion.button
 							whileHover={{ scale: 1.1 }}
@@ -205,6 +198,8 @@ const UserProfile = ({
 							<span className='text-sm font-semibold'>Выйти</span>
 						</motion.button>
 					</div>
+
+					{/* Кнопки переключения вида отображения */}
 					<div className='md:flex md:justify-end'>
 						<motion.button
 							whileHover={{ scale: 1.1 }}
@@ -223,9 +218,13 @@ const UserProfile = ({
 							<BookCopy size={24} />
 						</motion.button>
 					</div>
+
+					{/* Основной контент */}
 					<div className='md:flex mt-7'>
 						<div className='md:w-[80%]'>
 							<h1 className='text-2xl font-bold mb-14'>Страница профиля</h1>
+
+							{/* Кнопки категорий */}
 							<div className='md:flex md:justify-start md:gap-x-3 md:mb-10'>
 								<motion.button
 									whileHover={{ scale: 1.1 }}
@@ -264,17 +263,20 @@ const UserProfile = ({
 									<span className='text-sm font-semibold'>Одобренные задачи</span>
 								</motion.button>
 							</div>
-							<AnimatePresence>
-								{isLoading ? (
-									<LoadingSpinner key={`spinner-${category}`} />
-								) : showContent ? (
-									visibleTasks.length === 0 ? (
+
+							{/* Отображение задач */}
+							<div className='overflow-y-auto pr-2'>
+								<AnimatePresence mode='wait'>
+									{isLoading && !showContent ? (
+										<LoadingSpinner key={`spinner-${category}`} />
+									) : visibleTasks.length === 0 ? (
 										<motion.div
 											key={`empty-${category}`}
 											initial={{ opacity: 0 }}
 											animate={{ opacity: 1 }}
 											exit={{ opacity: 0 }}
 											transition={{ duration: 0.5 }}
+											className='max-w-full'
 										>
 											<EmptyCard
 												role='user'
@@ -287,36 +289,32 @@ const UserProfile = ({
 												}
 											/>
 										</motion.div>
-									) : listType === 'card' ? (
-										<motion.div
-											key={`cards-${category}`}
-											initial={{ opacity: 0 }}
-											animate={{ opacity: 1 }}
-											exit={{ opacity: 0 }}
-											transition={{ duration: 0.5 }}
-											className='md:grid md:gap-4 md:grid-cols-2'
-										>
-											{taskCard}
-										</motion.div>
 									) : (
 										<motion.div
-											key={`list-${category}`}
+											key={`tasks-${category}`}
 											initial={{ opacity: 0 }}
 											animate={{ opacity: 1 }}
 											exit={{ opacity: 0 }}
 											transition={{ duration: 0.5 }}
+											className={
+												listType === 'card'
+													? 'md:grid md:grid-cols-2 md:gap-4 max-w-full'
+													: 'max-w-full'
+											}
+											style={listType === 'card' ? { gridTemplateColumns: '1fr 1fr' } : undefined}
 										>
-											{taskCard}
+											<AnimatePresence>{taskCards}</AnimatePresence>
 										</motion.div>
-									)
-								) : null}
-							</AnimatePresence>
+									)}
+								</AnimatePresence>
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
+			<Notification notifications={notifications} />
 		</div>
 	)
 }
 
-export default UserProfile
+export default StudentProfile
