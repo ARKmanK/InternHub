@@ -59,18 +59,17 @@ const TasksListPage: FC = () => {
 	const [userId, setUserId] = useState<number | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [companies, setCompanies] = useState<string[]>([])
+	const [hasFetched, setHasFetched] = useState(false) // Добавляем флаг
 	const navigate = useNavigate()
 	const location = useLocation()
 
 	// Обработка уведомления при переходе с AddTaskForm
 	useEffect(() => {
-		// Проверяем, есть ли состояние и не было ли уведомление уже показано
 		if (location.state?.showSuccessNotification) {
 			addNotification('success', 'Успешно', 'Задача отправлена на модерацию')
-			// Очищаем состояние маршрута, чтобы предотвратить повторные уведомления
 			navigate(location.pathname, { replace: true, state: {} })
 		}
-	}, []) // Пустой массив зависимостей, чтобы эффект сработал только при монтировании
+	}, [])
 
 	const addToFavorite = async (id: number) => {
 		if (!role || !userId) {
@@ -174,6 +173,10 @@ const TasksListPage: FC = () => {
 	}
 
 	useEffect(() => {
+		if (hasFetched) {
+			return
+		}
+
 		setPage('/tasks')
 		const fetchUserAndTasks = async () => {
 			setLoading(true)
@@ -203,8 +206,6 @@ const TasksListPage: FC = () => {
 					}
 					finalUserId = user.id
 					finalRole = user.role
-					localStorage.setItem('userId', finalUserId.toString())
-					localStorage.setItem('role', finalRole)
 				}
 
 				setUserId(finalUserId)
@@ -233,6 +234,7 @@ const TasksListPage: FC = () => {
 			} catch (error: any) {
 				addNotification('error', 'Ошибка', `Не удалось загрузить данные: ${error.message}`)
 			} finally {
+				setHasFetched(true)
 				setLoading(false)
 			}
 		}
@@ -258,6 +260,14 @@ const TasksListPage: FC = () => {
 			supabase.removeChannel(channel)
 		}
 	}, [])
+
+	// Отдельный эффект для сохранения userId и role в localStorage
+	useEffect(() => {
+		if (userId && role) {
+			localStorage.setItem('userId', userId.toString())
+			localStorage.setItem('role', role)
+		}
+	}, [userId, role])
 
 	const visibleTasks = useMemo(() => {
 		let filteredTasks = [...tasks]
@@ -410,7 +420,7 @@ const TasksListPage: FC = () => {
 							</div>
 							<div className='md:w-[80%]'>
 								{listType === 'card' ? (
-									<div className='md:grid md:gap-x-18 md:gap-y-4 md:grid-cols-2'>{taskCard}</div>
+									<div className='md:grid md:gap-x-4 md:gap-y-4 md:grid-cols-2'>{taskCard}</div>
 								) : (
 									taskCard
 								)}

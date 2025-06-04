@@ -20,7 +20,11 @@ const CreateTaskPage = () => {
 	}
 
 	useEffect(() => {
+		console.log('CreateTaskPage mounted')
 		setPage('/create-task')
+		return () => {
+			console.log('CreateTaskPage unmounted')
+		}
 	}, [])
 
 	return (
@@ -54,4 +58,5 @@ const CreateTaskPage = () => {
 		</>
 	)
 }
+
 export default CreateTaskPage

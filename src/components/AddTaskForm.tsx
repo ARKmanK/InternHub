@@ -27,20 +27,35 @@ const AddTaskForm = () => {
 	const [userTags, setUserTags] = useState<string[]>([])
 	const [zipFile, setZipFile] = useState<File | null>(null)
 	const [zipAdded, setZipAdded] = useState<boolean>(false)
-
-	const role = getRole()
-	const userId = getUserId()
+	const [role, setRole] = useState<string | null>(null) // Переносим role в состояние
+	const [userId, setUserId] = useState<number | null>(null) // Переносим userId в состояние
+	const [hasFetched, setHasFetched] = useState(false) // Добавляем флаг
 
 	const MAX_TITLE_LENGTH = 50
 	const MAX_DESCRIPTION_LENGTH = 3000
 	const MAX_TAG_LENGTH = 20
 	const MAX_TAGS = 5
 
+	// Инициализация role и userId один раз при монтировании
 	useEffect(() => {
+		const initialRole = getRole()
+		const initialUserId = getUserId()
+		setRole(initialRole)
+		setUserId(initialUserId)
+	}, [])
+
+	useEffect(() => {
+		if (hasFetched || role === null || userId === null) {
+			console.log('Already fetched or role/userId not set, skipping fetchData')
+			return
+		}
+
 		const fetchData = async () => {
+			console.log('fetchData started')
 			if (role !== 'employer' || !userId) {
 				addNotification('warning', 'Ошибка', 'Только работодатели могут создавать задачи')
 				navigate('/tasks')
+				setHasFetched(true)
 				return
 			}
 
@@ -62,9 +77,12 @@ const AddTaskForm = () => {
 
 				const userTagsData = await getUserTags(userId)
 				setUserTags(userTagsData)
+
+				setHasFetched(true)
 			} catch (error: any) {
 				addNotification('error', 'Ошибка', error.message)
 				navigate('/tasks')
+				setHasFetched(true)
 			}
 		}
 
@@ -77,7 +95,7 @@ const AddTaskForm = () => {
 			id: 0,
 			tracking_number: 0,
 			title: title || 'Пример названия',
-			description: description || 'Пример описания...', // Передаём реальное описание
+			description: description || 'Пример описания...',
 			difficulty: difficulty || 1,
 			company_name: companyName || 'Пример компании',
 			deadline: deadlineStr || '2025-01-01',
@@ -85,7 +103,7 @@ const AddTaskForm = () => {
 			employer_id: userId || 0,
 		}
 		setPreviewTask(tempTask)
-	}, [title, description, difficulty, deadline, tags, companyName, userId]) // Добавили description в зависимости
+	}, [title, description, difficulty, deadline, tags, companyName, userId])
 
 	const handleTagChange = (tag: string) => {
 		if (tags.includes(tag)) {
@@ -560,7 +578,7 @@ const AddTaskForm = () => {
 						id={previewTask.id}
 						trackingNumber={previewTask.tracking_number}
 						title={previewTask.title}
-						description={previewTask.description} // Теперь отображается реальное описание
+						description={previewTask.description}
 						difficulty={previewTask.difficulty}
 						companyName={previewTask.company_name}
 						type='list'

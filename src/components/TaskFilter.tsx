@@ -26,9 +26,14 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 		tags: false,
 	})
 	const [allTags, setAllTags] = useState<string[]>([])
+	const [hasFetched, setHasFetched] = useState(false)
 	const { addNotification } = useNotification()
 
 	useEffect(() => {
+		if (hasFetched) {
+			return
+		}
+
 		const fetchTags = async () => {
 			try {
 				const commonTags = await getAllTags()
@@ -40,6 +45,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 				if (!session?.user) {
 					addNotification('warning', 'Внимание', 'Авторизуйтесь, чтобы увидеть кастомные теги')
 					setAllTags([...new Set(commonTagNames)])
+					setHasFetched(true)
 					return
 				}
 
@@ -52,6 +58,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 				if (userError || !userData) {
 					addNotification('error', 'Ошибка', 'Не удалось загрузить данные пользователя')
 					setAllTags([...new Set(commonTagNames)])
+					setHasFetched(true)
 					return
 				}
 
@@ -59,9 +66,11 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 				const userTags = await getUserTags(userId)
 				const uniqueTags = [...new Set([...commonTagNames, ...userTags])]
 				setAllTags(uniqueTags)
+				setHasFetched(true)
 			} catch (error: any) {
 				addNotification('error', 'Ошибка', `Не удалось загрузить теги: ${error.message}`)
 				setAllTags([])
+				setHasFetched(true)
 			}
 		}
 
@@ -296,7 +305,7 @@ const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
 
 			<div className='p-2'>
 				<button
-					onClick={resetFilters}
+					onClick={() => resetFilters()}
 					className='w-full py-2 text-white font-semibold bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg shadow-md hover:from-blue-500 hover:to-blue-700 transition-all'
 				>
 					Сбросить фильтры
