@@ -434,5 +434,4 @@ const TasksListPage: FC = () => {
 		</>
 	)
 }
-
 export default TasksListPage

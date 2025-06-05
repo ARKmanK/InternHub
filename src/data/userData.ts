@@ -239,6 +239,13 @@ export const goBack = (navigate: NavigateFunction): (() => void) => {
 			localStorage.setItem('pageHistory', JSON.stringify(pageHistory))
 		}
 
-		navigate(prevPage) // navigate соответствует типу NavigateFunction
+		// Проверяем, чтобы не возвращаться на страницу редактирования после сохранения
+		if (prevPage.startsWith('/edit-task/') && pageHistory.length > 1) {
+			pageHistory.pop()
+			localStorage.setItem('pageHistory', JSON.stringify(pageHistory))
+			navigate(pageHistory.length > 1 ? pageHistory[pageHistory.length - 2] : '/user')
+		} else {
+			navigate(prevPage)
+		}
 	}
 }

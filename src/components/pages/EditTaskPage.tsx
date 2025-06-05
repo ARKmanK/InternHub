@@ -22,10 +22,12 @@ import {
 import Message from '../Message'
 import { motion } from 'framer-motion'
 import LoadingAnimation from '../LoadingAnimation'
+import { useQueryClient } from '@tanstack/react-query'
 
 const EditTaskPage = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
+	const queryClient = useQueryClient()
 	const { notifications, addNotification } = useNotification()
 
 	const [taskData, setTaskData] = useState<TypeTask | null>(null)
@@ -50,9 +52,10 @@ const EditTaskPage = () => {
 	const [userTags, setUserTags] = useState<string[]>([])
 	const [zipFile, setZipFile] = useState<File | null>(null)
 	const [zipAdded, setZipAdded] = useState<boolean>(false)
+	const [isInitialLoad, setIsInitialLoad] = useState(true) // Флаг для контроля первого монтирования
 
 	const MAX_TITLE_LENGTH = 50
-	const MAX_DESCRIPTION_LENGTH = 250
+	const MAX_DESCRIPTION_LENGTH = 3000
 	const MAX_TAG_LENGTH = 20
 	const MAX_TAGS = 5
 
@@ -61,7 +64,12 @@ const EditTaskPage = () => {
 	const handleGoBack = goBack(navigate)
 
 	useEffect(() => {
-		setPage(`/edit-task/${id}`)
+		// Вызываем setPage только при первом монтировании, а не при каждом рендере
+		if (isInitialLoad && id) {
+			setPage(`/edit-task/${id}`)
+			setIsInitialLoad(false) // Сбрасываем флаг после первого вызова
+		}
+
 		const fetchData = async () => {
 			try {
 				const {
@@ -121,7 +129,7 @@ const EditTaskPage = () => {
 			}
 		}
 		fetchData()
-	}, [id, navigate])
+	}, [id, navigate, isInitialLoad])
 
 	useEffect(() => {
 		const textarea = textareaRef.current
@@ -141,11 +149,15 @@ const EditTaskPage = () => {
 
 	const previewTask = useMemo(() => {
 		const deadlineStr = formatDate(formData.deadline)
+		const truncatedDescription =
+			formData.description.length > 300
+				? formData.description.slice(0, 300) + '...'
+				: formData.description
 		return {
 			id: taskData?.id || 0,
 			tracking_number: taskData?.tracking_number || 0,
 			title: formData.title || 'Пример заголовка',
-			description: formData.description || 'Пример описания...',
+			description: truncatedDescription,
 			difficulty: formData.difficulty || 1,
 			company_name: companyName || 'Пример компании',
 			deadline: deadlineStr || '2025-01-01',
@@ -295,7 +307,6 @@ const EditTaskPage = () => {
 
 		if (zipFile) {
 			try {
-				// Удаляем старый файл, если он есть
 				if (taskData?.zip_file_url) {
 					const oldFilePath = taskData.zip_file_url.split('/').pop()
 					if (oldFilePath) {
@@ -313,16 +324,14 @@ const EditTaskPage = () => {
 					}
 				}
 
-				// Сантизация и генерация уникального имени файла
 				const fileExt = zipFile.name.split('.').pop()?.toLowerCase() || 'zip'
 				const baseName = formData.title
 					.toLowerCase()
-					.replace(/[^a-z0-9]/g, '-') // Заменяем неалфавитно-цифровые символы на дефисы
-					.substring(0, 20) // Ограничиваем длину
+					.replace(/[^a-z0-9]/g, '-')
+					.substring(0, 20)
 				const fileName = `${Date.now()}_${userId}_${baseName}.${fileExt}`
 				const filePath = `tasks_files/${fileName}`
 
-				// Загружаем новый файл
 				const { error: uploadError } = await supabase.storage
 					.from('task-files')
 					.upload(filePath, zipFile, {
@@ -335,7 +344,6 @@ const EditTaskPage = () => {
 					return
 				}
 
-				// Получаем новый публичный URL
 				const { data: publicUrlData } = supabase.storage.from('task-files').getPublicUrl(filePath)
 				zipFileUrl = publicUrlData.publicUrl
 			} catch (error: any) {
@@ -359,8 +367,10 @@ const EditTaskPage = () => {
 
 		try {
 			await updateTask(updatedTask, userId)
+			queryClient.invalidateQueries({ queryKey: ['allTasks'] })
 			addNotification('success', 'Успешно', 'Задача обновлена')
-			navigate(`/task/${taskData?.id}`)
+			// Не вызываем setPage при программном переходе
+			navigate('/user')
 		} catch (error: any) {
 			addNotification('error', 'Ошибка', error.message)
 		}
@@ -511,7 +521,7 @@ const EditTaskPage = () => {
 												<div className='flex items-center gap-2'>
 													<input
 														type='text'
-														placeholder='Введите новый тег'
+														placeholder='Введите новый теg'
 														value={newTag}
 														className='block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm text-gray-800 leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
 														onChange={e => handleNewTagChange(e.target.value)}

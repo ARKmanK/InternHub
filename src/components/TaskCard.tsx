@@ -20,7 +20,7 @@ type TaskCardProps = {
 	tags: string[]
 	role?: 'user' | 'employer' | 'admin' | null
 	isMine?: boolean
-	onDelete?: () => void
+	onDelete?: (id: number) => void // Обновлено
 	showControls?: boolean
 	onClick?: () => void
 	showFavoriteButton?: boolean
@@ -98,7 +98,6 @@ const TaskCard: FC<TaskCardProps> = ({
 		)
 	}
 
-	// Обрезаем описание: 150 символов для type='card', 300 символов для type='list'
 	const truncatedDescription =
 		type === 'card'
 			? description.length > 150
@@ -111,7 +110,7 @@ const TaskCard: FC<TaskCardProps> = ({
 	return (
 		<>
 			{type === 'list' && (
-				<div className='w-[700px] min-h-[250px] rounded-xl mb-10 border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg overflow-hidden relative'>
+				<div className='w-full max-w-[700px] min-h-[250px] rounded-xl mb-10 border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg overflow-hidden relative'>
 					<div className='py-3 px-4 flex flex-col justify-between'>
 						<div className='flex justify-between text-gray-600 text-sm font-medium'>
 							<p>Сейчас отслеживают {trackingNumber}</p>
@@ -135,7 +134,7 @@ const TaskCard: FC<TaskCardProps> = ({
 										<Settings className='ml-1' size={16} />
 									</button>
 									<button
-										onClick={onDelete}
+										onClick={() => onDelete && onDelete(id)}
 										className='text-xs text-white bg-gradient-to-br from-red-400 to-red-600 rounded-lg p-1 px-2 shadow-md hover:from-red-500 hover:to-red-700 transition-all flex items-center'
 									>
 										Удалить задачу
@@ -191,8 +190,8 @@ const TaskCard: FC<TaskCardProps> = ({
 				</div>
 			)}
 			{type === 'card' && (
-				<div className='w-[380px] h-[450px] rounded-xl border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg overflow-hidden relative mb-10'>
-					<div className='py-2 px-3 flex flex-col h-full'>
+				<div className='w-full max-w-[380px] h-[450px] rounded-xl border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg overflow-hidden relative'>
+					<div className='p-4 flex flex-col h-full'>
 						<div className='flex justify-between text-gray-600 text-sm font-medium'>
 							<p>Сейчас отслеживают {trackingNumber}</p>
 							{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
@@ -215,7 +214,7 @@ const TaskCard: FC<TaskCardProps> = ({
 										<Settings className='ml-1' size={16} />
 									</button>
 									<button
-										onClick={onDelete}
+										onClick={() => onDelete && onDelete(id)}
 										className='text-xs text-white bg-gradient-to-br from-red-400 to-red-600 rounded-lg p-1 px-2 shadow-md hover:from-red-500 hover:to-red-700 transition-all flex items-center'
 									>
 										Удалить задачу
@@ -224,7 +223,7 @@ const TaskCard: FC<TaskCardProps> = ({
 								</div>
 							)}
 							{role === 'employer' && isMine && !showControls && (
-								<div className='flex items-center text-blue-900 text-xs font-medium bg-blue-300 rounded-lg p-1 px-2 top-0 right-0 absolute'>
+								<div className='flex items-center text-blue-900 text-xs font-medium bg-blue-300 rounded-lg p-1 px-2 top-2 right-2 absolute'>
 									<span>Моя задача</span>
 									<BookmarkCheck className='ml-1' color='green' size={16} />
 								</div>

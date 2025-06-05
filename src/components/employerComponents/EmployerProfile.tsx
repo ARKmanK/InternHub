@@ -5,7 +5,7 @@ import EmptyCard from '@components/EmptyCard'
 import DeleteConfirmation from '@components/DeleteConfirmation'
 import { setPage } from '@data/userData'
 import { NavigateFunction } from 'react-router-dom'
-import { useState, memo } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { supabase } from '@/supabaseClient'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getAllTasks } from '@/src/lib/API/supabaseAPI'
@@ -28,7 +28,6 @@ type EmployerProfileProps = {
 	handleDelete: (id: number) => void
 	showDeleteForm: boolean
 	taskToDelete: number | null
-	tasks: TypeTask[]
 	confirmDelete: () => void
 	cancelDelete: () => void
 	navigate: NavigateFunction
@@ -42,7 +41,7 @@ const LoadingSpinner = memo(() => (
 		className='flex justify-center items-center h-[200px] overflow-hidden'
 		initial={{ opacity: 0 }}
 		animate={{ opacity: 1 }}
-		exit={{ opacity: 0, transition: { duration: 0.3 } }} // Ускорена анимация выхода
+		exit={{ opacity: 0, transition: { duration: 0.3 } }}
 	>
 		<motion.svg
 			width='200'
@@ -130,9 +129,9 @@ const EmployerProfile = ({
 	goBack,
 }: EmployerProfileProps) => {
 	const queryClient = useQueryClient()
-	const [showContent, setShowContent] = useState(
-		!!queryClient.getQueryData(['allTasks']) // Инициализация на основе наличия кэша
-	)
+	const [visibleTasks, setVisibleTasks] = useState<TypeTask[]>([])
+	const [isLoading, setIsLoading] = useState(true) // Состояние загрузки
+	const [showContent, setShowContent] = useState(false)
 
 	// Запрос сессии пользователя
 	const { data: sessionData, isLoading: isLoadingSession } = useQuery({
@@ -141,8 +140,8 @@ const EmployerProfile = ({
 			const { data } = await supabase.auth.getSession()
 			return data
 		},
-		staleTime: 5 * 60 * 1000, // 5 минут
-		gcTime: 30 * 60 * 1000, // 30 минут
+		staleTime: 5 * 60 * 1000,
+		gcTime: 30 * 60 * 1000,
 	})
 
 	// Запрос userId по email
@@ -159,8 +158,8 @@ const EmployerProfile = ({
 			return data
 		},
 		enabled: !!sessionData?.session?.user?.email,
-		staleTime: 5 * 60 * 1000, // 5 минут
-		gcTime: 30 * 60 * 1000, // 30 минут
+		staleTime: 5 * 60 * 1000,
+		gcTime: 30 * 60 * 1000,
 	})
 
 	const userId = userData?.id ?? null
@@ -169,16 +168,57 @@ const EmployerProfile = ({
 	const { data: allTasks = [], isLoading: isLoadingTasks } = useQuery<TypeTask[], Error>({
 		queryKey: ['allTasks'],
 		queryFn: getAllTasks,
-		staleTime: 5 * 60 * 1000, // 5 минут
-		gcTime: 30 * 60 * 1000, // 30 минут
+		staleTime: 5 * 60 * 1000,
+		gcTime: 30 * 60 * 1000,
 	})
 
-	// Фильтрация задач по employer_id
-	const visibleTasks = userId ? allTasks.filter(task => task.employer_id === userId) : []
+	// При монтировании компонента сбрасываем состояние загрузки
+	useEffect(() => {
+		setIsLoading(true)
+		setShowContent(false)
+	}, [])
 
-	// Обновление showContent
-	const isLoading = isLoadingSession || isLoadingUser || isLoadingTasks
-	const isFetched = !isLoading && !!queryClient.getQueryData(['allTasks']) && !!userId
+	// Обновление visibleTasks при изменении данных
+	useEffect(() => {
+		if (userId && allTasks.length >= 0) {
+			// Учитываем случай, когда задач нет (length может быть 0)
+			const filteredTasks = allTasks.filter(task => task.employer_id === userId)
+			setVisibleTasks(filteredTasks)
+
+			// Добавляем минимальную задержку для анимации
+			setTimeout(() => {
+				setIsLoading(false)
+				setShowContent(true)
+			}, 1000) // Задержка в 1 секунду
+		} else if (!isLoadingTasks && !isLoadingSession && !isLoadingUser) {
+			// Если нет задач, но загрузка завершена
+			setTimeout(() => {
+				setIsLoading(false)
+				setShowContent(true)
+			}, 1000)
+		}
+	}, [allTasks, userId, isLoadingTasks, isLoadingSession, isLoadingUser])
+
+	// Логика удаления задачи
+	const handleDeleteTask = async (id: number) => {
+		setIsLoading(true) // Показываем анимацию загрузки при удалении
+		setShowContent(false)
+		try {
+			const { error } = await supabase.from('tasks').delete().eq('id', id)
+			if (error) throw error
+			// Обновляем локальное состояние
+			setVisibleTasks(prevTasks => prevTasks.filter(task => task.id !== id))
+			// Инвалидируем кэш allTasks для перезапроса
+			queryClient.invalidateQueries({ queryKey: ['allTasks'] })
+		} catch (error: any) {
+			console.error('Ошибка удаления задачи:', error.message)
+		}
+	}
+
+	// Привязка handleDelete к пропсу
+	const handleDeleteProxy = (id: number) => {
+		handleDelete(id)
+	}
 
 	const taskToDeleteData = visibleTasks.find(task => task.id === taskToDelete)
 	const taskTitle = taskToDeleteData?.title || ''
@@ -203,7 +243,7 @@ const EmployerProfile = ({
 				deadline={task.deadline}
 				tags={task.tags ?? []}
 				role='employer'
-				onDelete={() => handleDelete(task.id)}
+				onDelete={handleDeleteProxy}
 				showControls={true}
 				onClick={() => {
 					setPage(`/task/${task.id}`)
@@ -264,7 +304,7 @@ const EmployerProfile = ({
 							</div>
 							<div className='overflow-y-auto pr-2'>
 								<AnimatePresence mode='wait'>
-									{isLoading || !isFetched ? (
+									{isLoading ? (
 										<LoadingSpinner key='spinner' />
 									) : visibleTasks.length === 0 ? (
 										<motion.div
@@ -318,5 +358,4 @@ const EmployerProfile = ({
 		</div>
 	)
 }
-
 export default EmployerProfile
