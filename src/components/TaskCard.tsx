@@ -190,7 +190,7 @@ const TaskCard: FC<TaskCardProps> = ({
 				</div>
 			)}
 			{type === 'card' && (
-				<div className='w-full max-w-[380px] h-[450px] rounded-xl border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg overflow-hidden relative'>
+				<div className='w-full max-w-[380px] h-[460px] rounded-xl border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg overflow-hidden relative'>
 					<div className='p-4 flex flex-col h-full'>
 						<div className='flex justify-between text-gray-600 text-sm font-medium'>
 							<p>Сейчас отслеживают {trackingNumber}</p>
@@ -265,7 +265,7 @@ const TaskCard: FC<TaskCardProps> = ({
 							>
 								На страницу задачи
 							</Button>
-							<div className='flex items-center text-gray-700 font-medium my-1'>
+							<div className='flex items-center text-gray-700 font-medium mb-1.5 mt-1.5'>
 								{companyName}
 								<BadgeCheck className='ml-2' fill='green' size={16} />
 							</div>

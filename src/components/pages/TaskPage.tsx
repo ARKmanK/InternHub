@@ -348,14 +348,13 @@ const TaskPage: FC = () => {
 								</button>
 							)}
 						</div>
-
 						<div className='md:min-w-[300px] md:min-h-[250px] rounded-xl md:mb-11 border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg'>
 							<div className='md:py-4 md:px-6'>
 								<div className='md:flex md:justify-between text-gray-600 text-sm font-medium'>
 									<p>Сейчас отслеживают {task.tracking_number}</p>
 								</div>
 								<h3 className='text-2xl font-bold md:pt-4 text-gray-800'>{task.title}</h3>
-								<div className='w-[70%] md:pt-4 text-gray-700'>{task.description}</div>
+								<div className='w-[93%] md:pt-4 text-gray-700 break-words'>{task.description}</div>
 								<div className='md:flex md:py-3 md:mt-4'>
 									<p className='text-gray-600'>{`Срок до: ${task.deadline}`}</p>
 									<div className='md:ml-4 md:flex'>

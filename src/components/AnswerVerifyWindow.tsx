@@ -46,11 +46,9 @@ const AnswerVerifyWindow: FC<ActivityModalProps> = ({
 					<X size={20} />
 				</button>
 				<div className='mb-6'>
-					<p className='font-bold text-xl text-blue-900 mb-4 border-b border-blue-100 pb-2'>
-						Решение
-					</p>
+					<p className='font-bold text-xl mb-4 border-b border-blue-100 pb-2'>Решение</p>
 					<div className='flex items-center mb-3'>
-						<div className='flex items-center bg-blue-100 text-blue-700 font-semibold text-sm px-3 py-1 rounded-lg mr-3 text-nowrap'>
+						<div className='flex items-center bg-blue-100 **: font-semibold text-sm px-3 py-1 rounded-lg mr-3 text-nowrap'>
 							<Github size={16} className='mr-1' /> GitHub URL:
 						</div>
 						{activity.url ? (
@@ -70,7 +68,7 @@ const AnswerVerifyWindow: FC<ActivityModalProps> = ({
 				{activity.archive_url && (
 					<div className='mb-6'>
 						<div className='flex items-center mb-3'>
-							<div className='flex items-center bg-blue-100 text-blue-700 font-semibold text-sm px-3 py-1 rounded-lg mr-3 text-nowrap'>
+							<div className='flex items-center bg-blue-100 font-medium text-sm px-3 py-1 rounded-lg mr-3 text-nowrap'>
 								<Download size={16} className='mr-1' /> Архивный файл (zip):
 							</div>
 							<a
@@ -87,7 +85,7 @@ const AnswerVerifyWindow: FC<ActivityModalProps> = ({
 				{activity.photo_urls && activity.photo_urls.length > 0 && (
 					<div className='mb-6'>
 						<div className='flex items-center mb-3'>
-							<div className='flex items-center bg-blue-100 text-blue-700 font-semibold text-sm px-3 py-1 rounded-lg mr-3'>
+							<div className='flex items-center bg-blue-100  font-medium text-sm px-3 py-1 rounded-lg mr-3'>
 								<Image size={16} className='mr-1' /> Фото:
 							</div>
 						</div>
@@ -110,7 +108,7 @@ const AnswerVerifyWindow: FC<ActivityModalProps> = ({
 				{activity.comment && (
 					<div className='mb-6'>
 						<div className='flex items-center mb-3'>
-							<div className='flex items-center bg-blue-100 text-blue-700 font-semibold text-sm px-3 py-1 rounded-lg mr-3'>
+							<div className='flex items-center bg-blue-100 font-medium text-sm px-3 py-1 rounded-lg mr-3'>
 								Комментарий:
 							</div>
 						</div>

@@ -31,6 +31,8 @@ type TypeTask = {
 	employer_id: number
 }
 
+// ... остальные импорты без изменений
+
 const UserPage = () => {
 	const queryClient = useQueryClient()
 	const location = useLocation()
@@ -66,7 +68,31 @@ const UserPage = () => {
 		fetchUser()
 	}, [])
 
-	// Подписка на изменения в реальном времени
+	// Подписка на изменения в реальном времени для таблицы tasks
+	useEffect(() => {
+		const tasksChannel = supabase.channel('tasks-changes')
+		tasksChannel
+			.on(
+				'postgres_changes',
+				{ event: '*', schema: 'public', table: 'tasks' }, // Убрали фильтр employer_id
+				payload => {
+					console.log('Tasks change detected:', payload)
+					queryClient.invalidateQueries({ queryKey: ['allTasks'] })
+				}
+			)
+			.subscribe(status => {
+				if (status === 'SUBSCRIBED') {
+					console.log('Subscribed to tasks changes')
+				}
+			})
+
+		return () => {
+			tasksChannel.unsubscribe()
+			supabase.removeChannel(tasksChannel)
+		}
+	}, [queryClient]) // Убрали userId из зависимостей
+
+	// Подписка на изменения в реальном времени для user_tasks
 	useEffect(() => {
 		if (!userId) return
 
@@ -142,8 +168,8 @@ const UserPage = () => {
 	const { data: allTasks = [], isLoading: isLoadingTasks } = useQuery<TypeTask[], Error>({
 		queryKey: ['allTasks'],
 		queryFn: getAllTasks,
-		staleTime: 5 * 60 * 1000,
-		gcTime: 30 * 60 * 1000,
+		staleTime: 0, // Отключаем staleTime для немедленного обновления
+		gcTime: 0, // Отключаем gcTime
 	})
 
 	// Запрос избранных задач
@@ -153,8 +179,8 @@ const UserPage = () => {
 			return userId ? getUserFavorites(userId) : Promise.resolve([])
 		},
 		enabled: !!userId,
-		staleTime: 0, // Отключаем кэш
-		gcTime: 0, // Отключаем сборщик мусора
+		staleTime: 0,
+		gcTime: 0,
 	})
 
 	// Запрос начатых задач
@@ -172,8 +198,8 @@ const UserPage = () => {
 			return data.map(item => item.task_id)
 		},
 		enabled: !!userId,
-		staleTime: 5 * 60 * 1000,
-		gcTime: 30 * 60 * 1000,
+		staleTime: 0,
+		gcTime: 0,
 	})
 
 	// Запрос завершённых задач
@@ -191,8 +217,8 @@ const UserPage = () => {
 			return data.map(item => item.task_id)
 		},
 		enabled: !!userId,
-		staleTime: 5 * 60 * 1000,
-		gcTime: 30 * 60 * 1000,
+		staleTime: 0,
+		gcTime: 0,
 	})
 
 	// Общее состояние загрузки
@@ -230,7 +256,9 @@ const UserPage = () => {
 	const visibleTasksMemo = useMemo(() => {
 		if (!role || !userId || role === 'admin') return []
 		if (role === 'employer') {
-			return allTasks.filter(task => task.employer_id === userId)
+			const filtered = allTasks.filter(task => task.employer_id === userId)
+			console.log('Filtered tasks for employer:', filtered) // Логирование
+			return filtered
 		}
 		let taskIds: number[] = []
 		switch (category) {
@@ -245,13 +273,13 @@ const UserPage = () => {
 				break
 		}
 		const filteredTasks = allTasks.filter(task => taskIds.includes(task.id))
-
 		return filteredTasks
 	}, [allTasks, role, userId, category, favoriteTasks, startedTasks, finishedTasks])
 
 	// Синхронизация visibleTasks
 	useEffect(() => {
 		setVisibleTasks(visibleTasksMemo)
+		console.log('Updated visibleTasks:', visibleTasksMemo) // Логирование
 	}, [visibleTasksMemo])
 
 	const removeFromFavorite = async (id: number) => {
@@ -272,10 +300,8 @@ const UserPage = () => {
 				if (updateError) throw updateError
 				setFavoriteTasks(prev => {
 					const newFavorites = prev.filter(taskId => taskId !== id)
-
 					return newFavorites
 				})
-				// Обновляем кэш React Query
 				queryClient.setQueryData(['favorites', userId], (old: number[] | undefined) =>
 					old ? old.filter(taskId => taskId !== id) : []
 				)
@@ -315,7 +341,6 @@ const UserPage = () => {
 				if (updateError) throw updateError
 				setFavoriteTasks(prev => {
 					const newFavorites = [...prev, id]
-
 					return newFavorites
 				})
 				queryClient.setQueryData(['favorites', userId], (old: number[] | undefined) =>
@@ -352,6 +377,7 @@ const UserPage = () => {
 				addNotification('success', 'Успех!', 'Задача удалена')
 				setShowDeleteForm(false)
 				setTaskToDelete(null)
+				queryClient.invalidateQueries({ queryKey: ['allTasks'] })
 			} catch (error: any) {
 				addNotification('error', 'Ошибка!', `Не удалось удалить задачу: ${error.message}`)
 			}

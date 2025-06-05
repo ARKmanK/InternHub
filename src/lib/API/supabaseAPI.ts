@@ -632,6 +632,9 @@ export const approveTaskSubmission = async (submissionId: number): Promise<void>
 		throw new Error('Submission not found')
 	}
 
+	// Логируем данные submission
+	console.log('Submission data:', submission)
+
 	const newTask = {
 		tracking_number: 0,
 		title: submission.title,
@@ -641,8 +644,11 @@ export const approveTaskSubmission = async (submissionId: number): Promise<void>
 		deadline: submission.deadline,
 		employer_id: submission.employer_id,
 		created_at: new Date().toISOString(),
-		zip_file_url: submission.zip_file_url, // Добавляем zip_file_url из submission
+		zip_file_url: submission.zip_file_url,
 	}
+
+	// Логируем новую задачу перед вставкой
+	console.log('New task to be inserted:', newTask)
 
 	const { data: taskData, error: taskError } = await supabase
 		.from('tasks')
@@ -656,8 +662,10 @@ export const approveTaskSubmission = async (submissionId: number): Promise<void>
 
 	const taskId = taskData.id
 
+	// Логируем созданную задачу
+	console.log('Created task:', taskData)
+
 	if (submission.tags && submission.tags.length > 0) {
-		// Получаем существующие общие теги
 		const { data: existingCommonTags, error: fetchCommonTagsError } = await supabase
 			.from('tags')
 			.select('id, name')
@@ -670,7 +678,6 @@ export const approveTaskSubmission = async (submissionId: number): Promise<void>
 		const commonTagNames = existingCommonTags.map(tag => tag.name)
 		const commonTagsMap = new Map(existingCommonTags.map(tag => [tag.name, tag.id]))
 
-		// Получаем существующие кастомные теги пользователя
 		const { data: existingUserTags, error: fetchUserTagsError } = await supabase
 			.from('user_tags')
 			.select('id, name')
@@ -684,7 +691,6 @@ export const approveTaskSubmission = async (submissionId: number): Promise<void>
 		const userTagNames = existingUserTags.map(tag => tag.name)
 		const userTagsMap = new Map(existingUserTags.map(tag => [tag.name, tag.id]))
 
-		// Связываем теги с задачей через task_tags
 		const taskTags = submission.tags
 			.map((tag: string) => {
 				if (commonTagNames.includes(tag)) {

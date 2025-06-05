@@ -3,12 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import TaskCard from '@components/TaskCard'
 import EmptyCard from '@components/EmptyCard'
 import DeleteConfirmation from '@components/DeleteConfirmation'
-import { setPage } from '@data/userData'
 import { NavigateFunction } from 'react-router-dom'
 import { useState, useEffect, memo } from 'react'
 import { supabase } from '@/supabaseClient'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getAllTasks } from '@/src/lib/API/supabaseAPI'
+import { setPage } from '@/src/data/userData'
 
 type TypeTask = {
 	id: number
@@ -25,6 +23,7 @@ type TypeTask = {
 type EmployerProfileProps = {
 	listType: 'list' | 'card'
 	setListType: (type: 'list' | 'card') => void
+	tasks: TypeTask[] // Добавлен проп tasks
 	handleDelete: (id: number) => void
 	showDeleteForm: boolean
 	taskToDelete: number | null
@@ -119,6 +118,7 @@ const LoadingSpinner = memo(() => (
 const EmployerProfile = ({
 	listType,
 	setListType,
+	tasks,
 	handleDelete,
 	showDeleteForm,
 	taskToDelete,
@@ -128,94 +128,41 @@ const EmployerProfile = ({
 	handleLogout,
 	goBack,
 }: EmployerProfileProps) => {
-	const queryClient = useQueryClient()
-	const [visibleTasks, setVisibleTasks] = useState<TypeTask[]>([])
-	const [isLoading, setIsLoading] = useState(true) // Состояние загрузки
+	const [isLoading, setIsLoading] = useState(true)
 	const [showContent, setShowContent] = useState(false)
+	const [visibleTasks, setVisibleTasks] = useState<TypeTask[]>(tasks)
 
-	// Запрос сессии пользователя
-	const { data: sessionData, isLoading: isLoadingSession } = useQuery({
-		queryKey: ['session'],
-		queryFn: async () => {
-			const { data } = await supabase.auth.getSession()
-			return data
-		},
-		staleTime: 5 * 60 * 1000,
-		gcTime: 30 * 60 * 1000,
-	})
+	useEffect(() => {
+		setVisibleTasks(tasks)
+		console.log('EmployerProfile updated visibleTasks:', tasks) // Логирование
+	}, [tasks])
 
-	// Запрос userId по email
-	const { data: userData, isLoading: isLoadingUser } = useQuery({
-		queryKey: ['user', sessionData?.session?.user?.email],
-		queryFn: async () => {
-			if (!sessionData?.session?.user?.email) return null
-			const { data, error } = await supabase
-				.from('users')
-				.select('id')
-				.eq('email', sessionData.session.user.email)
-				.single()
-			if (error) throw error
-			return data
-		},
-		enabled: !!sessionData?.session?.user?.email,
-		staleTime: 5 * 60 * 1000,
-		gcTime: 30 * 60 * 1000,
-	})
-
-	const userId = userData?.id ?? null
-
-	// Запрос всех задач
-	const { data: allTasks = [], isLoading: isLoadingTasks } = useQuery<TypeTask[], Error>({
-		queryKey: ['allTasks'],
-		queryFn: getAllTasks,
-		staleTime: 5 * 60 * 1000,
-		gcTime: 30 * 60 * 1000,
-	})
-
-	// При монтировании компонента сбрасываем состояние загрузки
 	useEffect(() => {
 		setIsLoading(true)
 		setShowContent(false)
+		setTimeout(() => {
+			setIsLoading(false)
+			setShowContent(true)
+		}, 1000)
 	}, [])
 
-	// Обновление visibleTasks при изменении данных
-	useEffect(() => {
-		if (userId && allTasks.length >= 0) {
-			// Учитываем случай, когда задач нет (length может быть 0)
-			const filteredTasks = allTasks.filter(task => task.employer_id === userId)
-			setVisibleTasks(filteredTasks)
-
-			// Добавляем минимальную задержку для анимации
-			setTimeout(() => {
-				setIsLoading(false)
-				setShowContent(true)
-			}, 1000) // Задержка в 1 секунду
-		} else if (!isLoadingTasks && !isLoadingSession && !isLoadingUser) {
-			// Если нет задач, но загрузка завершена
+	const handleDeleteTask = async (id: number) => {
+		setIsLoading(true)
+		setShowContent(false)
+		try {
+			const { error } = await supabase.from('tasks').delete().eq('id', id)
+			if (error) throw error
+			setVisibleTasks(prevTasks => prevTasks.filter(task => task.id !== id))
+		} catch (error: any) {
+			console.error('Ошибка удаления задачи:', error.message)
+		} finally {
 			setTimeout(() => {
 				setIsLoading(false)
 				setShowContent(true)
 			}, 1000)
 		}
-	}, [allTasks, userId, isLoadingTasks, isLoadingSession, isLoadingUser])
-
-	// Логика удаления задачи
-	const handleDeleteTask = async (id: number) => {
-		setIsLoading(true) // Показываем анимацию загрузки при удалении
-		setShowContent(false)
-		try {
-			const { error } = await supabase.from('tasks').delete().eq('id', id)
-			if (error) throw error
-			// Обновляем локальное состояние
-			setVisibleTasks(prevTasks => prevTasks.filter(task => task.id !== id))
-			// Инвалидируем кэш allTasks для перезапроса
-			queryClient.invalidateQueries({ queryKey: ['allTasks'] })
-		} catch (error: any) {
-			console.error('Ошибка удаления задачи:', error.message)
-		}
 	}
 
-	// Привязка handleDelete к пропсу
 	const handleDeleteProxy = (id: number) => {
 		handleDelete(id)
 	}
@@ -358,4 +305,5 @@ const EmployerProfile = ({
 		</div>
 	)
 }
+
 export default EmployerProfile
