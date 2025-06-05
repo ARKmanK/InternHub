@@ -172,6 +172,18 @@ const EditTaskPage = () => {
 
 	const handleTextChange = (field: 'title' | 'description', value: string) => {
 		const maxLength = field === 'title' ? MAX_TITLE_LENGTH : MAX_DESCRIPTION_LENGTH
+		const minLength = field === 'title' ? 10 : 30 // Минимальная длина: 10 для title, 30 для description
+
+		if (value.length < minLength) {
+			addNotification(
+				'warning',
+				'Ошибка',
+				`Поле "${
+					field === 'title' ? 'Заголовок' : 'Описание'
+				}" должно содержать минимум ${minLength} символов`
+			)
+			return
+		}
 		if (value.length <= maxLength) {
 			handleFormChange(field, value)
 		} else {

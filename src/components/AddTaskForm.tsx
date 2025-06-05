@@ -11,6 +11,7 @@ import { supabase } from '@/supabaseClient'
 import TaskCard from '@components/TaskCard'
 import { TypeTask } from '@/src/types/TypeTask'
 import { motion } from 'framer-motion'
+import getRandomNumber from '../data/getRandomNumber'
 
 const AddTaskForm = () => {
 	const navigate = useNavigate()
@@ -281,8 +282,9 @@ const AddTaskForm = () => {
 
 		if (zipFile) {
 			try {
-				const fileExt = zipFile.name.split('.').pop()
-				const fileName = `${Date.now()}_${userId}_${title}.${fileExt}`
+				const fileExt = zipFile.name.split('.').pop()?.toLowerCase() || 'zip'
+				const randomNumber = getRandomNumber(1, 10000)
+				const fileName = `task${randomNumber}.${fileExt}`
 				const filePath = `tasks_files/${fileName}`
 
 				const { error: uploadError } = await supabase.storage
@@ -297,7 +299,6 @@ const AddTaskForm = () => {
 				}
 
 				const { data: publicUrlData } = supabase.storage.from('task-files').getPublicUrl(filePath)
-
 				zipFileUrl = publicUrlData.publicUrl
 			} catch (error: any) {
 				addNotification('error', 'Ошибка', `Не удалось загрузить архив: ${error.message}`)

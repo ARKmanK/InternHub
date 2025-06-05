@@ -5,6 +5,7 @@ import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
 import { TypeTaskSubmission } from '@/src/types/TypeTaskSubmission'
 import { TypeTag } from '@/src/types/TypeTag'
 import { PostgrestError } from '@supabase/supabase-js'
+import getRandomNumber from '@/src/data/getRandomNumber'
 /* import { TypeTasksData } from '@/src/data/tasksData' */
 
 // Функции для работы с таблицей users
@@ -805,48 +806,70 @@ export const markMessageAsRead = async (messageId: number) => {
 }
 
 export const uploadFileAndCreateRecord = async (
-	taskActivityId: number,
-	file: File,
-	fileType: 'archive' | 'image'
+  taskActivityId: number,
+  file: File,
+  fileType: 'archive' | 'image'
 ): Promise<string> => {
-	const fileExt = file.name.split('.').pop()
-	const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt || 'dat'}` // Добавляем защиту от отсутствия расширения
-	const filePath = `${fileType}s/${fileName}` // Используем подпапки (archives/ и images/)
+  try {
+    const userId = getUserId(); // Получаем ID пользователя
+    if (!userId) {
+      throw new Error('Пользователь не авторизован');
+    }
 
-	// Загружаем файл в хранилище
-	const { data, error: uploadError } = await supabase.storage
-		.from('task-files')
-		.upload(filePath, file, {
-			cacheControl: '3600',
-			upsert: false,
-			contentType: file.type, // Указываем MIME-тип файла
-		})
+    // Генерируем случайное число в зависимости от типа файла
+    const randomNum = fileType === 'archive' ? getRandomNumber(1, 100) : getRandomNumber(1, 10000);
 
-	if (uploadError) {
+    // Формируем имя файла
+    const fileName =
+      fileType === 'archive'
+        ? `user_${userId}_file${randomNum}`
+        : `img_${userId}_${randomNum}`;
 
-		throw new Error(`Failed to upload file: ${uploadError.message}`)
-	}
+    // Получаем расширение файла
+    const fileExt = file.name.split('.').pop() || 'dat'; // Защита от отсутствия расширения
+    const fullFileName = `${fileName}.${fileExt}`;
+    const filePath = `${fileType}s/${fullFileName}`; // Путь: archives/ или images/
 
-	// Получаем публичный URL файла
-	const { data: urlData } = supabase.storage.from('task-files').getPublicUrl(filePath)
-	const fileUrl = urlData.publicUrl
+    // Загружаем файл в Supabase Storage
+    const { data, error: uploadError } = await supabase.storage
+      .from('task-files') // Убедитесь, что имя бакета совпадает с вашим
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type, // Указываем MIME-тип файла
+      });
 
-	// Создаем запись в таблице task_files
-	const { error: dbError } = await supabase.from('task_files').insert({
-		task_activity_id: taskActivityId,
-		file_name: fileName,
-		file_url: fileUrl,
-		file_type: fileType,
-		created_at: new Date().toISOString(),
-	})
+    if (uploadError) {
+      throw new Error(`Не удалось загрузить файл: ${uploadError.message}`);
+    }
 
-	if (dbError) {
+    // Получаем публичный URL файла
+    const { data: urlData } = supabase.storage.from('task-files').getPublicUrl(filePath);
+    const fileUrl = urlData.publicUrl;
 
-		throw new Error(`Failed to create file record: ${dbError.message}`)
-	}
+    if (!fileUrl) {
+      throw new Error('Не удалось получить публичный URL файла');
+    }
 
-	return fileUrl
-}
+    // Создаем запись в таблице task_files
+    const { error: dbError } = await supabase.from('task_files').insert({
+      task_activity_id: taskActivityId,
+      file_name: fullFileName,
+      file_url: fileUrl,
+      file_type: fileType,
+      created_at: new Date().toISOString(),
+    });
+
+    if (dbError) {
+      throw new Error(`Не удалось создать запись о файле: ${dbError.message}`);
+    }
+
+    return fileUrl;
+  } catch (error: any) {
+    console.error('Ошибка в uploadFileAndCreateRecord:', error);
+    throw new Error(`Не удалось загрузить файл: ${error.message}`);
+  }
+};
 
 export const getUserUuidById = async (userId: number): Promise<string | null> => {
 	const { data, error } = await supabase.from('users').select('uuid').eq('id', userId).single()

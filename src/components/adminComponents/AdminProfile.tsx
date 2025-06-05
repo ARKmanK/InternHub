@@ -154,7 +154,7 @@ const AdminProfile: FC<AdminProfileProps> = ({ navigate, goBack, handleLogout })
 											<p className='text-sm mt-2 text-gray-700'>Компания: {task.company_name}</p>
 											<p className='text-sm text-gray-700'>Крайний срок: {task.deadline}</p>
 										</div>
-										<div className='flex gap-2 mt-4 md:mt-0'>
+										<div className='flex gap-2 mt-4 md:mt-0 ml-2'>
 											<motion.button
 												whileHover={{ scale: 1.1 }}
 												whileTap={{ scale: 0.9 }}
