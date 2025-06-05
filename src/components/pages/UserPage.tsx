@@ -76,13 +76,11 @@ const UserPage = () => {
 				'postgres_changes',
 				{ event: '*', schema: 'public', table: 'tasks' }, // Убрали фильтр employer_id
 				payload => {
-					console.log('Tasks change detected:', payload)
 					queryClient.invalidateQueries({ queryKey: ['allTasks'] })
 				}
 			)
 			.subscribe(status => {
 				if (status === 'SUBSCRIBED') {
-					console.log('Subscribed to tasks changes')
 				}
 			})
 
@@ -257,7 +255,7 @@ const UserPage = () => {
 		if (!role || !userId || role === 'admin') return []
 		if (role === 'employer') {
 			const filtered = allTasks.filter(task => task.employer_id === userId)
-			console.log('Filtered tasks for employer:', filtered) // Логирование
+
 			return filtered
 		}
 		let taskIds: number[] = []
@@ -279,7 +277,6 @@ const UserPage = () => {
 	// Синхронизация visibleTasks
 	useEffect(() => {
 		setVisibleTasks(visibleTasksMemo)
-		console.log('Updated visibleTasks:', visibleTasksMemo) // Логирование
 	}, [visibleTasksMemo])
 
 	const removeFromFavorite = async (id: number) => {

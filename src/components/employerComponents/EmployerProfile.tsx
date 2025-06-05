@@ -134,7 +134,6 @@ const EmployerProfile = ({
 
 	useEffect(() => {
 		setVisibleTasks(tasks)
-		console.log('EmployerProfile updated visibleTasks:', tasks) // Логирование
 	}, [tasks])
 
 	useEffect(() => {
@@ -154,7 +153,6 @@ const EmployerProfile = ({
 			if (error) throw error
 			setVisibleTasks(prevTasks => prevTasks.filter(task => task.id !== id))
 		} catch (error: any) {
-			console.error('Ошибка удаления задачи:', error.message)
 		} finally {
 			setTimeout(() => {
 				setIsLoading(false)

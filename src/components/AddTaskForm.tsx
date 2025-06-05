@@ -27,16 +27,17 @@ const AddTaskForm = () => {
 	const [userTags, setUserTags] = useState<string[]>([])
 	const [zipFile, setZipFile] = useState<File | null>(null)
 	const [zipAdded, setZipAdded] = useState<boolean>(false)
-	const [role, setRole] = useState<string | null>(null) // Переносим role в состояние
-	const [userId, setUserId] = useState<number | null>(null) // Переносим userId в состояние
-	const [hasFetched, setHasFetched] = useState(false) // Добавляем флаг
+	const [role, setRole] = useState<string | null>(null)
+	const [userId, setUserId] = useState<number | null>(null)
+	const [hasFetched, setHasFetched] = useState(false)
 
 	const MAX_TITLE_LENGTH = 50
+	const MIN_TITLE_LENGTH = 10 // Минимальная длина названия
 	const MAX_DESCRIPTION_LENGTH = 3000
+	const MIN_DESCRIPTION_LENGTH = 30 // Минимальная длина описания
 	const MAX_TAG_LENGTH = 20
 	const MAX_TAGS = 5
 
-	// Инициализация role и userId один раз при монтировании
 	useEffect(() => {
 		const initialRole = getRole()
 		const initialUserId = getUserId()
@@ -46,13 +47,11 @@ const AddTaskForm = () => {
 
 	useEffect(() => {
 		if (hasFetched || role === null || userId === null) {
-			console.log('Already fetched or role/userId not set, skipping fetchData')
 			return
 		}
 
 		const fetchData = async () => {
-			console.log('fetchData started')
-			if (role !== 'employer' || !userId) {
+			if (role !== 'employer') {
 				addNotification('warning', 'Ошибка', 'Только работодатели могут создавать задачи')
 				navigate('/tasks')
 				setHasFetched(true)
@@ -75,7 +74,7 @@ const AddTaskForm = () => {
 				const commonTagsData = await getAllTags()
 				setCommonTags(commonTagsData.map(tag => tag.name))
 
-				const userTagsData = await getUserTags(userId)
+				const userTagsData = await getUserTags(userId!)
 				setUserTags(userTagsData)
 
 				setHasFetched(true)
@@ -231,6 +230,26 @@ const AddTaskForm = () => {
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
 
+		// Проверка минимальной длины названия
+		if (title.trim().length < MIN_TITLE_LENGTH) {
+			addNotification(
+				'warning',
+				'Ошибка',
+				`Название должно содержать минимум ${MIN_TITLE_LENGTH} символов`
+			)
+			return
+		}
+
+		// Проверка минимальной длины описания
+		if (description.trim().length < MIN_DESCRIPTION_LENGTH) {
+			addNotification(
+				'warning',
+				'Ошибка',
+				`Описание должно содержать минимум ${MIN_DESCRIPTION_LENGTH} символов`
+			)
+			return
+		}
+
 		if (!title.trim()) {
 			addNotification('warning', 'Ошибка', 'Название — обязательное поле')
 			return
@@ -341,7 +360,7 @@ const AddTaskForm = () => {
 				<form onSubmit={handleSubmit} className='space-y-6'>
 					<div>
 						<label className='block text-sm font-medium text-gray-900'>
-							Название (максимум {MAX_TITLE_LENGTH} символов)
+							Название (до {MAX_TITLE_LENGTH} символов)
 						</label>
 						<div className='mt-1 relative rounded-md shadow-sm'>
 							<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
@@ -359,7 +378,9 @@ const AddTaskForm = () => {
 						</div>
 					</div>
 					<div>
-						<label className='block text-sm font-medium text-gray-900'>Описание</label>
+						<label className='block text-sm font-medium text-gray-900'>
+							Описание (до {MAX_DESCRIPTION_LENGTH} символов)
+						</label>
 						<div className='mt-1 relative rounded-md shadow-sm'>
 							<div className='absolute top-2 left-0 pl-3 flex items-start pointer-events-none'>
 								<svg
@@ -593,4 +614,5 @@ const AddTaskForm = () => {
 		</>
 	)
 }
+
 export default AddTaskForm

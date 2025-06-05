@@ -29,8 +29,16 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId, loadData }) => 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 
+		// Проверка, что URL не пустой
 		if (!url) {
 			addNotification('error', 'Ошибка', 'Поле URL обязательно для заполнения')
+			return
+		}
+
+		// Проверка, что URL начинается с github.com/
+		const normalizedUrl = url.trim().toLowerCase()
+		if (!normalizedUrl.includes('github.com/')) {
+			addNotification('error', 'Ошибка', 'URL должен содержать "github.com/"')
 			return
 		}
 
