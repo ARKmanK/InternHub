@@ -23,7 +23,7 @@ type TypeTask = {
 type EmployerProfileProps = {
 	listType: 'list' | 'card'
 	setListType: (type: 'list' | 'card') => void
-	tasks: TypeTask[] // Добавлен проп tasks
+	tasks: TypeTask[]
 	handleDelete: (id: number) => void
 	showDeleteForm: boolean
 	taskToDelete: number | null
@@ -32,9 +32,9 @@ type EmployerProfileProps = {
 	navigate: NavigateFunction
 	handleLogout: () => void
 	goBack: () => void
+	isLoading: boolean
 }
 
-// Компонент анимации загрузки
 const LoadingSpinner = memo(() => (
 	<motion.div
 		className='flex justify-center items-center h-[200px] overflow-hidden'
@@ -127,48 +127,16 @@ const EmployerProfile = ({
 	navigate,
 	handleLogout,
 	goBack,
+	isLoading,
 }: EmployerProfileProps) => {
-	const [isLoading, setIsLoading] = useState(true)
-	const [showContent, setShowContent] = useState(false)
-	const [visibleTasks, setVisibleTasks] = useState<TypeTask[]>(tasks)
-
-	useEffect(() => {
-		setVisibleTasks(tasks)
-	}, [tasks])
-
-	useEffect(() => {
-		setIsLoading(true)
-		setShowContent(false)
-		setTimeout(() => {
-			setIsLoading(false)
-			setShowContent(true)
-		}, 1000)
-	}, [])
-
-	const handleDeleteTask = async (id: number) => {
-		setIsLoading(true)
-		setShowContent(false)
-		try {
-			const { error } = await supabase.from('tasks').delete().eq('id', id)
-			if (error) throw error
-			setVisibleTasks(prevTasks => prevTasks.filter(task => task.id !== id))
-		} catch (error: any) {
-		} finally {
-			setTimeout(() => {
-				setIsLoading(false)
-				setShowContent(true)
-			}, 1000)
-		}
-	}
-
-	const handleDeleteProxy = (id: number) => {
+	const handleDeleteTask = (id: number) => {
 		handleDelete(id)
 	}
 
-	const taskToDeleteData = visibleTasks.find(task => task.id === taskToDelete)
+	const taskToDeleteData = tasks.find(task => task.id === taskToDelete)
 	const taskTitle = taskToDeleteData?.title || ''
 
-	const taskCard = visibleTasks.map(task => (
+	const taskCard = tasks.map(task => (
 		<motion.div
 			key={task.id}
 			initial={{ opacity: 0, y: -20 }}
@@ -188,7 +156,7 @@ const EmployerProfile = ({
 				deadline={task.deadline}
 				tags={task.tags ?? []}
 				role='employer'
-				onDelete={handleDeleteProxy}
+				onDelete={handleDeleteTask}
 				showControls={true}
 				onClick={() => {
 					setPage(`/task/${task.id}`)
@@ -251,7 +219,7 @@ const EmployerProfile = ({
 								<AnimatePresence mode='wait'>
 									{isLoading ? (
 										<LoadingSpinner key='spinner' />
-									) : visibleTasks.length === 0 ? (
+									) : tasks.length === 0 ? (
 										<motion.div
 											key='empty'
 											initial={{ opacity: 0 }}

@@ -38,7 +38,7 @@ export const createUser = async (userData: TypeUserData) => {
 		}
 	})
 
-	console.log('Data to insert into users:', dataToInsert)
+
 	const { data, error } = await supabase.from('users').insert(dataToInsert).select()
 
 	if (error) {
@@ -633,7 +633,7 @@ export const approveTaskSubmission = async (submissionId: number): Promise<void>
 	}
 
 	// Логируем данные submission
-	console.log('Submission data:', submission)
+
 
 	const newTask = {
 		tracking_number: 0,
@@ -648,7 +648,7 @@ export const approveTaskSubmission = async (submissionId: number): Promise<void>
 	}
 
 	// Логируем новую задачу перед вставкой
-	console.log('New task to be inserted:', newTask)
+
 
 	const { data: taskData, error: taskError } = await supabase
 		.from('tasks')
@@ -661,9 +661,6 @@ export const approveTaskSubmission = async (submissionId: number): Promise<void>
 	}
 
 	const taskId = taskData.id
-
-	// Логируем созданную задачу
-	console.log('Created task:', taskData)
 
 	if (submission.tags && submission.tags.length > 0) {
 		const { data: existingCommonTags, error: fetchCommonTagsError } = await supabase
@@ -754,7 +751,7 @@ export const addMessage = async (userId: number, text: string): Promise<{ id: nu
 		.single()
 
 	if (error) {
-		console.error('Error adding message:', error)
+
 		throw new Error(`Failed to add message: ${error.message}`)
 	}
 
@@ -826,7 +823,7 @@ export const uploadFileAndCreateRecord = async (
 		})
 
 	if (uploadError) {
-		console.error('Upload error details:', uploadError)
+
 		throw new Error(`Failed to upload file: ${uploadError.message}`)
 	}
 
@@ -844,7 +841,7 @@ export const uploadFileAndCreateRecord = async (
 	})
 
 	if (dbError) {
-		console.error('Database error details:', dbError)
+
 		throw new Error(`Failed to create file record: ${dbError.message}`)
 	}
 

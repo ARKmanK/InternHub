@@ -49,7 +49,6 @@ const UserPage = () => {
 	const [userId, setUserId] = useState<number | null>(null)
 	const navigate = useNavigate()
 	const handleGoBack = goBack(navigate)
-	const [visibleTasks, setVisibleTasks] = useState<TypeTask[]>([])
 
 	useEffect(() => {
 		setPage('/user')
@@ -274,11 +273,6 @@ const UserPage = () => {
 		return filteredTasks
 	}, [allTasks, role, userId, category, favoriteTasks, startedTasks, finishedTasks])
 
-	// Синхронизация visibleTasks
-	useEffect(() => {
-		setVisibleTasks(visibleTasksMemo)
-	}, [visibleTasksMemo])
-
 	const removeFromFavorite = async (id: number) => {
 		if (role === 'user' && favoriteTasks.includes(id)) {
 			try {
@@ -416,8 +410,7 @@ const UserPage = () => {
 						userId={userId}
 						listType={listType}
 						setListType={setListType}
-						visibleTasks={visibleTasks}
-						setVisibleTasks={setVisibleTasks}
+						visibleTasks={visibleTasksMemo}
 						favoriteTasks={favoriteTasks}
 						category={category}
 						activeCategory={activeCategory}
@@ -434,7 +427,7 @@ const UserPage = () => {
 					<EmployerProfile
 						listType={listType}
 						setListType={setListType}
-						tasks={visibleTasks}
+						tasks={visibleTasksMemo}
 						handleDelete={handleDelete}
 						taskToDelete={taskToDelete}
 						showDeleteForm={showDeleteForm}
@@ -443,10 +436,16 @@ const UserPage = () => {
 						navigate={navigate}
 						handleLogout={handleLogout}
 						goBack={handleGoBack}
+						isLoading={isLoading}
 					/>
 				)}
 				{role === 'admin' && (
-					<AdminProfile navigate={navigate} handleLogout={handleLogout} goBack={handleGoBack} />
+					<AdminProfile
+						navigate={navigate}
+						handleLogout={handleLogout}
+						goBack={handleGoBack}
+						/* isLoading={isLoading} */ // Если нужно добавить для AdminProfile
+					/>
 				)}
 				<Notification notifications={notifications} />
 				<Message />

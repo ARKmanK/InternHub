@@ -23,8 +23,7 @@ type TypeTask = {
 type UserProfileProps = {
 	listType: 'list' | 'card'
 	setListType: (type: 'list' | 'card') => void
-	visibleTasks: TypeTask[]
-	setVisibleTasks: (tasks: TypeTask[]) => void
+	visibleTasks: TypeTask[] // Убираем setVisibleTasks
 	favoriteTasks: number[]
 	category: 'favorite' | 'started' | 'finished'
 	activeCategory: string
@@ -122,7 +121,6 @@ const StudentProfile = ({
 	listType,
 	setListType,
 	visibleTasks,
-	setVisibleTasks,
 	favoriteTasks,
 	category,
 	activeCategory,
