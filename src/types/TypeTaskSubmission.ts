@@ -12,5 +12,5 @@ export type TypeTaskSubmission = {
 	company_name: string
 	deadline: string
 	employer_id: number
-	tags?: string[] // Опционально
+	tags: string[] | null
 }

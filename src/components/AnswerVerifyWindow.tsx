@@ -1,5 +1,5 @@
 import { FC, useEffect } from 'react'
-import { X, FileDown, Eye } from 'lucide-react'
+import { X, FileDown, Eye, Github, Download, Image } from 'lucide-react'
 import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
 
 interface ActivityModalProps {
@@ -37,49 +37,59 @@ const AnswerVerifyWindow: FC<ActivityModalProps> = ({
 	if (!isOpen) return null
 
 	return (
-		<div className='absolute z-10 top-0 left-full ml-2'>
-			<div className='modal-content bg-white border bottom-11.5 border-gray-300 rounded-lg shadow-lg p-4 w-[400px] relative'>
+		<div className='absolute z-20 top-1/2 -translate-y-1/2 right-0 mr-[-420px]'>
+			<div className='modal-content bg-gradient-to-br from-white to-blue-50 border border-blue-200 rounded-2xl shadow-xl p-6 w-[400px] transform transition-all duration-300 ease-in-out'>
 				<button
-					className='absolute top-2 right-2 text-gray-500 hover:text-gray-700'
+					className='absolute top-4 right-4 text-blue-500 hover:text-blue-700 transition-colors bg-blue-100 rounded-full p-1'
 					onClick={onClose}
 				>
 					<X size={20} />
 				</button>
-				<div className='mb-4'>
-					<p className='font-semibold mb-5'>Решение:</p>
-					<div className='flex items-center mt-2'>
-						<span className='mr-2'>GitHub URL:</span>
+				<div className='mb-6'>
+					<p className='font-bold text-xl mb-4 border-b border-blue-100 pb-2'>Решение</p>
+					<div className='flex items-center mb-3'>
+						<div className='flex items-center bg-blue-100 **: font-semibold text-sm px-3 py-1 rounded-lg mr-3 text-nowrap'>
+							<Github size={16} className='mr-1' /> GitHub URL:
+						</div>
 						{activity.url ? (
 							<a
 								href={activity.url}
 								target='_blank'
 								rel='noopener noreferrer'
-								className='text-blue-600 hover:underline truncate'
+								className='text-blue-600 hover:underline truncate text-sm'
 							>
 								{activity.url}
 							</a>
 						) : (
-							<p className='text-gray-500 text-sm'>Ссылка отсутствует</p>
+							<p className='text-gray-400 text-sm italic'>Ссылка отсутствует</p>
 						)}
 					</div>
 				</div>
 				{activity.archive_url && (
-					<div className='mb-4 flex items-center'>
-						<p className='mr-2'>Архивный файл (zip):</p>
-						<a
-							href={activity.archive_url}
-							download
-							className='text-blue-600 hover:underline flex items-center'
-						>
-							<FileDown size={16} className='mr-1' />
-							Скачать файл
-						</a>
+					<div className='mb-6'>
+						<div className='flex items-center mb-3'>
+							<div className='flex items-center bg-blue-100 font-medium text-sm px-3 py-1 rounded-lg mr-3 text-nowrap'>
+								<Download size={16} className='mr-1' /> Архивный файл (zip):
+							</div>
+							<a
+								href={activity.archive_url}
+								download
+								className='text-blue-600 hover:underline flex items-center text-sm'
+							>
+								<FileDown size={16} className='mr-1' />
+								Скачать файл
+							</a>
+						</div>
 					</div>
 				)}
 				{activity.photo_urls && activity.photo_urls.length > 0 && (
-					<div className='mb-4'>
-						<p className=''>Фото:</p>
-						<div className='flex flex-col gap-1 mt-1'>
+					<div className='mb-6'>
+						<div className='flex items-center mb-3'>
+							<div className='flex items-center bg-blue-100  font-medium text-sm px-3 py-1 rounded-lg mr-3'>
+								<Image size={16} className='mr-1' /> Фото:
+							</div>
+						</div>
+						<div className='flex flex-col gap-2 ml-1'>
 							{activity.photo_urls.map((photoUrl, idx) => (
 								<a
 									key={idx}
@@ -96,20 +106,26 @@ const AnswerVerifyWindow: FC<ActivityModalProps> = ({
 					</div>
 				)}
 				{activity.comment && (
-					<div className='mb-4'>
-						<p className='font-semibold'>Комментарий:</p>
-						<p className='text-sm'>{activity.comment}</p>
+					<div className='mb-6'>
+						<div className='flex items-center mb-3'>
+							<div className='flex items-center bg-blue-100 font-medium text-sm px-3 py-1 rounded-lg mr-3'>
+								Комментарий:
+							</div>
+						</div>
+						<p className='text-sm text-gray-800 bg-blue-50 p-4 rounded-lg shadow-inner'>
+							{activity.comment}
+						</p>
 					</div>
 				)}
-				<div className='flex justify-between mt-4'>
+				<div className='flex justify-between gap-4'>
 					<button
-						className='bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600'
+						className='flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-md'
 						onClick={() => onApprove(activity.id)}
 					>
 						Одобрить
 					</button>
 					<button
-						className='bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600'
+						className='flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-md'
 						onClick={() => onReject(activity.id)}
 					>
 						Отклонить

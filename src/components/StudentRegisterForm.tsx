@@ -6,7 +6,7 @@ interface UserRegisterFormProps {
 	addNotification: (type: string, title: string, message: string) => void
 }
 
-const UserRegisterForm: FC<UserRegisterFormProps> = ({ onSubmit, onBack, addNotification }) => {
+const StudentRegisterForm: FC<UserRegisterFormProps> = ({ onSubmit, onBack, addNotification }) => {
 	const verifyUserInputs = (data: {
 		firstName: FormDataEntryValue | null
 		lastName: FormDataEntryValue | null
@@ -63,7 +63,7 @@ const UserRegisterForm: FC<UserRegisterFormProps> = ({ onSubmit, onBack, addNoti
 
 	return (
 		<div className='md:mt-10 md:p-6 bg-[#96bddd] rounded-xl border-2 border-gray-[#dce3eb] max-w-[700px] m-auto'>
-			<h2 className='text-2xl font-semibold text-gray-900 mb-6'>Регистрация пользователя</h2>
+			<h2 className='text-2xl font-semibold text-gray-900 mb-6'>Регистрация студента</h2>
 			<form onSubmit={handleSubmitUser} className='space-y-4'>
 				<div>
 					<label className='block text-sm font-medium text-gray-900'>Email</label>
@@ -254,4 +254,4 @@ const UserRegisterForm: FC<UserRegisterFormProps> = ({ onSubmit, onBack, addNoti
 	)
 }
 
-export default UserRegisterForm
+export default StudentRegisterForm

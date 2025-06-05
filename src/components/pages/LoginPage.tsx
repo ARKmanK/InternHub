@@ -137,7 +137,7 @@ const LoginPage: FC = () => {
 			setPage('/tasks')
 			navigate('/tasks')
 		} catch (error: any) {
-			addNotification('error', 'Ошибка', `Не удалось войти: ${error.message}`)
+			addNotification('error', 'Ошибка', 'Не удалось войти: неверный логин или пароль')
 		}
 	}
 

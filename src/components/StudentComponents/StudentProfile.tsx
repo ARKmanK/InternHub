@@ -2,11 +2,11 @@ import { List, BookCopy, Undo2, LogOut } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import TaskCard from '@components/TaskCard'
 import EmptyCard from '@components/EmptyCard'
-import DeleteConfirmation from '@components/DeleteConfirmation'
-import { NavigateFunction } from 'react-router-dom'
-import { useState, useEffect, memo } from 'react'
-import { supabase } from '@/supabaseClient'
-import { setPage } from '@/src/data/userData'
+import { setPage } from '@data/userData'
+import { NavigateFunction, useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import useNotification from '@hooks/useNotification'
+import Notification from '@components/UI/Notification/Notification'
 
 type TypeTask = {
 	id: number
@@ -20,27 +20,29 @@ type TypeTask = {
 	employer_id: number
 }
 
-type EmployerProfileProps = {
+type UserProfileProps = {
 	listType: 'list' | 'card'
 	setListType: (type: 'list' | 'card') => void
-	tasks: TypeTask[]
-	handleDelete: (id: number) => void
-	showDeleteForm: boolean
-	taskToDelete: number | null
-	confirmDelete: () => void
-	cancelDelete: () => void
+	visibleTasks: TypeTask[] // Убираем setVisibleTasks
+	favoriteTasks: number[]
+	category: 'favorite' | 'started' | 'finished'
+	activeCategory: string
+	handleCategoryChange: (type: 'favorite' | 'started' | 'finished') => void
+	addToFavorite: (id: number) => void
+	removeFromFavorite: (id: number) => void
 	navigate: NavigateFunction
 	handleLogout: () => void
 	goBack: () => void
 	isLoading: boolean
+	userId: number | null
 }
 
-const LoadingSpinner = memo(() => (
+const LoadingSpinner = () => (
 	<motion.div
 		className='flex justify-center items-center h-[200px] overflow-hidden'
 		initial={{ opacity: 0 }}
 		animate={{ opacity: 1 }}
-		exit={{ opacity: 0, transition: { duration: 0.3 } }}
+		exit={{ opacity: 0, transition: { duration: 1 } }}
 	>
 		<motion.svg
 			width='200'
@@ -113,36 +115,36 @@ const LoadingSpinner = memo(() => (
 			/>
 		</motion.svg>
 	</motion.div>
-))
+)
 
-const EmployerProfile = ({
+const StudentProfile = ({
 	listType,
 	setListType,
-	tasks,
-	handleDelete,
-	showDeleteForm,
-	taskToDelete,
-	confirmDelete,
-	cancelDelete,
+	visibleTasks,
+	favoriteTasks,
+	category,
+	activeCategory,
+	handleCategoryChange,
+	addToFavorite,
+	removeFromFavorite,
 	navigate,
 	handleLogout,
 	goBack,
 	isLoading,
-}: EmployerProfileProps) => {
-	const handleDeleteTask = (id: number) => {
-		handleDelete(id)
-	}
+	userId,
+}: UserProfileProps) => {
+	const location = useLocation()
+	const { notifications, addNotification } = useNotification()
+	const [showContent, setShowContent] = useState(!isLoading)
 
-	const taskToDeleteData = tasks.find(task => task.id === taskToDelete)
-	const taskTitle = taskToDeleteData?.title || ''
-
-	const taskCard = tasks.map(task => (
+	// Формируем карточки задач
+	const taskCards = visibleTasks.map(task => (
 		<motion.div
 			key={task.id}
 			initial={{ opacity: 0, y: -20 }}
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, y: -20 }}
-			transition={{ duration: 0.7 }}
+			transition={{ duration: 0.5 }}
 			className='max-w-full'
 		>
 			<TaskCard
@@ -153,14 +155,16 @@ const EmployerProfile = ({
 				difficulty={task.difficulty}
 				companyName={task.company_name}
 				type={listType}
+				addToFavorite={addToFavorite}
+				removeFromFavorite={removeFromFavorite}
+				isFavorite={favoriteTasks.includes(task.id)}
+				showFavoriteButton={category === 'favorite'}
 				deadline={task.deadline}
 				tags={task.tags ?? []}
-				role='employer'
-				onDelete={handleDeleteTask}
-				showControls={true}
+				role='user'
 				onClick={() => {
 					setPage(`/task/${task.id}`)
-					navigate(`/task/${task.id}`)
+					navigate(`/task/${task.id}`, { state: { fromBack: false } })
 				}}
 			/>
 		</motion.div>
@@ -168,8 +172,9 @@ const EmployerProfile = ({
 
 	return (
 		<div className='md:flex md:justify-center md:py-[20px] md:px-[10px]'>
-			<div className='md:min-h-[730px] md:w-[980px]'>
+			<div className='md:min-h-[1130px] md:w-[980px]'>
 				<div className='md:flex md:flex-col'>
+					{/* Кнопки "Назад" и "Выйти" */}
 					<div className='md:py-4 md:flex md:justify-end items-center'>
 						<motion.button
 							whileHover={{ scale: 1.1 }}
@@ -191,6 +196,8 @@ const EmployerProfile = ({
 							<span className='text-sm font-semibold'>Выйти</span>
 						</motion.button>
 					</div>
+
+					{/* Кнопки переключения вида отображения */}
 					<div className='md:flex md:justify-end'>
 						<motion.button
 							whileHover={{ scale: 1.1 }}
@@ -209,49 +216,92 @@ const EmployerProfile = ({
 							<BookCopy size={24} />
 						</motion.button>
 					</div>
+
+					{/* Основной контент */}
 					<div className='md:flex mt-7'>
 						<div className='md:w-[80%]'>
 							<h1 className='text-2xl font-bold mb-14'>Страница профиля</h1>
-							<div className='md:mb-10'>
-								<h2 className='text-xl font-semibold'>Мои задачи</h2>
+
+							{/* Кнопки категорий */}
+							<div className='md:flex md:justify-start md:gap-x-3 md:mb-10'>
+								<motion.button
+									whileHover={{ scale: 1.1 }}
+									whileTap={{ scale: 0.9 }}
+									className={`p-2 rounded-lg shadow-md transition-all flex items-center justify-center min-w-[120px] h-[40px] ${
+										activeCategory === 'favorite'
+											? 'bg-gradient-to-br from-blue-300 to-blue-500 text-white'
+											: 'bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 hover:from-blue-300 hover:to-blue-500'
+									}`}
+									onClick={() => handleCategoryChange('favorite')}
+								>
+									<span className='text-sm font-semibold'>Избранное</span>
+								</motion.button>
+								<motion.button
+									whileHover={{ scale: 1.1 }}
+									whileTap={{ scale: 0.9 }}
+									className={`p-2 rounded-lg shadow-md transition-all flex items-center justify-center min-w-[120px] h-[40px] ${
+										activeCategory === 'started'
+											? 'bg-gradient-to-br from-blue-300 to-blue-500 text-white'
+											: 'bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 hover:from-blue-300 hover:to-blue-500'
+									}`}
+									onClick={() => handleCategoryChange('started')}
+								>
+									<span className='text-sm font-semibold'>Начатые задачи</span>
+								</motion.button>
+								<motion.button
+									whileHover={{ scale: 1.1 }}
+									whileTap={{ scale: 0.9 }}
+									className={`p-2 rounded-lg shadow-md transition-all flex items-center justify-center min-w-[120px] h-[40px] ${
+										activeCategory === 'finished'
+											? 'bg-gradient-to-br from-blue-300 to-blue-500 text-white'
+											: 'bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 hover:from-blue-300 hover:to-blue-500'
+									}`}
+									onClick={() => handleCategoryChange('finished')}
+								>
+									<span className='text-sm font-semibold'>Одобренные задачи</span>
+								</motion.button>
 							</div>
+
+							{/* Отображение задач */}
 							<div className='overflow-y-auto pr-2'>
 								<AnimatePresence mode='wait'>
-									{isLoading ? (
-										<LoadingSpinner key='spinner' />
-									) : tasks.length === 0 ? (
+									{isLoading && !showContent ? (
+										<LoadingSpinner key={`spinner-${category}`} />
+									) : visibleTasks.length === 0 ? (
 										<motion.div
-											key='empty'
+											key={`empty-${category}`}
 											initial={{ opacity: 0 }}
 											animate={{ opacity: 1 }}
 											exit={{ opacity: 0 }}
-											transition={{ duration: 0.7 }}
+											transition={{ duration: 0.5 }}
 											className='max-w-full'
 										>
-											<EmptyCard role='employer' listType='Мои задачи' />
-										</motion.div>
-									) : listType === 'card' ? (
-										<motion.div
-											key='cards'
-											initial={{ opacity: 0 }}
-											animate={{ opacity: 1 }}
-											exit={{ opacity: 0 }}
-											transition={{ duration: 0.7 }}
-											className='md:grid md:gap-4 md:grid-cols-2 max-w-full'
-											style={{ gridTemplateColumns: '1fr 1fr' }}
-										>
-											{taskCard}
+											<EmptyCard
+												role='user'
+												listType={
+													category === 'favorite'
+														? 'Избранное'
+														: category === 'started'
+														? 'Начатые задачи'
+														: 'Одобренные задачи'
+												}
+											/>
 										</motion.div>
 									) : (
 										<motion.div
-											key='list'
+											key={`tasks-${category}`}
 											initial={{ opacity: 0 }}
 											animate={{ opacity: 1 }}
 											exit={{ opacity: 0 }}
-											transition={{ duration: 0.7 }}
-											className='max-w-full'
+											transition={{ duration: 0.5 }}
+											className={
+												listType === 'card'
+													? 'md:grid md:grid-cols-2 md:gap-4 max-w-full'
+													: 'max-w-full'
+											}
+											style={listType === 'card' ? { gridTemplateColumns: '1fr 1fr' } : undefined}
 										>
-											{taskCard}
+											<AnimatePresence>{taskCards}</AnimatePresence>
 										</motion.div>
 									)}
 								</AnimatePresence>
@@ -259,17 +309,10 @@ const EmployerProfile = ({
 						</div>
 					</div>
 				</div>
-				{showDeleteForm && (
-					<DeleteConfirmation
-						taskId={taskToDelete || 0}
-						taskTitle={taskTitle}
-						onConfirm={confirmDelete}
-						onCancel={cancelDelete}
-					/>
-				)}
 			</div>
+			<Notification notifications={notifications} />
 		</div>
 	)
 }
 
-export default EmployerProfile
+export default StudentProfile

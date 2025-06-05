@@ -13,7 +13,16 @@ import {
 	getUserUuidById,
 } from '@/src/lib/API/supabaseAPI'
 import { setPage, goBack } from '@data/userData'
-import { BadgeCheck, Star, CircleCheckBig, Hourglass, Heart, Undo2 } from 'lucide-react'
+import {
+	BadgeCheck,
+	Star,
+	CircleCheckBig,
+	Hourglass,
+	Heart,
+	Undo2,
+	FileArchive,
+} from 'lucide-react'
+import { motion } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import Header from '@components/Header'
@@ -21,7 +30,10 @@ import NavBar from '@components/NavBar'
 import AddAnswerForm from '@components/AddAnswerForm'
 import { supabase } from '@/supabaseClient'
 import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
-import AnswerVerifyWindow from '@components/AnswerVerifyWindow' // Импортируем новый компонент
+import AnswerVerifyWindow from '@components/AnswerVerifyWindow'
+import Message from '../Message'
+import LoadingAnimation from '../LoadingAnimation'
+import TaskNotFound from '../TaskNotFound'
 
 type TypeTasksData = {
 	id: number
@@ -33,6 +45,7 @@ type TypeTasksData = {
 	deadline: string
 	tags: string[]
 	employer_id: number
+	zip_file_url?: string | null // Добавляем поле для URL архива
 }
 
 const TaskPage: FC = () => {
@@ -49,6 +62,8 @@ const TaskPage: FC = () => {
 	const [selectedActivity, setSelectedActivity] = useState<TypeTaskActivity | null>(null)
 	const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
 	const modalRefs = useRef<Map<number, HTMLDivElement>>(new Map())
+
+	const handleGoBack = goBack(navigate)
 
 	const loadData = async () => {
 		setIsLoading(true)
@@ -72,6 +87,7 @@ const TaskPage: FC = () => {
 				navigate('/tasks')
 				return
 			}
+
 			setTask({
 				id: foundTask.id,
 				tracking_number: foundTask.tracking_number,
@@ -82,6 +98,7 @@ const TaskPage: FC = () => {
 				deadline: foundTask.deadline,
 				tags: foundTask.tags ?? [],
 				employer_id: foundTask.employer_id,
+				zip_file_url: foundTask.zip_file_url, // Прямое использование из foundTask
 			} as TypeTasksData)
 
 			const favorites = await getUserFavorites(userId)
@@ -225,9 +242,12 @@ const TaskPage: FC = () => {
 				.eq('id', activityId)
 			if (error) throw error
 
-			if (currentActivity) {
+			if (currentActivity && task) {
 				await addTaskToFinished(currentActivity.user_id, currentActivity.task_id)
-				await addMessage(currentActivity.user_id, 'Ваше решение было одобрено!')
+				await addMessage(
+					currentActivity.user_id,
+					`Ваше решение по задаче "${task.title}" было одобрено!`
+				)
 			}
 
 			setActivityData(prev =>
@@ -250,8 +270,11 @@ const TaskPage: FC = () => {
 			const { error } = await supabase.from('task_activity').delete().eq('id', activityId)
 			if (error) throw error
 
-			if (currentActivity) {
-				await addMessage(currentActivity.user_id, 'Ваше решение было отклонено.')
+			if (currentActivity && task) {
+				await addMessage(
+					currentActivity.user_id,
+					`Ваше решение по задаче "${task.title}" было отклонено.`
+				)
 			}
 
 			setActivityData(prev => (prev ? prev.filter(activity => activity.id !== activityId) : null))
@@ -259,6 +282,14 @@ const TaskPage: FC = () => {
 			handleCloseModal()
 		} catch (error: any) {
 			addNotification('error', 'Ошибка', `Не удалось отклонить и удалить решение: ${error.message}`)
+		}
+	}
+
+	const handleDownloadArchive = () => {
+		if (task?.zip_file_url) {
+			window.open(task.zip_file_url, '_blank')
+		} else {
+			addNotification('warning', 'Ошибка', 'Архив не прикреплен к задаче')
 		}
 	}
 
@@ -281,7 +312,7 @@ const TaskPage: FC = () => {
 	}
 
 	if (!task || isLoading) {
-		return <div>{isLoading ? 'Загрузка...' : 'Задача не найдена'}</div>
+		return isLoading ? <LoadingAnimation loading={true} /> : <TaskNotFound />
 	}
 
 	const isEmployerTaskOwner = role === 'employer' && task.employer_id === userId
@@ -291,18 +322,21 @@ const TaskPage: FC = () => {
 			<Header />
 			<NavBar />
 			<div className='md:flex md:justify-center md:py-[20px] md:px-[10px]'>
-				<div className='md:min-h-[1200px] md:w-[980px]'>
+				<div className='md:min-h-[900px] md:w-[980px]'>
 					<div className='md:flex md:flex-col'>
 						<div className='md:py-4 md:flex md:justify-end md:items-center md:gap-4'>
-							<button
-								className='md:p-1 hover:bg-gray-300'
-								onClick={() => goBack(navigate)}
+							<motion.button
+								whileHover={{ scale: 1.1 }}
+								whileTap={{ scale: 0.9 }}
+								className='p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2'
+								onClick={handleGoBack}
 								aria-label='Вернуться назад'
 							>
-								<Undo2 size={30} />
-							</button>
+								<Undo2 size={24} />
+								<span className='text-sm font-semibold'>Назад</span>
+							</motion.button>
 							{role === 'user' && (
-								<button className='p-1 rounded transition-colors' onClick={handleFavorite}>
+								<button className='p-1 rounded-full transition-colors' onClick={handleFavorite}>
 									<Heart
 										fill={favoriteTasks.includes(task.id) ? 'red' : 'gray'}
 										color={favoriteTasks.includes(task.id) ? 'red' : 'red'}
@@ -314,21 +348,20 @@ const TaskPage: FC = () => {
 								</button>
 							)}
 						</div>
-
-						<div className='md:min-w-[300px] md:min-h-[250px] rounded-xl md:mb-11 border-2 border-gray-[#dce3eb] bg-[#96bddd]'>
-							<div className='md:py-2 md:px-3'>
-								<div className='md:flex md:justify-between text-gray-500 text-sm'>
+						<div className='md:min-w-[300px] md:min-h-[250px] rounded-xl md:mb-11 border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg'>
+							<div className='md:py-4 md:px-6'>
+								<div className='md:flex md:justify-between text-gray-600 text-sm font-medium'>
 									<p>Сейчас отслеживают {task.tracking_number}</p>
 								</div>
-								<h3 className='text-xl font-semibold md:pt-4'>{task.title}</h3>
-								<div className='w-[70%] md:pt-4'>{task.description}</div>
-								<div className='md:flex md:py-2 md:mt-4'>
-									<p>{`Срок до: ${task.deadline}`}</p>
+								<h3 className='text-2xl font-bold md:pt-4 text-gray-800'>{task.title}</h3>
+								<div className='w-[93%] md:pt-4 text-gray-700 break-words'>{task.description}</div>
+								<div className='md:flex md:py-3 md:mt-4'>
+									<p className='text-gray-600'>{`Срок до: ${task.deadline}`}</p>
 									<div className='md:ml-4 md:flex'>
 										{task.tags.map(tag => (
 											<div
 												key={tag}
-												className='bg-[#6092bb] md:mx-3 md:min-w-[40px] rounded-md md:text-center md:px-2 md:py-0.5'
+												className='bg-blue-400 text-white md:mx-3 md:min-w-[40px] rounded-full md:text-center md:px-3 md:py-1 text-sm'
 											>
 												{tag}
 											</div>
@@ -336,22 +369,37 @@ const TaskPage: FC = () => {
 									</div>
 								</div>
 								<div className='md:flex md:flex-col md:mb-4'>
-									<p className='md:mb-2'>Сложность</p>
+									<p className='md:mb-2 text-gray-600 font-medium'>Сложность</p>
 									{renderDifficultyStars(task.difficulty)}
 								</div>
-								<div className='md:flex md:justify-end'>
-									<div className='md:flex'>
+								<div className='md:flex md:justify-between md:items-center'>
+									<div className='md:flex items-center text-gray-700 font-medium'>
 										{task.company_name}
 										<BadgeCheck className='ml-2' fill='green' />
 									</div>
+									{task.zip_file_url && (
+										<div className='border-2 border-blue-300 rounded-lg p-2 bg-white shadow-md flex flex-col items-center'>
+											<span className='text-gray-800 text-sm font-semibold mb-2 whitespace-nowrap'>
+												Доп. материалы
+											</span>
+											<motion.button
+												whileTap={{ scale: 0.95 }}
+												className='w-full md:w-auto md:py-2 md:px-4 border border-gray-400 rounded-md bg-gradient-to-br from-blue-300 to-blue-500 text-gray-900 cursor-pointer flex items-center justify-center hover:from-blue-400 hover:to-blue-600 transition-all shadow-md'
+												onClick={handleDownloadArchive}
+											>
+												<FileArchive className='mr-2' size={20} />
+												<span className='text-sm font-medium'>Скачать архив</span>
+											</motion.button>
+										</div>
+									)}
 								</div>
 							</div>
 						</div>
 
 						{role === 'user' && (
-							<div className='md:flex md:justify-end md:mb-2'>
+							<div className='md:flex md:justify-end md:mb-4'>
 								<button
-									className='md:py-1.5 md:px-2 md:rounded-lg bg-[#0c426f] text-white font-semibold'
+									className='md:py-2 md:px-4 md:rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-md'
 									onClick={handleClick}
 								>
 									Добавить решение
@@ -360,60 +408,169 @@ const TaskPage: FC = () => {
 						)}
 
 						{showAddAnswerForm && (
-							<AddAnswerForm
-								taskId={taskId || ''}
-								onClose={() => {
-									setShowAddAnswerForm(false)
-									loadData()
-								}}
-							/>
+							<div className='md:flex md:flex-row md:gap-6'>
+								<div className='md:flex-1'>
+									<AddAnswerForm
+										taskId={taskId || ''}
+										onClose={() => setShowAddAnswerForm(false)}
+										loadData={loadData}
+									/>
+								</div>
+								<div className='md:flex-1'>
+									{!showAddAnswerForm && (
+										<div className='md:min-w-[300px] md:min-h-[250px] md:rounded-xl md:mb-10 bg-white shadow-xl border border-gray-200'>
+											<div className='bg-gradient-to-r from-blue-500 to-blue-600 md:rounded-t-xl'>
+												<div
+													className={`grid ${
+														isEmployerTaskOwner ? 'grid-cols-4' : 'grid-cols-3'
+													} md:items-center md:w-full md:rounded-t-xl`}
+												>
+													<div className='border-r border-blue-400 md:py-3 md:flex md:justify-center'>
+														<span className='text-white font-semibold'>Статус</span>
+													</div>
+													<div className='border-r border-blue-400 md:py-3 md:flex md:justify-center'>
+														<span className='text-white font-semibold'>Пользователь</span>
+													</div>
+													<div
+														className={`${
+															isEmployerTaskOwner ? 'border-r' : ''
+														} border-blue-400 md:py-3 md:flex md:justify-center`}
+													>
+														<span className='text-white font-semibold'>Дата</span>
+													</div>
+													{isEmployerTaskOwner && (
+														<div className='md:py-3 md:flex md:justify-center'>
+															<span className='text-white font-semibold'>Действие</span>
+														</div>
+													)}
+												</div>
+											</div>
+											<div className='md:min-h-[150px]'>
+												{activityData && activityData.length > 0 ? (
+													activityData.map((activity, index) => (
+														<div
+															key={index}
+															className={`relative grid ${
+																isEmployerTaskOwner ? 'grid-cols-4' : 'grid-cols-3'
+															} md:mb-2 md:border-b border-gray-200 last:border-b-0 last:mb-0 md:w-full items-center md:py-4 hover:bg-gray-50 transition-colors`}
+															ref={el => {
+																if (el) modalRefs.current.set(activity.id, el)
+															}}
+														>
+															<div className='flex items-center md:justify-center'>
+																<div className='mr-3'>
+																	{activity.status === 'done' ? (
+																		<CircleCheckBig size={20} className='text-green-500' />
+																	) : activity.status === 'rejected' ? (
+																		<span className='text-red-500'>✗</span>
+																	) : (
+																		<Hourglass size={20} className='text-yellow-500' />
+																	)}
+																</div>
+																<span className='text-sm text-gray-700'>
+																	{activity.status === 'verifying'
+																		? 'Верифицируется'
+																		: activity.status === 'done'
+																		? 'Готово'
+																		: 'Отклонено'}
+																</span>
+															</div>
+															<div className='md:text-center text-sm text-gray-700 truncate'>
+																{activity.username || 'Неизвестно'}
+															</div>
+															<div className='md:text-center text-sm text-gray-700'>
+																<span>
+																	{activity.activity_date ||
+																		new Date(activity.created_at).toLocaleDateString()}
+																</span>
+															</div>
+															{isEmployerTaskOwner && (
+																<div className='md:flex md:justify-center'>
+																	<button
+																		className='text-blue-600 hover:underline text-sm font-medium'
+																		onClick={() => handleOpenModal(activity)}
+																	>
+																		Просмотреть
+																	</button>
+																</div>
+															)}
+															{isEmployerTaskOwner && (
+																<AnswerVerifyWindow
+																	activity={selectedActivity || activity}
+																	isOpen={isModalOpen && selectedActivity?.id === activity.id}
+																	onClose={handleCloseModal}
+																	onApprove={handleApprove}
+																	onReject={handleReject}
+																/>
+															)}
+														</div>
+													))
+												) : (
+													<div className='flex items-center justify-center h-[150px]'>
+														<span className='text-3xl text-gray-400 opacity-70 font-semibold'>
+															Нет данных
+														</span>
+													</div>
+												)}
+											</div>
+										</div>
+									)}
+								</div>
+							</div>
 						)}
 
 						{!showAddAnswerForm && (
-							<div className='md:min-w-[300px] md:min-h-[250px] md:rounded-xl md:mb-10 border-1 border-gray-[#dce3eb] bg-[#96bddd]'>
-								<div
-									className={`md:flex bg-[#69a9dd] md:items-center md:w-full md:rounded-t-xl md:border-b-1 md:justify-between`}
-								>
-									<div className='md:flex md:gap-4 w-2/3'>
-										<div className='md:border-r md:py-2.5 min-w-[150px] md:flex md:justify-center'>
-											<span>Статус</span>
+							<div className='md:min-w-[300px] md:min-h-[250px] md:rounded-xl md:mb-10 bg-white shadow-xl border border-gray-200'>
+								<div className='bg-gradient-to-r from-blue-500 to-blue-600 md:rounded-t-xl'>
+									<div
+										className={`grid ${
+											isEmployerTaskOwner ? 'grid-cols-4' : 'grid-cols-3'
+										} md:items-center md:w-full md:rounded-t-xl`}
+									>
+										<div className='border-r border-blue-400 md:py-3 md:flex md:justify-center'>
+											<span className='text-white font-semibold'>Статус</span>
 										</div>
-										<div className='md:border-r md:py-2.5 min-w-[180px] md:flex md:justify-center'>
-											<span>Пользователь</span>
+										<div className='border-r border-blue-400 md:py-3 md:flex md:justify-center'>
+											<span className='text-white font-semibold'>Пользователь</span>
 										</div>
-									</div>
-									<div className='md:flex md:gap-4 w-1/3 md:justify-end'>
-										<div className='md:border-r md:py-2.5 min-w-[150px] md:flex md:justify-center'>
-											<span>Дата</span>
+										<div
+											className={`${
+												isEmployerTaskOwner ? 'border-r' : ''
+											} border-blue-400 md:py-3 md:flex md:justify-center`}
+										>
+											<span className='text-white font-semibold'>Дата</span>
 										</div>
 										{isEmployerTaskOwner && (
-											<div className='md:py-2.5 min-w-[120px] md:flex md:justify-center'>
-												<span>Ответ</span>
+											<div className='md:py-3 md:flex md:justify-center'>
+												<span className='text-white font-semibold'>Действие</span>
 											</div>
 										)}
 									</div>
 								</div>
-								<div>
+								<div className='md:min-h-[150px]'>
 									{activityData && activityData.length > 0 ? (
 										activityData.map((activity, index) => (
 											<div
 												key={index}
-												className='relative md:mb-2 md:border-b-1 last:border-b-0 last:mb-0 md:w-full md:flex items-center justify-between'
+												className={`relative grid ${
+													isEmployerTaskOwner ? 'grid-cols-4' : 'grid-cols-3'
+												} md:mb-2 md:border-b border-gray-200 last:border-b-0 last:mb-0 md:w-full items-center md:py-4 hover:bg-gray-50 transition-colors`}
+												style={{ minHeight: '60px' }}
 												ref={el => {
 													if (el) modalRefs.current.set(activity.id, el)
 												}}
 											>
-												<div className='flex items-center md:min-w-[150px] md:justify-center'>
-													<div className='mr-4'>
+												<div className='flex items-center justify-center'>
+													<div className='mr-3 flex items-center'>
 														{activity.status === 'done' ? (
-															<CircleCheckBig size={20} />
+															<CircleCheckBig size={20} className='text-green-500' />
 														) : activity.status === 'rejected' ? (
-															<span className='text-red-500'>✗</span>
+															<span className='text-red-500 text-xl'>✗</span>
 														) : (
-															<Hourglass size={20} />
+															<Hourglass size={20} className='text-yellow-500' />
 														)}
 													</div>
-													<span className='text-sm'>
+													<span className='text-sm text-gray-700 flex items-center'>
 														{activity.status === 'verifying'
 															? 'Верифицируется'
 															: activity.status === 'done'
@@ -421,19 +578,19 @@ const TaskPage: FC = () => {
 															: 'Отклонено'}
 													</span>
 												</div>
-												<div className='md:flex-1 md:min-w-[180px] md:text-center text-sm truncate'>
+												<div className='md:text-center text-sm text-gray-700 truncate flex items-center justify-center'>
 													{activity.username || 'Неизвестно'}
 												</div>
-												<div className='md:min-w-[150px] md:flex md:justify-center text-sm'>
+												<div className='md:text-center text-sm text-gray-700 flex items-center justify-center'>
 													<span>
 														{activity.activity_date ||
 															new Date(activity.created_at).toLocaleDateString()}
 													</span>
 												</div>
 												{isEmployerTaskOwner && (
-													<div className='md:min-w-[120px] md:flex md:justify-center'>
+													<div className='flex items-center justify-center'>
 														<button
-															className='text-blue-600 hover:underline text-sm'
+															className='text-blue-600 hover:underline text-sm font-medium py-1'
 															onClick={() => handleOpenModal(activity)}
 														>
 															Просмотреть
@@ -452,7 +609,11 @@ const TaskPage: FC = () => {
 											</div>
 										))
 									) : (
-										<div className='ml-20 text-sm md:flex-none'>Нет данных</div>
+										<div className='flex items-center justify-center h-[150px]'>
+											<span className='text-3xl text-gray-400 opacity-70 font-semibold'>
+												Нет данных
+											</span>
+										</div>
 									)}
 								</div>
 							</div>
@@ -461,6 +622,7 @@ const TaskPage: FC = () => {
 				</div>
 			</div>
 			<Notification notifications={notifications} />
+			<Message />
 		</>
 	)
 }

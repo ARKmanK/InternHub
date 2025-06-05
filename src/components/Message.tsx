@@ -21,28 +21,36 @@ const Message: FC = () => {
 	const [isOpen, setIsOpen] = useState(false)
 	const [messages, setMessages] = useState<Message[]>([])
 	const [unreadCount, setUnreadCount] = useState<number>(0)
-	const messageRef = useRef<HTMLDivElement>(null) // Для отслеживания кликов вне области
+	const [isLoading, setIsLoading] = useState(true)
+	const messageRef = useRef<HTMLDivElement>(null)
+	const buttonRef = useRef<HTMLButtonElement>(null) // Добавляем реф для кнопки-иконки
 
 	// Загружаем сообщения и количество непрочитанных
 	useEffect(() => {
 		const fetchMessages = async () => {
-			const userId = getUserId()
-			if (userId) {
-				// Получаем количество непрочитанных сообщений
-				const count = await getUnreadMessagesCount(userId)
-				setUnreadCount(count)
-
-				// Загружаем сообщения (пагинация: первые 10)
-				const userMessages = await getMessagesByUserId(userId, 10, 0)
-				setMessages(
-					userMessages.map(msg => ({
-						...msg,
-						timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
-							hour: '2-digit',
-							minute: '2-digit',
-						}),
-					}))
-				)
+			setIsLoading(true)
+			try {
+				const userId = getUserId()
+				if (userId) {
+					const count = await getUnreadMessagesCount(userId)
+					setUnreadCount(count)
+					const userMessages = await getMessagesByUserId(userId, 10, 0)
+					setMessages(
+						userMessages.map(msg => ({
+							...msg,
+							timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+								hour: '2-digit',
+								minute: '2-digit',
+							}),
+						}))
+					)
+				} else {
+					console.warn('User ID is not available')
+				}
+			} catch (error) {
+				console.error('Error fetching messages:', error)
+			} finally {
+				setIsLoading(false)
 			}
 		}
 		fetchMessages()
@@ -62,7 +70,7 @@ const Message: FC = () => {
 						is_read: true,
 					}))
 				)
-				setUnreadCount(0) // Сбрасываем счётчик непрочитанных
+				setUnreadCount(0)
 			}
 		}
 	}, [isOpen])
@@ -70,7 +78,13 @@ const Message: FC = () => {
 	// Закрытие при клике вне области
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
-			if (messageRef.current && !messageRef.current.contains(event.target as Node)) {
+			// Проверяем, что клик произошёл вне messageRef и не по кнопке-иконке
+			if (
+				messageRef.current &&
+				!messageRef.current.contains(event.target as Node) &&
+				buttonRef.current &&
+				!buttonRef.current.contains(event.target as Node)
+			) {
 				setIsOpen(false)
 			}
 		}
@@ -85,22 +99,19 @@ const Message: FC = () => {
 	}, [isOpen])
 
 	const toggleMenu = () => {
-		setIsOpen(!isOpen)
+		setIsOpen(prev => !prev)
 	}
 
 	const handleDelete = async (messageId: number) => {
 		try {
-			// Проверяем, было ли сообщение непрочитанным
 			const messageToDelete = messages.find(msg => msg.id === messageId)
 			const wasUnread = messageToDelete && !messageToDelete.is_read
 
-			// Удаляем сообщение
 			await deleteMessage(messageId)
 			setMessages(prev => prev.filter(msg => msg.id !== messageId))
 
-			// Уменьшаем счётчик непрочитанных, если сообщение было непрочитанным
 			if (wasUnread) {
-				setUnreadCount(prev => Math.max(0, prev - 1)) // Уменьшаем на 1, но не ниже 0
+				setUnreadCount(prev => Math.max(0, prev - 1))
 			}
 		} catch (error) {
 			console.error('Error deleting message:', error)
@@ -109,18 +120,27 @@ const Message: FC = () => {
 
 	return (
 		<div className='fixed bottom-[60px] right-4 z-50'>
-			<button
+			<motion.button
+				ref={buttonRef} // Привязываем реф к кнопке
+				whileHover={{ scale: 1.1 }}
+				whileTap={{ scale: 0.9 }}
+				className='relative p-3 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-full shadow-md hover:from-blue-300 hover:to-blue-500 transition-all focus:outline-none'
 				onClick={toggleMenu}
-				className='relative bg-blue-500 text-white rounded-full p-3 shadow-lg hover:bg-blue-600 transition-colors focus:outline-none'
 				aria-label={isOpen ? 'Закрыть сообщения' : 'Открыть сообщения'}
 			>
 				<MessageCircle size={24} />
-				{unreadCount > 0 && (
-					<span className='absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
-						{unreadCount}
+				{isLoading ? (
+					<span className='absolute top-0 right-0 bg-gradient-to-br from-gray-300 to-gray-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+						...
 					</span>
+				) : (
+					unreadCount > 0 && (
+						<span className='absolute top-0 right-0 bg-gradient-to-br from-red-300 to-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+							{unreadCount}
+						</span>
+					)
 				)}
-			</button>
+			</motion.button>
 			<AnimatePresence>
 				{isOpen && (
 					<motion.div
@@ -129,10 +149,12 @@ const Message: FC = () => {
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: 20 }}
 						transition={{ duration: 0.2 }}
-						className='absolute bottom-12 right-0 w-80 bg-white rounded-lg shadow-lg p-4 mt-2 border border-gray-200'
+						className='absolute bottom-12 right-0 w-80 bg-gradient-to-br from-blue-50 to-gray-300 rounded-lg shadow-xl p-4 mt-2 border border-gray-200'
 					>
 						<h3 className='text-lg font-semibold mb-2 text-gray-800'>Сообщения</h3>
-						{messages.length === 0 ? (
+						{isLoading ? (
+							<p className='text-gray-500'>Загрузка...</p>
+						) : messages.length === 0 ? (
 							<p className='text-gray-500'>Нет новых сообщений</p>
 						) : (
 							<ul className='space-y-2 max-h-48 overflow-y-auto'>
@@ -147,13 +169,15 @@ const Message: FC = () => {
 											<p className='text-sm text-gray-800'>{message.text}</p>
 											<span className='text-xs text-gray-400'>{message.timestamp}</span>
 										</div>
-										<button
+										<motion.button
+											whileHover={{ scale: 1.1 }}
+											whileTap={{ scale: 0.9 }}
 											onClick={() => handleDelete(message.id)}
 											className='ml-2 text-red-500 hover:text-red-700 transition-colors'
 											aria-label='Удалить сообщение'
 										>
 											<Trash2 size={16} />
-										</button>
+										</motion.button>
 									</li>
 								))}
 							</ul>

@@ -1,15 +1,17 @@
 import { FormEvent, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AppWindow, X } from 'lucide-react'
+import { AppWindow, X, FileArchive, Check } from 'lucide-react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
-import { getAllTags, getUserTags } from '@/src/lib/API/supabaseAPI'
+import { deleteUserTag, getAllTags, getUserTags } from '@/src/lib/API/supabaseAPI'
 import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
 import { supabase } from '@/supabaseClient'
 import TaskCard from '@components/TaskCard'
 import { TypeTask } from '@/src/types/TypeTask'
+import { motion } from 'framer-motion'
+import getRandomNumber from '../data/getRandomNumber'
 
 const AddTaskForm = () => {
 	const navigate = useNavigate()
@@ -24,26 +26,40 @@ const AddTaskForm = () => {
 	const [companyName, setCompanyName] = useState<string>('')
 	const [commonTags, setCommonTags] = useState<string[]>([])
 	const [userTags, setUserTags] = useState<string[]>([])
-
-	const role = getRole()
-	const userId = getUserId()
+	const [zipFile, setZipFile] = useState<File | null>(null)
+	const [zipAdded, setZipAdded] = useState<boolean>(false)
+	const [role, setRole] = useState<string | null>(null)
+	const [userId, setUserId] = useState<number | null>(null)
+	const [hasFetched, setHasFetched] = useState(false)
 
 	const MAX_TITLE_LENGTH = 50
-	const MAX_DESCRIPTION_LENGTH = 250
+	const MIN_TITLE_LENGTH = 10 // Минимальная длина названия
+	const MAX_DESCRIPTION_LENGTH = 3000
+	const MIN_DESCRIPTION_LENGTH = 30 // Минимальная длина описания
 	const MAX_TAG_LENGTH = 20
 	const MAX_TAGS = 5
 
-	// Загружаем companyName и теги при монтировании компонента
 	useEffect(() => {
+		const initialRole = getRole()
+		const initialUserId = getUserId()
+		setRole(initialRole)
+		setUserId(initialUserId)
+	}, [])
+
+	useEffect(() => {
+		if (hasFetched || role === null || userId === null) {
+			return
+		}
+
 		const fetchData = async () => {
-			if (role !== 'employer' || !userId) {
+			if (role !== 'employer') {
 				addNotification('warning', 'Ошибка', 'Только работодатели могут создавать задачи')
 				navigate('/tasks')
+				setHasFetched(true)
 				return
 			}
 
 			try {
-				// Получаем companyName
 				const { data: user, error: userError } = await supabase
 					.from('users')
 					.select('company_name')
@@ -56,23 +72,23 @@ const AddTaskForm = () => {
 
 				setCompanyName(user.company_name || 'Неизвестная компания')
 
-				// Получаем общие теги
-				const commonTagsData = await getAllTags() // TypeTag[]
+				const commonTagsData = await getAllTags()
 				setCommonTags(commonTagsData.map(tag => tag.name))
 
-				// Получаем кастомные теги пользователя
-				const userTagsData = await getUserTags(userId) // string[]
+				const userTagsData = await getUserTags(userId!)
 				setUserTags(userTagsData)
+
+				setHasFetched(true)
 			} catch (error: any) {
 				addNotification('error', 'Ошибка', error.message)
 				navigate('/tasks')
+				setHasFetched(true)
 			}
 		}
 
 		fetchData()
 	}, [role, userId, navigate, addNotification])
 
-	// Обновляем превью задачи
 	useEffect(() => {
 		const deadlineStr = formatDate(deadline)
 		const tempTask: TypeTask = {
@@ -130,13 +146,10 @@ const AddTaskForm = () => {
 		}
 
 		try {
-			// Добавляем новый тег в user_tags
-			const { error } = await supabase
-				.from('user_tags')
-				.insert({ user_id: userId, name: trimmedTag })
-
-			if (error) {
-				throw new Error(`Не удалось создать тег: ${error.message}`)
+			if (userId) {
+				await supabase.from('user_tags').insert({ user_id: userId, name: trimmedTag })
+			} else {
+				throw new Error('Пользователь не авторизован')
 			}
 
 			setTags([...tags, trimmedTag])
@@ -147,9 +160,16 @@ const AddTaskForm = () => {
 		}
 	}
 
-	const removeCustomTag = (tagToRemove: string) => {
-		setTags(tags.filter(tag => tag !== tagToRemove))
-		setUserTags(userTags.filter(tag => tag !== tagToRemove))
+	const removeCustomTag = async (tagToRemove: string) => {
+		try {
+			if (userId) {
+				await deleteUserTag(userId, tagToRemove)
+			}
+			setTags(tags.filter(tag => tag !== tagToRemove))
+			setUserTags(userTags.filter(tag => tag !== tagToRemove))
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', error.message)
+		}
 	}
 
 	const formatDate = (date: Date | null): string => {
@@ -157,7 +177,7 @@ const AddTaskForm = () => {
 		const year = date.getFullYear()
 		const month = String(date.getMonth() + 1).padStart(2, '0')
 		const day = String(date.getDate()).padStart(2, '0')
-		return `${year}-${month}-${day}` // Формат YYYY-MM-DD
+		return `${year}-${month}-${day}`
 	}
 
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,8 +206,50 @@ const AddTaskForm = () => {
 		}
 	}
 
+	const handleZipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0]
+		if (file) {
+			const validTypes = ['.zip', '.rar', '.7z', '.tar', '.gz']
+			const fileExt = `.${file.name.split('.').pop()?.toLowerCase()}`
+			if (!validTypes.includes(fileExt)) {
+				addNotification(
+					'warning',
+					'Ошибка',
+					'Поддерживаются только архивы (.zip, .rar, .7z, .tar, .gz)'
+				)
+				return
+			}
+			if (file.size > 30 * 1024 * 1024) {
+				addNotification('warning', 'Ошибка', 'Размер архива не должен превышать 30MB')
+				return
+			}
+			setZipFile(file)
+			setZipAdded(true)
+		}
+	}
+
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
+
+		// Проверка минимальной длины названия
+		if (title.trim().length < MIN_TITLE_LENGTH) {
+			addNotification(
+				'warning',
+				'Ошибка',
+				`Название должно содержать минимум ${MIN_TITLE_LENGTH} символов`
+			)
+			return
+		}
+
+		// Проверка минимальной длины описания
+		if (description.trim().length < MIN_DESCRIPTION_LENGTH) {
+			addNotification(
+				'warning',
+				'Ошибка',
+				`Описание должно содержать минимум ${MIN_DESCRIPTION_LENGTH} символов`
+			)
+			return
+		}
 
 		if (!title.trim()) {
 			addNotification('warning', 'Ошибка', 'Название — обязательное поле')
@@ -216,10 +278,38 @@ const AddTaskForm = () => {
 		}
 
 		const deadlineStr = formatDate(deadline)
+		let zipFileUrl: string | null = null
+
+		if (zipFile) {
+			try {
+				const fileExt = zipFile.name.split('.').pop()?.toLowerCase() || 'zip'
+				const randomNumber = getRandomNumber(1, 10000)
+				const fileName = `task${randomNumber}.${fileExt}`
+				const filePath = `tasks_files/${fileName}`
+
+				const { error: uploadError } = await supabase.storage
+					.from('task-files')
+					.upload(filePath, zipFile, {
+						cacheControl: '3600',
+						upsert: false,
+					})
+
+				if (uploadError) {
+					throw new Error(`Не удалось загрузить архив: ${uploadError.message}`)
+				}
+
+				const { data: publicUrlData } = supabase.storage.from('task-files').getPublicUrl(filePath)
+				zipFileUrl = publicUrlData.publicUrl
+			} catch (error: any) {
+				addNotification('error', 'Ошибка', `Не удалось загрузить архив: ${error.message}`)
+				return
+			}
+		}
+
 		const submissionData = {
 			user_id: userId,
-			submission_url: null, // В данном случае поле необязательное
-			zip_file_url: null,
+			submission_url: null,
+			zip_file_url: zipFileUrl,
 			comment: null,
 			photos: null,
 			title,
@@ -237,14 +327,15 @@ const AddTaskForm = () => {
 				throw new Error(`Не удалось создать задачу: ${error.message}`)
 			}
 
-			addNotification('success', 'Успешно', 'Задача отправлена на модерацию')
 			setTitle('')
 			setDescription('')
 			setDifficulty(0)
 			setDeadline(null)
 			setTags([])
 			setNewTag('')
-			navigate('/tasks')
+			setZipFile(null)
+			setZipAdded(false)
+			navigate('/tasks', { state: { showSuccessNotification: true } })
 		} catch (error: any) {
 			addNotification('error', 'Ошибка', `Не удалось создать задачу: ${error.message}`)
 		}
@@ -252,37 +343,35 @@ const AddTaskForm = () => {
 
 	return (
 		<>
-			<div className='md:mt-10 md:p-6 bg-white rounded-lg shadow-md max-w-[800px] m-auto'>
-				<div className='flex items-center mb-4'>
-					<svg
-						className='w-6 h-6 mr-2 text-gray-500'
-						fill='none'
-						stroke='currentColor'
-						viewBox='0 0 24 24'
+			<motion.div
+				className='mt-10 p-6 bg-gradient-to-br from-blue-50 to-gray-300 rounded-xl shadow-xl max-w-[800px] m-auto'
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				exit={{ opacity: 0, y: 20 }}
+			>
+				<div className='flex items-center mb-6'>
+					<motion.div
+						whileHover={{ scale: 1.1 }}
+						className='p-1 bg-gradient-to-br from-blue-300 to-blue-500 rounded-full shadow-md'
 					>
-						<path
-							strokeLinecap='round'
-							strokeLinejoin='round'
-							strokeWidth='2'
-							d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h10a2 2 0 012 2v14a2 2 0 01-2 2z'
-						/>
-					</svg>
-					<h2 className='text-xl font-semibold text-gray-700'>Создание задачи</h2>
+						<AppWindow className='w-9 h-6 text-gray-900' />
+					</motion.div>
+					<h2 className='ml-2 text-xl font-semibold text-gray-900'>Создание задачи</h2>
 				</div>
-				<form onSubmit={handleSubmit} className='space-y-4'>
+				<form onSubmit={handleSubmit} className='space-y-6'>
 					<div>
-						<label className='block text-sm font-medium text-gray-600'>
-							Название (максимум {MAX_TITLE_LENGTH} символов)
+						<label className='block text-sm font-medium text-gray-900'>
+							Название (до {MAX_TITLE_LENGTH} символов)
 						</label>
 						<div className='mt-1 relative rounded-md shadow-sm'>
 							<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-								<AppWindow className='w-5 h-5 text-gray-400' />
+								<AppWindow className='w-5 h-5 text-gray-500' />
 							</div>
 							<input
 								type='text'
 								placeholder='Название'
 								value={title}
-								className='block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
+								className='block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-400 transition-all outline-none'
 								onChange={handleTitleChange}
 								autoFocus
 								maxLength={MAX_TITLE_LENGTH}
@@ -290,11 +379,13 @@ const AddTaskForm = () => {
 						</div>
 					</div>
 					<div>
-						<label className='block text-sm font-medium text-gray-600'>Описание</label>
+						<label className='block text-sm font-medium text-gray-900'>
+							Описание (до {MAX_DESCRIPTION_LENGTH} символов)
+						</label>
 						<div className='mt-1 relative rounded-md shadow-sm'>
 							<div className='absolute top-2 left-0 pl-3 flex items-start pointer-events-none'>
 								<svg
-									className='w-5 h-5 text-gray-400'
+									className='w-5 h-5 text-gray-500'
 									fill='none'
 									stroke='currentColor'
 									viewBox='0 0 24 24'
@@ -310,7 +401,7 @@ const AddTaskForm = () => {
 							<textarea
 								value={description}
 								onChange={handleDescriptionChange}
-								className='block w-full min-h-[70px] h-[150px] pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
+								className='block w-full min-h-[70px] h-[150px] pl-10 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-400 transition-all outline-none resize-y'
 								placeholder='Опишите задачу...'
 								rows={6}
 								maxLength={MAX_DESCRIPTION_LENGTH}
@@ -318,11 +409,11 @@ const AddTaskForm = () => {
 						</div>
 					</div>
 					<div>
-						<label className='block text-sm font-medium text-gray-600'>Сложность задачи</label>
+						<label className='block text-sm font-medium text-gray-900'>Сложность задачи</label>
 						<div className='mt-1 relative rounded-md shadow-sm'>
 							<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
 								<svg
-									className='w-5 h-5 text-gray-400'
+									className='w-5 h-5 text-gray-500'
 									fill='none'
 									stroke='currentColor'
 									viewBox='0 0 24 24'
@@ -338,7 +429,7 @@ const AddTaskForm = () => {
 							<select
 								value={difficulty}
 								onChange={e => setDifficulty(Number(e.target.value))}
-								className='block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
+								className='block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-400 transition-all outline-none'
 							>
 								<option value={0} disabled>
 									Выберите сложность
@@ -350,37 +441,44 @@ const AddTaskForm = () => {
 						</div>
 					</div>
 					<div>
-						<label className='block text-sm font-medium text-gray-600'>Дата сдачи</label>
-						<div className='mt-1 relative rounded-md'>
-							<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-								<svg
-									className='w-5 h-5 text-gray-400'
-									fill='none'
-									stroke='currentColor'
-									viewBox='0 0 24 24'
-								>
-									<path
-										strokeLinecap='round'
-										strokeLinejoin='round'
-										strokeWidth='2'
-										d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'
-									/>
-								</svg>
+						<label className='block text-sm font-medium text-gray-900'>Дата сдачи</label>
+						<div className='mt-1 flex items-center'>
+							<div className='relative rounded-md shadow-sm'>
+								<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
+									<svg
+										className='w-5 h-5 text-gray-500'
+										fill='none'
+										stroke='currentColor'
+										viewBox='0 0 24 24'
+									>
+										<path
+											strokeLinecap='round'
+											strokeLinejoin='round'
+											strokeWidth='2'
+											d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'
+										/>
+									</svg>
+								</div>
+								<DatePicker
+									selected={deadline}
+									onChange={(date: Date | null) => setDeadline(date)}
+									dateFormat='dd.MM.yyyy'
+									className='pl-10 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-400 transition-all outline-none'
+									placeholderText='Выберите дату'
+									wrapperClassName='w-[228px]'
+								/>
 							</div>
-							<DatePicker
-								selected={deadline}
-								onChange={(date: Date | null) => setDeadline(date)}
-								dateFormat='dd.MM.yyyy'
-								className='block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
-								placeholderText='Выберите дату'
-							/>
 						</div>
 					</div>
 					<div>
-						<label className='block text-sm font-medium text-gray-600'>Ключевые теги</label>
-						<div className='mt-1 flex flex-wrap gap-3' style={{ margin: '-4px 0' }}>
+						<label className='block text-sm font-medium text-gray-900'>Ключевые теги</label>
+						<div className='mt-1 flex flex-wrap gap-2'>
 							{commonTags.map(tag => (
-								<label key={tag} className='inline-flex items-center'>
+								<motion.label
+									key={tag}
+									whileHover={{ scale: 1.05 }}
+									className='inline-flex items-center'
+								>
 									<input
 										type='checkbox'
 										checked={tags.includes(tag)}
@@ -388,20 +486,19 @@ const AddTaskForm = () => {
 										className='hidden'
 									/>
 									<span
-										className={`px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors ${
+										className={`px-3 py-1 rounded-xl text-sm font-medium cursor-pointer transition-colors ${
 											tags.includes(tag)
-												? 'bg-blue-500 text-white'
-												: 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+												? 'bg-gradient-to-br from-blue-400 to-blue-600 text-white'
+												: 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800 hover:from-gray-400 hover:to-gray-500'
 										}`}
-										style={{ margin: '4px 0' }}
 									>
 										{tag}
 									</span>
-								</label>
+								</motion.label>
 							))}
 							{userTags.map(tag => (
 								<div key={tag} className='inline-flex items-center'>
-									<label className='inline-flex items-center'>
+									<motion.label whileHover={{ scale: 1.05 }} className='inline-flex items-center'>
 										<input
 											type='checkbox'
 											checked={tags.includes(tag)}
@@ -411,57 +508,93 @@ const AddTaskForm = () => {
 										<span
 											className={`px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors ${
 												tags.includes(tag)
-													? 'bg-blue-500 text-white'
-													: 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+													? 'bg-gradient-to-br from-blue-400 to-blue-600 text-white'
+													: 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800 hover:from-gray-400 hover:to-gray-500'
 											}`}
-											style={{ margin: '4px 0' }}
 										>
 											{tag}
 										</span>
-									</label>
-									<button
+									</motion.label>
+									<motion.button
+										whileHover={{ scale: 1.1 }}
+										whileTap={{ scale: 0.9 }}
 										type='button'
 										onClick={() => removeCustomTag(tag)}
-										className='ml-2 text-red-500 hover:text-red-700'
+										className='ml-2 text-red-600 hover:text-red-800 transition-colors'
 									>
 										<X size={16} />
-									</button>
+									</motion.button>
 								</div>
 							))}
 						</div>
 					</div>
 					<div>
-						<label className='block text-sm font-medium text-gray-600'>Создать новый тег</label>
+						<label className='block text-sm font-medium text-gray-900'>Создать новый тег</label>
 						<div className='mt-1 flex items-center gap-2'>
 							<input
 								type='text'
 								placeholder='Введите новый тег'
 								value={newTag}
-								className='block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
+								className='block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-400 transition-all outline-none'
 								onChange={handleNewTagChange}
 								maxLength={MAX_TAG_LENGTH}
 							/>
-							<button
+							<motion.button
+								whileHover={{ scale: 1.1 }}
+								whileTap={{ scale: 0.9 }}
 								type='button'
 								onClick={addCustomTag}
-								className='bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+								className='px-4 py-2 bg-gradient-to-br from-blue-300 to-blue-500 text-gray-900 rounded-lg shadow-md hover:from-blue-400 hover:to-blue-600 transition-all'
 							>
 								Добавить
-							</button>
+							</motion.button>
 						</div>
 					</div>
-					<div className='mt-4'>
-						<button
+					<div className='flex flex-col'>
+						<p className='mt-4 text-sm font-medium text-gray-900'>
+							Дополнительные материалы (архив) (опционально)
+						</p>
+						<div className='flex items-center'>
+							<motion.label
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								className='py-2 px-3 border border-gray-400 rounded-md bg-gradient-to-br from-blue-300 to-blue-500 text-gray-900 cursor-pointer flex items-center w-[180px] hover:from-blue-400 hover:to-blue-600 transition-all shadow-md'
+							>
+								<FileArchive className='mr-2' size={20} />
+								<span className='text-sm font-medium'>Выбрать архив</span>
+								<input
+									type='file'
+									accept='.zip,.rar,.7z,.tar,.gz'
+									className='hidden'
+									onChange={handleZipChange}
+								/>
+							</motion.label>
+							{zipAdded && (
+								<motion.div whileHover={{ scale: 1.1 }} className='flex items-center ml-3'>
+									<Check size={24} className='text-green-600' />
+								</motion.div>
+							)}
+						</div>
+					</div>
+					<div className='mt-6'>
+						<motion.button
+							whileHover={{ scale: 1.1 }}
+							whileTap={{ scale: 0.9 }}
 							type='submit'
-							className='w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+							className='w-full py-2 text-white font-semibold bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg shadow-md hover:from-blue-500 hover:to-blue-700 transition-all'
 						>
 							Отправить на модерацию
-						</button>
+						</motion.button>
 					</div>
 				</form>
-			</div>
-			<div className='md:mt-10 max-w-[900px] m-auto'>
-				<p className='font-medium text-lg mb-4'>Что получится</p>
+			</motion.div>
+			<motion.div
+				className='mt-10 max-w-[900px] m-auto bg-gradient-to-br from-blue-50 to-gray-300 rounded-xl shadow-xl p-4'
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				exit={{ opacity: 0, y: 20 }}
+			>
+				<p className='font-medium text-lg text-gray-900 my-4'>Что получится</p>
 				{previewTask && (
 					<TaskCard
 						id={previewTask.id}
@@ -477,7 +610,7 @@ const AddTaskForm = () => {
 						isMine={role === 'employer'}
 					/>
 				)}
-			</div>
+			</motion.div>
 			<Notification notifications={notifications} />
 		</>
 	)

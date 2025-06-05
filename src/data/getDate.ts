@@ -1,4 +1,3 @@
-
 const getDate = (): [string, string, string] => {
 	const today = new Date()
 

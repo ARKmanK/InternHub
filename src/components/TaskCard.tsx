@@ -1,9 +1,9 @@
-// components/TaskCard.tsx
-import { FC, MouseEvent } from 'react'
+import { FC, MouseEvent, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Heart, BadgeCheck, Star, Delete, BookCheck, Settings } from 'lucide-react'
+import { Heart, BadgeCheck, Star, Delete, Settings, BookmarkCheck } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@components/UI/Button/Button'
+import { setPage } from '../data/userData'
 
 type TaskCardProps = {
 	id: number
@@ -20,7 +20,7 @@ type TaskCardProps = {
 	tags: string[]
 	role?: 'user' | 'employer' | 'admin' | null
 	isMine?: boolean
-	onDelete?: () => void
+	onDelete?: (id: number) => void // Обновлено
 	showControls?: boolean
 	onClick?: () => void
 	showFavoriteButton?: boolean
@@ -53,6 +53,7 @@ const TaskCard: FC<TaskCardProps> = ({
 	}
 
 	const handleEdit = () => {
+		setPage(`/edit-task/${id}`)
 		navigate(`/edit-task/${id}`)
 	}
 
@@ -64,12 +65,11 @@ const TaskCard: FC<TaskCardProps> = ({
 		}
 	}
 
-	// Обработчик для переключения состояния избранного
 	const handleFavoriteClick = () => {
 		if (isFavorite && removeFromFavorite) {
-			removeFromFavorite(id) // Удаляем из избранного
+			removeFromFavorite(id)
 		} else if (!isFavorite && addToFavorite) {
-			addToFavorite(id) // Добавляем в избранное
+			addToFavorite(id)
 		}
 	}
 
@@ -99,20 +99,23 @@ const TaskCard: FC<TaskCardProps> = ({
 	}
 
 	const truncatedDescription =
-		type === 'card' && description.length > 150 ? description.slice(0, 150) + '...' : description
+		type === 'card'
+			? description.length > 150
+				? description.slice(0, 150) + '...'
+				: description
+			: description.length > 300
+			? description.slice(0, 300) + '...'
+			: description
 
 	return (
 		<>
 			{type === 'list' && (
-				<div className='w-[700px] min-h-[250px] rounded-xl mb-10 border-2 border-gray-[#dce3eb] bg-[#96bddd] overflow-hidden relative'>
-					<div className='py-2 px-3 flex flex-col justify-between'>
-						<div className='flex justify-between text-gray-500 text-sm'>
+				<div className='w-full max-w-[700px] min-h-[250px] rounded-xl mb-10 border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg overflow-hidden relative'>
+					<div className='py-3 px-4 flex flex-col justify-between'>
+						<div className='flex justify-between text-gray-600 text-sm font-medium'>
 							<p>Сейчас отслеживают {trackingNumber}</p>
 							{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
-								<button
-									className='p-1 rounded transition-colors'
-									onClick={handleFavoriteClick} // Используем handleFavoriteClick
-								>
+								<button className='p-1 rounded transition-colors' onClick={handleFavoriteClick}>
 									<Heart
 										fill={isFavorite ? 'red' : 'gray'}
 										color={isFavorite ? 'red' : 'red'}
@@ -122,121 +125,149 @@ const TaskCard: FC<TaskCardProps> = ({
 								</button>
 							)}
 							{role === 'employer' && showControls && (
-								<div className='flex'>
-									<div className='text-xs text-black border-2 border-t-0 border-r-0 rounded-bl-lg rounded-tr-lg p-1 top-0 right-30 absolute'>
-										<button className='flex' onClick={handleEdit}>
-											Редактировать
-											<Settings className='ml-1' size={20} />
-										</button>
-									</div>
-									<div className='text-xs text-black border-2 border-t-0 border-r-0 rounded-tr-lg p-1 top-0 right-0 absolute'>
-										<button className='flex' onClick={onDelete}>
-											Удалить задачу
-											<Delete className='ml-1' size={20} />
-										</button>
-									</div>
+								<div className='flex space-x-2'>
+									<button
+										onClick={handleEdit}
+										className='text-xs text-white bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg p-1 px-2 shadow-md hover:from-blue-500 hover:to-blue-700 transition-all flex items-center'
+									>
+										Редактировать
+										<Settings className='ml-1' size={16} />
+									</button>
+									<button
+										onClick={() => onDelete && onDelete(id)}
+										className='text-xs text-white bg-gradient-to-br from-red-400 to-red-600 rounded-lg p-1 px-2 shadow-md hover:from-red-500 hover:to-red-700 transition-all flex items-center'
+									>
+										Удалить задачу
+										<Delete className='ml-1' size={16} />
+									</button>
 								</div>
 							)}
 							{role === 'employer' && isMine && !showControls && (
-								<div className='flex text-black border-2 border-t-0 border-r-0 rounded-bl-lg rounded-tr-lg p-1 top-0 right-0 absolute'>
+								<div className='flex items-center text-blue-900 text-xs font-medium bg-blue-300 rounded-lg p-1 px-2 top-1 right-1 absolute'>
 									<span>Моя задача</span>
-									<BookCheck fill='#0e8083' size={20} />
+									<BookmarkCheck className='ml-1' color='green' size={18} />
 								</div>
 							)}
 						</div>
 						<h3
-							className={`font-semibold pt-4 text-ellipsis line-clamp-1 ${
+							className={`font-bold pt-4 text-ellipsis line-clamp-1 ${
 								title.length > 40 ? 'text-lg' : 'text-xl'
-							}`}
+							} text-gray-800`}
 						>
 							{title}
 						</h3>
-						<div className='pt-4 break-words'>{truncatedDescription}</div>
+						<div className='pt-4 text-gray-700 break-words'>{truncatedDescription}</div>
 						<div className='py-2 mt-4'>
-							<p className='text-nowrap mb-2'>{`Срок до: ${deadline}`}</p>
-							<div className='flex flex-wrap gap-3' style={{ margin: '-4px 0' }}>
+							<p className='text-gray-600 font-medium mb-2'>{`Срок до: ${deadline}`}</p>
+							<div className='flex flex-wrap gap-2'>
 								{tags.map(tag => (
-									<div
+									<span
 										key={tag}
-										className='bg-[#6092bb] min-w-[40px] h-[28px] rounded-md text-center px-2 py-0.5 flex items-center justify-center'
-										style={{ margin: '4px 0' }}
+										className='bg-blue-400 text-white text-sm font-medium px-2 py-1 rounded-full'
 									>
 										{tag}
-									</div>
+									</span>
 								))}
 							</div>
 						</div>
 						<div className='flex flex-col mb-4'>
-							<p className='mb-2'>Сложность</p>
+							<p className='text-gray-600 font-medium mb-2'>Сложность</p>
 							{renderDifficultyStars(difficulty)}
 						</div>
 						<div className='flex justify-between'>
-							<Button onClick={handleNavigate}>На страницу задачи</Button>
-							<div className='flex items-center'>
+							<button
+								className='py-2 px-3 text-sm text-white font-semibold bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg shadow-md hover:from-blue-500 hover:to-blue-700 transition-all'
+								onClick={handleNavigate}
+							>
+								На страницу задачи
+							</button>
+							<div className='flex items-center text-gray-700 font-medium'>
 								{companyName}
-								<BadgeCheck className='ml-2' fill='green' />
+								<BadgeCheck className='ml-1' fill='green' size={20} />
 							</div>
 						</div>
 					</div>
 				</div>
 			)}
 			{type === 'card' && (
-				<div className='w-[380px] min-h-[350px] bg-[#96bddd] rounded-xl border-2 border-gray-[#dce3eb] overflow-hidden'>
-					<div className='py-2 px-3 flex flex-col justify-between'>
-						<div>
-							<div className='flex justify-between text-gray-500 text-sm'>
-								<p>Сейчас отслеживают {trackingNumber}</p>
-								{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
+				<div className='w-full max-w-[380px] h-[460px] rounded-xl border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg overflow-hidden relative'>
+					<div className='p-4 flex flex-col h-full'>
+						<div className='flex justify-between text-gray-600 text-sm font-medium'>
+							<p>Сейчас отслеживают {trackingNumber}</p>
+							{role === 'user' && showFavoriteButton && (addToFavorite || removeFromFavorite) && (
+								<button className='p-1 rounded transition-colors' onClick={handleFavoriteClick}>
+									<Heart
+										fill={isFavorite ? 'red' : 'gray'}
+										color={isFavorite ? 'red' : 'red'}
+										className={isFavorite ? '' : 'hover:fill-red-500 hover:text-red-500'}
+										size={32}
+									/>
+								</button>
+							)}
+							{role === 'employer' && showControls && (
+								<div className='flex space-x-2'>
 									<button
-										className='p-1 rounded transition-colors'
-										onClick={handleFavoriteClick} // Используем handleFavoriteClick
+										onClick={handleEdit}
+										className='text-xs text-white bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg p-1 px-2 shadow-md hover:from-blue-500 hover:to-blue-700 transition-all flex items-center'
 									>
-										<Heart
-											fill={isFavorite ? 'red' : 'gray'}
-											color={isFavorite ? 'red' : 'red'}
-											className={isFavorite ? '' : 'hover:fill-red-500 hover:text-red-500'}
-											size={32}
-										/>
+										Редактировать
+										<Settings className='ml-1' size={16} />
 									</button>
-								)}
-							</div>
+									<button
+										onClick={() => onDelete && onDelete(id)}
+										className='text-xs text-white bg-gradient-to-br from-red-400 to-red-600 rounded-lg p-1 px-2 shadow-md hover:from-red-500 hover:to-red-700 transition-all flex items-center'
+									>
+										Удалить задачу
+										<Delete className='ml-1' size={28} />
+									</button>
+								</div>
+							)}
+							{role === 'employer' && isMine && !showControls && (
+								<div className='flex items-center text-blue-900 text-xs font-medium bg-blue-300 rounded-lg p-1 px-2 top-2 right-2 absolute'>
+									<span>Моя задача</span>
+									<BookmarkCheck className='ml-1' color='green' size={16} />
+								</div>
+							)}
+						</div>
+						<div className='flex flex-col flex-1'>
 							<h3
-								className={`font-semibold pt-4 text-ellipsis line-clamp-1 ${
+								className={`font-bold pt-4 text-ellipsis line-clamp-1 ${
 									title.length > 40 ? 'text-lg' : 'text-xl'
-								}`}
+								} text-gray-800`}
 							>
 								{title}
 							</h3>
-							<div className='pt-4 overflow-hidden text-ellipsis line-clamp-4 break-words'>
+							<div className='pt-4 flex-1 text-gray-700 text-ellipsis line-clamp-4 break-words'>
 								{truncatedDescription}
 							</div>
-							<div className='flex-1 mt-6'>
-								<div className='flex flex-col'>
-									<p className='mb-2'>{`Срок до: ${deadline}`}</p>
-									<div className='flex flex-wrap gap-3 -my-[2px]'>
-										{tags.map(tag => (
-											<div
-												key={tag}
-												className='bg-[#6092bb] min-w-[40px] rounded-md my-[1px] text-center px-2 py-0.5 flex items-center justify-center'
-											>
-												{tag}
-											</div>
-										))}
-									</div>
+							<div className='mt-4 flex flex-col'>
+								<p className='text-gray-600 font-medium mb-2'>{`Срок до: ${deadline}`}</p>
+								<div className='flex flex-wrap gap-2 mb-3'>
+									{tags.map(tag => (
+										<span
+											key={tag}
+											className='bg-blue-400 text-white text-sm font-medium px-2 py-1 rounded-full'
+										>
+											{tag}
+										</span>
+									))}
 								</div>
-								<div className='mt-3'>
-									<p className='mb-2'>Сложность</p>
+								<div>
+									<p className='text-gray-600 font-medium mb-2'>Сложность</p>
 									{renderDifficultyStars(difficulty)}
 								</div>
 							</div>
 						</div>
-						<div className='flex flex-col items-start gap-1 md:mt-3.5'>
-							<Button onClick={handleNavigate} className='text-sm px-2 py-1'>
+						<div className='mt-4'>
+							<Button
+								onClick={handleNavigate}
+								className='py-2 px-3 w-full text-sm text-white font-semibold bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg shadow-md hover:from-blue-500 hover:to-blue-700 transition-all'
+							>
 								На страницу задачи
 							</Button>
-							<div className='flex items-center md:my-2 md:ml-0.5'>
+							<div className='flex items-center text-gray-700 font-medium mb-1.5 mt-1.5'>
 								{companyName}
-								<BadgeCheck className='ml-2' fill='green' />
+								<BadgeCheck className='ml-2' fill='green' size={16} />
 							</div>
 						</div>
 					</div>
@@ -246,4 +277,4 @@ const TaskCard: FC<TaskCardProps> = ({
 	)
 }
 
-export default TaskCard
+export default memo(TaskCard)

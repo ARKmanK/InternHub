@@ -1,8 +1,9 @@
+import { FC, useState, useEffect, useMemo } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Header from '@components/Header'
 import NavBar from '@components/NavBar'
 import TaskCard from '@components/TaskCard'
 import TaskFilter from '@components/TaskFilter'
-import { useNavigate } from 'react-router-dom'
 import {
 	getAllTasks,
 	getUserByEmail,
@@ -10,16 +11,17 @@ import {
 	addTaskToFavorites,
 	removeTaskFromFavorite,
 	getUniqueCompanies,
+	getTaskSubmissionsCount,
 } from '@/src/lib/API/supabaseAPI'
 import { supabase } from '@/supabaseClient'
-import { List, BookCopy, CircleUserRound } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { List, BookCopy, CircleUserRound, Plus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
-import { Button } from '@components/UI/Button/Button'
 import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
 import { setPage } from '@/src/data/userData'
+import Message from '../Message'
+import LoadingAnimation from '../LoadingAnimation'
 
 type TypeTask = {
 	id: number
@@ -39,12 +41,14 @@ type TypeFilter = {
 	tags: string[] | null
 }
 
-const TasksListPage = () => {
+const TasksListPage: FC = () => {
 	const [listType, setListType] = useState('list')
 	const [role, setRole] = useState<'user' | 'employer' | 'admin' | null>(null)
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [tasks, setTasks] = useState<TypeTask[]>([])
 	const [employerTaskIds, setEmployerTaskIds] = useState<number[]>([])
+	const [submissionsCount, setSubmissionsCount] = useState<number>(0)
+	const [submissionsLoading, setSubmissionsLoading] = useState<boolean>(true)
 	const { notifications, addNotification } = useNotification()
 	const [filter, setFilter] = useState<TypeFilter>({
 		companies: null,
@@ -55,7 +59,17 @@ const TasksListPage = () => {
 	const [userId, setUserId] = useState<number | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [companies, setCompanies] = useState<string[]>([])
+	const [hasFetched, setHasFetched] = useState(false) // Добавляем флаг
 	const navigate = useNavigate()
+	const location = useLocation()
+
+	// Обработка уведомления при переходе с AddTaskForm
+	useEffect(() => {
+		if (location.state?.showSuccessNotification) {
+			addNotification('success', 'Успешно', 'Задача отправлена на модерацию')
+			navigate(location.pathname, { replace: true, state: {} })
+		}
+	}, [])
 
 	const addToFavorite = async (id: number) => {
 		if (!role || !userId) {
@@ -63,7 +77,7 @@ const TasksListPage = () => {
 			return
 		}
 		if (favoriteTasks.includes(id)) {
-			return // Не добавляем, если уже в избранном
+			return
 		}
 		try {
 			await addTaskToFavorites(userId, id)
@@ -96,7 +110,7 @@ const TasksListPage = () => {
 			return
 		}
 		if (!favoriteTasks.includes(id)) {
-			return // Не удаляем, если не в избранном
+			return
 		}
 		try {
 			await removeTaskFromFavorite(userId, id)
@@ -146,7 +160,23 @@ const TasksListPage = () => {
 		}
 	}
 
+	const loadSubmissionsCount = async () => {
+		try {
+			setSubmissionsLoading(true)
+			const count = await getTaskSubmissionsCount()
+			setSubmissionsCount(count)
+		} catch (error: any) {
+			addNotification('error', 'Ошибка', `Не удалось загрузить количество заявок: ${error.message}`)
+		} finally {
+			setSubmissionsLoading(false)
+		}
+	}
+
 	useEffect(() => {
+		if (hasFetched) {
+			return
+		}
+
 		setPage('/tasks')
 		const fetchUserAndTasks = async () => {
 			setLoading(true)
@@ -176,8 +206,6 @@ const TasksListPage = () => {
 					}
 					finalUserId = user.id
 					finalRole = user.role
-					localStorage.setItem('userId', finalUserId.toString())
-					localStorage.setItem('role', finalRole)
 				}
 
 				setUserId(finalUserId)
@@ -194,6 +222,7 @@ const TasksListPage = () => {
 					await loadEmployerTasks(finalUserId)
 				} else if (finalRole === 'admin' && finalUserId) {
 					setEmployerTaskIds([])
+					await loadSubmissionsCount()
 				}
 
 				const tasksData = await getAllTasks()
@@ -205,14 +234,16 @@ const TasksListPage = () => {
 			} catch (error: any) {
 				addNotification('error', 'Ошибка', `Не удалось загрузить данные: ${error.message}`)
 			} finally {
+				setHasFetched(true)
 				setLoading(false)
 			}
 		}
 
 		fetchUserAndTasks()
 
-		const subscription = supabase
-			.channel('tasks-changes')
+		const channel = supabase.channel('tasks-changes')
+
+		channel
 			.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, payload => {
 				setTasks(prev =>
 					prev.map(task =>
@@ -225,9 +256,18 @@ const TasksListPage = () => {
 			.subscribe()
 
 		return () => {
-			subscription.unsubscribe()
+			channel.unsubscribe()
+			supabase.removeChannel(channel)
 		}
 	}, [])
+
+	// Отдельный эффект для сохранения userId и role в localStorage
+	useEffect(() => {
+		if (userId && role) {
+			localStorage.setItem('userId', userId.toString())
+			localStorage.setItem('role', role)
+		}
+	}, [userId, role])
 
 	const visibleTasks = useMemo(() => {
 		let filteredTasks = [...tasks]
@@ -292,8 +332,8 @@ const TasksListPage = () => {
 						difficulty={task.difficulty}
 						companyName={task.company_name}
 						type={listType}
-						addToFavorite={addToFavorite} // Передаём addToFavorite
-						removeFromFavorite={removeFromFavorite} // Передаём removeFromFavorite
+						addToFavorite={addToFavorite}
+						removeFromFavorite={removeFromFavorite}
 						isFavorite={favoriteTasks.includes(task.id)}
 						deadline={task.deadline}
 						tags={task.tags}
@@ -307,11 +347,7 @@ const TasksListPage = () => {
 	}, [visibleTasks, listType, role, favoriteTasks, employerTaskIds])
 
 	if (loading) {
-		return (
-			<div className='flex justify-center items-center h-screen'>
-				<div className='text-white'>Загрузка...</div>
-			</div>
-		)
+		return <LoadingAnimation loading={true} />
 	}
 
 	if (!role) {
@@ -327,26 +363,56 @@ const TasksListPage = () => {
 					<div className='md:flex md:flex-col'>
 						<div className='md:py-4 md:flex md:justify-end items-center'>
 							{role === 'employer' && (
-								<Button onClick={openCreateTaskPage}>Разместить задачу</Button>
+								<motion.button
+									whileHover={{ scale: 1.1 }}
+									whileTap={{ scale: 0.9 }}
+									className='mr-4 p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2'
+									onClick={openCreateTaskPage}
+								>
+									<Plus size={24} />
+									<span className='text-sm font-semibold'>Разместить задачу</span>
+								</motion.button>
 							)}
-							<button
-								className='md:ml-7 md:p-1 hover:bg-gray-300'
+							<motion.button
+								whileHover={{ scale: 1.1 }}
+								whileTap={{ scale: 0.9 }}
+								className='md:ml-4 p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2 relative'
 								onClick={openProfile}
 								aria-label='Открыть профиль'
 							>
-								<CircleUserRound size={30} />
-							</button>
+								<CircleUserRound size={24} />
+								<span className='text-sm font-semibold'>Профиль</span>
+								{role === 'admin' &&
+									(submissionsLoading ? (
+										<span className='absolute top-[-10px] right-[-10px] bg-gradient-to-br from-gray-300 to-gray-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+											...
+										</span>
+									) : (
+										submissionsCount > 0 && (
+											<span className='absolute top-[-10px] right-[-10px] bg-gradient-to-br from-red-300 to-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+												{submissionsCount}
+											</span>
+										)
+									))}
+							</motion.button>
 						</div>
 						<div className='md:flex md:justify-end'>
-							<button
-								className='md:mr-4 md:p-1 hover:bg-gray-300'
+							<motion.button
+								whileHover={{ scale: 1.1 }}
+								whileTap={{ scale: 0.9 }}
+								className='md:mr-4 p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all'
 								onClick={() => setListType('list')}
 							>
-								<List size={30} />
-							</button>
-							<button className='md:p-1 hover:bg-gray-300' onClick={() => setListType('card')}>
-								<BookCopy size={30} />
-							</button>
+								<List size={24} />
+							</motion.button>
+							<motion.button
+								whileHover={{ scale: 1.1 }}
+								whileTap={{ scale: 0.9 }}
+								className='p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all'
+								onClick={() => setListType('card')}
+							>
+								<BookCopy size={24} />
+							</motion.button>
 						</div>
 						<div className='md:flex mt-7'>
 							<div className='md:w-[25%] md:mr-10'>
@@ -354,7 +420,7 @@ const TasksListPage = () => {
 							</div>
 							<div className='md:w-[80%]'>
 								{listType === 'card' ? (
-									<div className='md:grid md:gap-x-18 md:gap-y-4 md:grid-cols-2'>{taskCard}</div>
+									<div className='md:grid md:gap-x-4 md:gap-y-4 md:grid-cols-2'>{taskCard}</div>
 								) : (
 									taskCard
 								)}
@@ -364,8 +430,8 @@ const TasksListPage = () => {
 				</div>
 			</div>
 			<Notification notifications={notifications} />
+			<Message />
 		</>
 	)
 }
-
 export default TasksListPage
