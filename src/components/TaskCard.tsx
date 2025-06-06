@@ -58,6 +58,7 @@ const TaskCard: FC<TaskCardProps> = ({
 	}
 
 	const handleNavigate = (e: MouseEvent<HTMLButtonElement>) => {
+		e.preventDefault()
 		if (onClick) {
 			onClick()
 		} else {
