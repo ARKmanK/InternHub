@@ -438,7 +438,7 @@ const EditTaskPage = () => {
 												</p>
 												<textarea
 													ref={textareaRef}
-													className='w-full min-h-[150px] bg-white border border-gray-300 rounded-lg p-3 resize-y shadow-sm text-gray-800 outline-0'
+													className='w-full min-h-[183px] bg-white border border-gray-300 rounded-lg p-3 resize-y shadow-sm text-gray-800 outline-0'
 													placeholder='...'
 													value={formData.description}
 													onChange={e => handleTextChange('description', e.target.value)}
@@ -599,12 +599,12 @@ const EditTaskPage = () => {
 													)}
 												</div>
 											</div>
-											<div className='md:flex md:justify-center mt-6'>
+											<div className='md:flex md:justify-center mt-1'>
 												<motion.button
 													whileHover={{ scale: 1.05 }}
 													whileTap={{ scale: 0.95 }}
 													type='submit'
-													className='px-6 py-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-md hover:from-blue-600 hover:to-blue-700 transition-all text-lg'
+													className='px-10 py-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-md hover:from-blue-600 hover:to-blue-700 transition-all text-lg'
 												>
 													Сохранить
 												</motion.button>

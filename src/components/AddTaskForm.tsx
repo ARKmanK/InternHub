@@ -219,7 +219,7 @@ const AddTaskForm = () => {
 				)
 				return
 			}
-			if (file.size > 30 * 1024 * 1024) {
+			if (file.size > 100 * 1024 * 1024) {
 				addNotification('warning', 'Ошибка', 'Размер архива не должен превышать 30MB')
 				return
 			}

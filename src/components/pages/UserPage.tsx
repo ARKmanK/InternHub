@@ -31,22 +31,23 @@ type TypeTask = {
 	employer_id: number
 }
 
-// ... остальные импорты без изменений
-
 const UserPage = () => {
 	const queryClient = useQueryClient()
 	const location = useLocation()
 	const [role, setRole] = useState<'employer' | 'user' | 'admin' | null>(null)
-	const [listType, setListType] = useState<'list' | 'card'>('list')
+	const [listType] = useState<'list'>('list') // Фиксируем как 'list'
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [startedTasks, setStartedTasks] = useState<number[]>([])
 	const [finishedTasks, setFinishedTasks] = useState<number[]>([])
 	const [taskToDelete, setTaskToDelete] = useState<number | null>(null)
 	const [showDeleteForm, setShowDeleteForm] = useState(false)
+	const [studentListType, setStudentListType] = useState<'list' | 'card'>('list')
 	const { notifications, addNotification } = useNotification()
 	const [category, setCategory] = useState<'favorite' | 'started' | 'finished'>('favorite')
 	const [activeCategory, setActiveCategory] = useState('favorite')
 	const [userId, setUserId] = useState<number | null>(null)
+
+	const employerListType = 'list'
 	const navigate = useNavigate()
 	const handleGoBack = goBack(navigate)
 
@@ -71,13 +72,9 @@ const UserPage = () => {
 	useEffect(() => {
 		const tasksChannel = supabase.channel('tasks-changes')
 		tasksChannel
-			.on(
-				'postgres_changes',
-				{ event: '*', schema: 'public', table: 'tasks' }, // Убрали фильтр employer_id
-				payload => {
-					queryClient.invalidateQueries({ queryKey: ['allTasks'] })
-				}
-			)
+			.on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, payload => {
+				queryClient.invalidateQueries({ queryKey: ['allTasks'] })
+			})
 			.subscribe(status => {
 				if (status === 'SUBSCRIBED') {
 				}
@@ -87,7 +84,7 @@ const UserPage = () => {
 			tasksChannel.unsubscribe()
 			supabase.removeChannel(tasksChannel)
 		}
-	}, [queryClient]) // Убрали userId из зависимостей
+	}, [queryClient])
 
 	// Подписка на изменения в реальном времени для user_tasks
 	useEffect(() => {
@@ -165,8 +162,8 @@ const UserPage = () => {
 	const { data: allTasks = [], isLoading: isLoadingTasks } = useQuery<TypeTask[], Error>({
 		queryKey: ['allTasks'],
 		queryFn: getAllTasks,
-		staleTime: 0, // Отключаем staleTime для немедленного обновления
-		gcTime: 0, // Отключаем gcTime
+		staleTime: 0,
+		gcTime: 0,
 	})
 
 	// Запрос избранных задач
@@ -254,7 +251,6 @@ const UserPage = () => {
 		if (!role || !userId || role === 'admin') return []
 		if (role === 'employer') {
 			const filtered = allTasks.filter(task => task.employer_id === userId)
-
 			return filtered
 		}
 		let taskIds: number[] = []
@@ -408,9 +404,9 @@ const UserPage = () => {
 				{role === 'user' && (
 					<StudentProfile
 						userId={userId}
-						listType={listType}
-						setListType={setListType}
+						listType={studentListType}
 						visibleTasks={visibleTasksMemo}
+						setListType={setStudentListType}
 						favoriteTasks={favoriteTasks}
 						category={category}
 						activeCategory={activeCategory}
@@ -425,8 +421,7 @@ const UserPage = () => {
 				)}
 				{role === 'employer' && (
 					<EmployerProfile
-						listType={listType}
-						setListType={setListType}
+						listType={employerListType}
 						tasks={visibleTasksMemo}
 						handleDelete={handleDelete}
 						taskToDelete={taskToDelete}
@@ -440,12 +435,7 @@ const UserPage = () => {
 					/>
 				)}
 				{role === 'admin' && (
-					<AdminProfile
-						navigate={navigate}
-						handleLogout={handleLogout}
-						goBack={handleGoBack}
-						/* isLoading={isLoading} */ // Если нужно добавить для AdminProfile
-					/>
+					<AdminProfile navigate={navigate} handleLogout={handleLogout} goBack={handleGoBack} />
 				)}
 				<Notification notifications={notifications} />
 				<Message />

@@ -471,7 +471,7 @@ const TaskPage: FC = () => {
 																	{activity.status === 'verifying'
 																		? 'Верифицируется'
 																		: activity.status === 'done'
-																		? 'Готово'
+																		? 'Одобрено'
 																		: 'Отклонено'}
 																</span>
 															</div>
@@ -574,7 +574,7 @@ const TaskPage: FC = () => {
 														{activity.status === 'verifying'
 															? 'Верифицируется'
 															: activity.status === 'done'
-															? 'Готово'
+															? 'Одобрено'
 															: 'Отклонено'}
 													</span>
 												</div>

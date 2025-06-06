@@ -6,8 +6,10 @@ import {
 	getUnreadMessagesCount,
 	markMessageAsRead,
 	deleteMessage,
+	getEmployerTaskReport,
 } from '@/src/lib/API/supabaseAPI'
-import { getUserId } from '@/src/lib/API/supabaseAPI'
+import { getUserId, getRole } from '@/src/lib/API/supabaseAPI'
+import { supabase } from '@/supabaseClient'
 
 interface Message {
 	id: number
@@ -17,46 +19,169 @@ interface Message {
 	is_read: boolean
 }
 
+interface TaskReport {
+	taskTitle: string
+	newActivitiesCount: number
+}
+
+const LoadingSpinner = () => (
+	<motion.div
+		className='flex justify-center items-center h-[100px]'
+		initial={{ opacity: 0 }}
+		animate={{ opacity: 1 }}
+		exit={{ opacity: 0, transition: { duration: 0.3 } }}
+	>
+		<motion.div
+			className='w-6 h-6 border-2 border-t-blue-500 rounded-full'
+			animate={{ rotate: 360 }}
+			transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+		/>
+	</motion.div>
+)
+
 const Message: FC = () => {
 	const [isOpen, setIsOpen] = useState(false)
 	const [messages, setMessages] = useState<Message[]>([])
 	const [unreadCount, setUnreadCount] = useState<number>(0)
+	const [taskReport, setTaskReport] = useState<TaskReport[]>([])
 	const [isLoading, setIsLoading] = useState(true)
 	const messageRef = useRef<HTMLDivElement>(null)
-	const buttonRef = useRef<HTMLButtonElement>(null) // Добавляем реф для кнопки-иконки
+	const buttonRef = useRef<HTMLButtonElement>(null)
 
-	// Загружаем сообщения и количество непрочитанных
-	useEffect(() => {
-		const fetchMessages = async () => {
-			setIsLoading(true)
-			try {
-				const userId = getUserId()
-				if (userId) {
-					const count = await getUnreadMessagesCount(userId)
-					setUnreadCount(count)
-					const userMessages = await getMessagesByUserId(userId, 10, 0)
-					setMessages(
-						userMessages.map(msg => ({
-							...msg,
-							timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
-								hour: '2-digit',
-								minute: '2-digit',
-							}),
-						}))
-					)
-				} else {
-					console.warn('User ID is not available')
-				}
-			} catch (error) {
-				console.error('Error fetching messages:', error)
-			} finally {
-				setIsLoading(false)
+	const today = new Date()
+	const formattedDate = `${today.getDate().toString().padStart(2, '0')}.${(today.getMonth() + 1)
+		.toString()
+		.padStart(2, '0')}.${today.getFullYear()}`
+
+	const totalNotifications = messages.filter(msg => !msg.is_read).length + taskReport.length
+
+	const fetchData = async () => {
+		setIsLoading(true)
+		try {
+			const userId = getUserId()
+			const role = getRole()
+
+			if (!userId) {
+				console.warn('User ID is not available')
+				setMessages([])
+				setUnreadCount(0)
+				setTaskReport([])
+				return
 			}
+
+			const {
+				data: { session },
+			} = await supabase.auth.getSession()
+			if (session) {
+				supabase.realtime.setAuth(session.access_token)
+				console.log('JWT set for Realtime')
+			} else {
+				console.warn('No session found for Realtime auth')
+			}
+
+			const [countResult, messagesResult, reportResult] = await Promise.all([
+				getUnreadMessagesCount(userId),
+				getMessagesByUserId(userId, 10, 0),
+				role === 'employer' ? getEmployerTaskReport(userId) : Promise.resolve([]),
+			])
+
+			console.log('Fetched task report:', reportResult)
+			console.log('Unread count:', countResult)
+			console.log('Messages:', messagesResult)
+
+			setUnreadCount(countResult)
+			setMessages(
+				messagesResult.map(msg => ({
+					...msg,
+					timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+						hour: '2-digit',
+						minute: '2-digit',
+					}),
+				}))
+			)
+			setTaskReport(reportResult)
+		} catch (error) {
+			console.error('Error fetching data:', error)
+			setMessages([])
+			setUnreadCount(0)
+			setTaskReport([])
+		} finally {
+			setIsLoading(false)
 		}
-		fetchMessages()
+	}
+
+	useEffect(() => {
+		fetchData()
 	}, [])
 
-	// Обновляем is_read при открытии компонента
+	useEffect(() => {
+		const userId = getUserId()
+		if (!userId || getRole() !== 'employer') return
+
+		const setupSubscription = async () => {
+			const { data: tasks, error } = await supabase
+				.from('tasks')
+				.select('id')
+				.eq('employer_id', userId)
+
+			if (error) {
+				console.error('Error fetching tasks for subscription:', error)
+				return
+			}
+
+			const taskIds = tasks?.map(task => task.id) || []
+			if (taskIds.length === 0) {
+				console.log('No tasks found for employer_id:', userId)
+				return
+			}
+
+			const channel = supabase
+				.channel('task-activity-changes')
+				.on(
+					'postgres_changes',
+					{
+						event: 'UPDATE',
+						schema: 'public',
+						table: 'task_activity',
+						filter: `task_id=in.(${taskIds.join(',')})`,
+					},
+					payload => {
+						console.log('Realtime change detected in task_activity:', payload)
+						fetchData() // Обновляем данные при изменении
+					}
+				)
+				.subscribe(status => {
+					console.log('Realtime subscription status:', status)
+					if (status === 'SUBSCRIBED') {
+						console.log('Successfully subscribed to task_activity changes for task_ids:', taskIds)
+					} else if (status === 'CHANNEL_ERROR') {
+						console.error(
+							'Subscription error: Check Realtime settings, RLS policies, or table changes'
+						)
+					}
+				})
+
+			return channel
+		}
+
+		const subscriptionPromise = setupSubscription()
+		subscriptionPromise.then(channel => {
+			if (channel) {
+				return () => {
+					supabase.removeChannel(channel)
+					console.log('Realtime subscription unsubscribed')
+				}
+			}
+		})
+
+		return () => {
+			// Очистка подписки при размонтировании
+			subscriptionPromise.then(channel => {
+				if (channel) supabase.removeChannel(channel)
+			})
+		}
+	}, [])
+
 	useEffect(() => {
 		if (isOpen && messages.length > 0) {
 			const unreadMessages = messages.filter(msg => !msg.is_read)
@@ -73,12 +198,10 @@ const Message: FC = () => {
 				setUnreadCount(0)
 			}
 		}
-	}, [isOpen])
+	}, [isOpen, messages])
 
-	// Закрытие при клике вне области
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
-			// Проверяем, что клик произошёл вне messageRef и не по кнопке-иконке
 			if (
 				messageRef.current &&
 				!messageRef.current.contains(event.target as Node) &&
@@ -118,10 +241,14 @@ const Message: FC = () => {
 		}
 	}
 
+	const handleDeleteReport = () => {
+		setTaskReport([])
+	}
+
 	return (
 		<div className='fixed bottom-[60px] right-4 z-50'>
 			<motion.button
-				ref={buttonRef} // Привязываем реф к кнопке
+				ref={buttonRef}
 				whileHover={{ scale: 1.1 }}
 				whileTap={{ scale: 0.9 }}
 				className='relative p-3 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-full shadow-md hover:from-blue-300 hover:to-blue-500 transition-all focus:outline-none'
@@ -134,9 +261,9 @@ const Message: FC = () => {
 						...
 					</span>
 				) : (
-					unreadCount > 0 && (
+					totalNotifications > 0 && (
 						<span className='absolute top-0 right-0 bg-gradient-to-br from-red-300 to-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
-							{unreadCount}
+							{totalNotifications > 99 ? '99+' : totalNotifications}
 						</span>
 					)
 				)}
@@ -153,34 +280,63 @@ const Message: FC = () => {
 					>
 						<h3 className='text-lg font-semibold mb-2 text-gray-800'>Сообщения</h3>
 						{isLoading ? (
-							<p className='text-gray-500'>Загрузка...</p>
-						) : messages.length === 0 ? (
-							<p className='text-gray-500'>Нет новых сообщений</p>
+							<LoadingSpinner />
 						) : (
-							<ul className='space-y-2 max-h-48 overflow-y-auto'>
-								{messages.map(message => (
-									<li
-										key={message.id}
-										className={`flex justify-between items-start p-2 rounded-md ${
-											message.is_read ? 'bg-gray-100' : 'bg-white'
-										} hover:bg-gray-200 transition-colors border-b border-gray-200 last:border-b-0`}
-									>
-										<div className='flex-1'>
-											<p className='text-sm text-gray-800'>{message.text}</p>
-											<span className='text-xs text-gray-400'>{message.timestamp}</span>
+							<>
+								{taskReport.length > 0 && (
+									<div className='mb-4 p-3 bg-gray-100 rounded-md border border-gray-300'>
+										<div className='flex justify-between items-center mb-2'>
+											<h4 className='text-sm font-semibold text-gray-700'>
+												Отчет по задачам за {formattedDate}:
+											</h4>
+											<motion.button
+												whileHover={{ scale: 1.1 }}
+												whileTap={{ scale: 0.9 }}
+												onClick={handleDeleteReport}
+												className='text-red-500 hover:text-red-600 transition-colors'
+												aria-label='Удалить отчет'
+											>
+												<Trash2 size={16} />
+											</motion.button>
 										</div>
-										<motion.button
-											whileHover={{ scale: 1.1 }}
-											whileTap={{ scale: 0.9 }}
-											onClick={() => handleDelete(message.id)}
-											className='ml-2 text-red-500 hover:text-red-700 transition-colors'
-											aria-label='Удалить сообщение'
-										>
-											<Trash2 size={16} />
-										</motion.button>
-									</li>
-								))}
-							</ul>
+										<ul className='space-y-1 text-sm text-gray-600'>
+											{taskReport.map((item, index) => (
+												<li key={index}>
+													{item.taskTitle} - {item.newActivitiesCount} новых записей
+												</li>
+											))}
+										</ul>
+									</div>
+								)}
+								{messages.length === 0 && taskReport.length === 0 ? (
+									<p className='text-gray-500'>Нет новых сообщений</p>
+								) : (
+									<ul className='space-y-2 max-h-48 overflow-y-auto'>
+										{messages.map(message => (
+											<li
+												key={message.id}
+												className={`flex justify-between items-start p-2 rounded-md ${
+													message.is_read ? 'bg-gray-100' : 'bg-white'
+												} hover:bg-gray-200 transition-colors border-b border-gray-200 last:border-b-0`}
+											>
+												<div className='flex-1'>
+													<p className='text-sm text-gray-800'>{message.text}</p>
+													<span className='text-xs text-gray-400'>{message.timestamp}</span>
+												</div>
+												<motion.button
+													whileHover={{ scale: 1.1 }}
+													whileTap={{ scale: 0.9 }}
+													onClick={() => handleDelete(message.id)}
+													className='ml-2 text-red-500 hover:text-red-700 transition-colors'
+													aria-label='Удалить сообщение'
+												>
+													<Trash2 size={16} />
+												</motion.button>
+											</li>
+										))}
+									</ul>
+								)}
+							</>
 						)}
 					</motion.div>
 				)}

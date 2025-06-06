@@ -1,4 +1,4 @@
-import { List, BookCopy, Undo2, LogOut } from 'lucide-react'
+import { Undo2, LogOut } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import TaskCard from '@components/TaskCard'
 import EmptyCard from '@components/EmptyCard'
@@ -21,8 +21,7 @@ type TypeTask = {
 }
 
 type EmployerProfileProps = {
-	listType: 'list' | 'card'
-	setListType: (type: 'list' | 'card') => void
+	listType: 'list'
 	tasks: TypeTask[]
 	handleDelete: (id: number) => void
 	showDeleteForm: boolean
@@ -117,7 +116,6 @@ const LoadingSpinner = memo(() => (
 
 const EmployerProfile = ({
 	listType,
-	setListType,
 	tasks,
 	handleDelete,
 	showDeleteForm,
@@ -191,31 +189,13 @@ const EmployerProfile = ({
 							<span className='text-sm font-semibold'>Выйти</span>
 						</motion.button>
 					</div>
-					<div className='md:flex md:justify-end'>
-						<motion.button
-							whileHover={{ scale: 1.1 }}
-							whileTap={{ scale: 0.9 }}
-							className='md:mr-4 p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all'
-							onClick={() => setListType('list')}
-						>
-							<List size={24} />
-						</motion.button>
-						<motion.button
-							whileHover={{ scale: 1.1 }}
-							whileTap={{ scale: 0.9 }}
-							className='p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all'
-							onClick={() => setListType('card')}
-						>
-							<BookCopy size={24} />
-						</motion.button>
-					</div>
 					<div className='md:flex mt-7'>
 						<div className='md:w-[80%]'>
 							<h1 className='text-2xl font-bold mb-14'>Страница профиля</h1>
 							<div className='md:mb-10'>
 								<h2 className='text-xl font-semibold'>Мои задачи</h2>
 							</div>
-							<div className='overflow-y-auto pr-2'>
+							<div className='overflow-y-auto'>
 								<AnimatePresence mode='wait'>
 									{isLoading ? (
 										<LoadingSpinner key='spinner' />
@@ -229,18 +209,6 @@ const EmployerProfile = ({
 											className='max-w-full'
 										>
 											<EmptyCard role='employer' listType='Мои задачи' />
-										</motion.div>
-									) : listType === 'card' ? (
-										<motion.div
-											key='cards'
-											initial={{ opacity: 0 }}
-											animate={{ opacity: 1 }}
-											exit={{ opacity: 0 }}
-											transition={{ duration: 0.7 }}
-											className='md:grid md:gap-4 md:grid-cols-2 max-w-full'
-											style={{ gridTemplateColumns: '1fr 1fr' }}
-										>
-											{taskCard}
 										</motion.div>
 									) : (
 										<motion.div
