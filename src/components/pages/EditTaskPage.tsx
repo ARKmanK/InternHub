@@ -20,7 +20,6 @@ const EditTaskPage = () => {
 	const navigate = useNavigate()
 	const queryClient = useQueryClient()
 	const { notifications, addNotification } = useNotification()
-
 	const [taskData, setTaskData] = useState<TypeTask | null>(null)
 	const [role, setRole] = useState<'user' | 'employer' | 'admin' | null>(null)
 	const [companyName, setCompanyName] = useState('')
@@ -28,7 +27,6 @@ const EditTaskPage = () => {
 	const [commonTags, setCommonTags] = useState<string[]>([])
 	const [userTags, setUserTags] = useState<string[]>([])
 	const [isInitialLoad, setIsInitialLoad] = useState(true)
-
 	const handleGoBack = goBack(navigate)
 
 	useEffect(() => {
@@ -52,7 +50,6 @@ const EditTaskPage = () => {
 					navigate('/login')
 					return
 				}
-
 				setRole(user.role)
 				setUserId(user.id)
 				setCompanyName(user.company_name || 'Неизвестная компания')
@@ -65,18 +62,14 @@ const EditTaskPage = () => {
 						navigate('/tasks')
 						return
 					}
-
 					if (task.employer_id !== user.id) {
 						addNotification('error', 'Ошибка', 'У вас нет доступа к редактированию этой задачи')
 						navigate('/tasks')
 						return
 					}
-
 					setTaskData(task)
-
 					const commonTagsData = await getAllTags()
 					setCommonTags(commonTagsData.map(tag => tag.name))
-
 					const userTagsData = await getUserTags(user.id)
 					setUserTags(userTagsData)
 				}

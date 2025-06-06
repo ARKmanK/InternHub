@@ -4,8 +4,8 @@ import { FC, FormEvent, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useNotification from '@hooks/useNotification'
 import Notification from '@UI/Notification/Notification'
-import LoginForm from '@/src/components/Forms/LoginForm/LoginForm'
-import RegisterForm from '@/src/components/Forms/RegisterForm'
+import LoginForm from '@components/Forms/LoginForm/LoginForm'
+import RegisterForm from '@components/Forms/RegisterForm'
 import { debounce } from 'lodash'
 import { clearSessionData, setPage } from '@data/userData'
 import {
@@ -29,7 +29,6 @@ const LoginPage: FC = () => {
 	const [rememberMe, setRememberMe] = useState(false)
 	const [savedEmail, setSavedEmail] = useState<string>('')
 
-	// Проверяет сохраненную сессию при рендере компонента
 	useEffect(() => {
 		const checkSavedSession = async () => {
 			const savedSession = localStorage.getItem('supabaseSession')
@@ -40,12 +39,10 @@ const LoginPage: FC = () => {
 			if (savedSession && sessionExpiry && savedRememberMe === 'true') {
 				const expiryTime = parseInt(sessionExpiry, 10)
 				const currentTime = Date.now()
-
 				if (currentTime < expiryTime) {
 					try {
 						const session = JSON.parse(savedSession)
 						await setSession(session.access_token, session.refresh_token)
-
 						const user = await getCurrentUser()
 						if (user && user.email) {
 							const userFromDb = await getUserByEmail(user.email)
@@ -65,7 +62,6 @@ const LoginPage: FC = () => {
 					clearSessionData()
 				}
 			}
-
 			if (savedEmail && savedRememberMe === 'true') {
 				setSavedEmail(savedEmail)
 				setRememberMe(true)
@@ -106,7 +102,6 @@ const LoginPage: FC = () => {
 				localStorage.setItem('userId', userFromDb.id.toString())
 				localStorage.setItem('role', userFromDb.role)
 			}
-
 			addNotification('success', 'Успешно', 'Вход выполнен')
 			setPage('/tasks')
 			navigate('/tasks')
@@ -116,7 +111,6 @@ const LoginPage: FC = () => {
 		}
 	}
 
-	// Обработчик регистрации
 	const handleRegister = debounce(async (data: TypeRegisterFormData) => {
 		try {
 			const userData: TypeUserData = {
@@ -128,10 +122,8 @@ const LoginPage: FC = () => {
 				course: data.course,
 				company_name: data.company_name,
 			}
-
 			await createUser(userData)
 			const userFromDb = await getUserByEmail(data.email)
-
 			if (!userFromDb) {
 				addNotification(
 					'error',
@@ -140,10 +132,8 @@ const LoginPage: FC = () => {
 				)
 				return
 			}
-
 			localStorage.setItem('userId', userFromDb.id.toString())
 			localStorage.setItem('role', userFromDb.role)
-
 			if (rememberMe) {
 				const session = await getCurrentSession()
 				if (session) {
@@ -154,7 +144,6 @@ const LoginPage: FC = () => {
 					localStorage.setItem('email', data.email)
 				}
 			}
-
 			addNotification('success', 'Успешно', 'Регистрация завершена')
 			setPage('/tasks')
 			navigate('/tasks')

@@ -44,8 +44,7 @@ const EmployerRegisterForm: FC<TypeEmployerRegisterFormProps> = ({
 			return
 		}
 
-		console.log('Employer data:', data) // Отладочный вывод
-		onSubmit(data)
+		console.log('Employer data:', data)
 	}
 
 	return (

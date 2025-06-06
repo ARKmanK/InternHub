@@ -2,17 +2,15 @@ import { memo } from 'react'
 import { TypeTask } from '@/src/types/TypeTask'
 import { NavigateFunction } from 'react-router-dom'
 import { QueryClient } from '@tanstack/react-query'
-import { useTaskForm } from '@/src/hooks/useEditTaskForm'
+import { useTaskForm } from '@hooks/useEditTaskForm'
 import { motion } from 'framer-motion'
 import { deleteUserTag } from '@lib/API/supabase/tagsAPI'
-
 import EditTaskFormFields from './EditTaskFormFields'
 import EditTaskFormTags from './EditTaskFormTags'
 import EditTaskFormArchive from './EditTaskFormArchive'
-
 import TaskPreview from '../../TaskPreview'
 
-type EditTaskFormProps = {
+type TypeEditTaskFormProps = {
 	taskData: TypeTask
 	userId: number
 	role: 'user' | 'employer' | 'admin' | null
@@ -24,7 +22,7 @@ type EditTaskFormProps = {
 	navigate: NavigateFunction
 }
 
-const EditTaskForm: React.FC<EditTaskFormProps> = memo(
+const EditTaskForm: React.FC<TypeEditTaskFormProps> = memo(
 	({
 		taskData,
 		userId,

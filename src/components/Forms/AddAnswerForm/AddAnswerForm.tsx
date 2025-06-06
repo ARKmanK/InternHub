@@ -3,17 +3,17 @@ import { motion } from 'framer-motion'
 import { FileArchive, FileImage, Check, SendHorizontal } from 'lucide-react'
 import useNotification from '@hooks/useNotification'
 import Notification from '@UI/Notification/Notification'
-import { submitTaskActivity } from '@/src/lib/API/supabase/taskActivityAPI'
-import BackButton from '../../UI/Buttons/BackButton'
+import { submitTaskActivity } from '@lib/API/supabase/taskActivityAPI'
+import BackButton from '@UI/Buttons/BackButton'
 import AddAnswerFields from './AddAnswerFields'
 
-type TypeAddAnswerForm = {
+type TypeAddAnswerFormProps = {
 	onClose: MouseEventHandler<HTMLButtonElement>
 	taskId: string
 	loadData: () => Promise<void>
 }
 
-const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId, loadData }) => {
+const AddAnswerForm: FC<TypeAddAnswerFormProps> = ({ onClose, taskId, loadData }) => {
 	const [url, setUrl] = useState('')
 	const [comment, setComment] = useState('')
 	const [zip, setZip] = useState<File[]>([])
@@ -24,7 +24,6 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId, loadData }) => 
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
-
 		if (!url) {
 			addNotification('error', 'Ошибка', 'Поле URL обязательно для заполнения')
 			return
@@ -40,7 +39,6 @@ const AddAnswerForm: FC<TypeAddAnswerForm> = ({ onClose, taskId, loadData }) => 
 			await submitTaskActivity(taskId, url, comment || null, zip, images, addNotification, loadData)
 			onClose({} as React.MouseEvent<HTMLButtonElement>)
 		} catch (error) {
-			// Error handling is managed within submitTaskActivity
 		} finally {
 			setUrl('')
 			setComment('')

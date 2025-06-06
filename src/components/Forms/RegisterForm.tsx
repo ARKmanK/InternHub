@@ -14,18 +14,17 @@ const RegisterForm: FC<TypeRegisterFormProps> = ({ onSubmit }) => {
 			role: selectedRole,
 			email: formData.get('email'),
 			password: formData.get('password'),
-			first_name: formData.get('first_name'), // Изменено с firstName на first_name
-			last_name: formData.get('last_name'), // Изменено с lastName на last_name
-			student_group: formData.get('student_group'), // Изменено с group на student_group
+			first_name: formData.get('first_name'),
+			last_name: formData.get('last_name'),
+			student_group: formData.get('student_group'),
 			course: formData.get('course'),
-			company_name: formData.get('company_name'), // Изменено с companyName на company_name
+			company_name: formData.get('company_name'),
 		}
 
 		if (!data.email || !data.password) {
 			alert('Почта и Пароль обязательны')
 			return
 		}
-
 		if (selectedRole === 'user') {
 			if (!data.first_name || !data.last_name || !data.student_group || !data.course) {
 				alert('Все поля обязательны для регистрации пользователя')
@@ -37,7 +36,6 @@ const RegisterForm: FC<TypeRegisterFormProps> = ({ onSubmit }) => {
 				return
 			}
 		}
-
 		onSubmit(data)
 	}
 
@@ -116,7 +114,7 @@ const RegisterForm: FC<TypeRegisterFormProps> = ({ onSubmit }) => {
 									<label className='block text-sm font-medium'>Имя</label>
 									<input
 										type='text'
-										name='first_name' // Изменено с firstName на first_name
+										name='first_name'
 										className='mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 										placeholder='Введите имя'
 										defaultValue=''
@@ -126,7 +124,7 @@ const RegisterForm: FC<TypeRegisterFormProps> = ({ onSubmit }) => {
 									<label className='block text-sm font-medium'>Фамилия</label>
 									<input
 										type='text'
-										name='last_name' // Изменено с lastName на last_name
+										name='last_name'
 										className='mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 										placeholder='Введите фамилию'
 										defaultValue=''
@@ -136,7 +134,7 @@ const RegisterForm: FC<TypeRegisterFormProps> = ({ onSubmit }) => {
 									<label className='block text-sm font-medium'>Группа</label>
 									<input
 										type='text'
-										name='student_group' // Изменено с group на student_group
+										name='student_group'
 										className='mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 										placeholder='Введите группу'
 										defaultValue=''
@@ -166,7 +164,7 @@ const RegisterForm: FC<TypeRegisterFormProps> = ({ onSubmit }) => {
 								<label className='block text-sm font-medium'>Наименование компании</label>
 								<input
 									type='text'
-									name='company_name' // Изменено с companyName на company_name
+									name='company_name'
 									className='mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
 									placeholder='Введите наименование компании'
 									defaultValue=''

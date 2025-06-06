@@ -3,12 +3,12 @@ import TaskCard from '@components/TaskCard'
 import { TypeTask } from '@/src/types/TypeTask'
 import { motion } from 'framer-motion'
 
-type AddTaskPreviewProps = {
+type TypeAddTaskPreviewProps = {
 	previewTask: TypeTask | null
 	role: string | null
 }
 
-const AddTaskPreview: React.FC<AddTaskPreviewProps> = memo(({ previewTask, role }) => {
+const AddTaskPreview: React.FC<TypeAddTaskPreviewProps> = memo(({ previewTask, role }) => {
 	return (
 		<motion.div
 			className='mt-10 max-w-[900px] m-auto bg-gradient-to-br from-blue-50 to-gray-300 rounded-xl shadow-xl p-4'

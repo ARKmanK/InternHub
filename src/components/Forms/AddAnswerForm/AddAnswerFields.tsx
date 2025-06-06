@@ -1,12 +1,12 @@
 import { FC } from 'react'
 import { Link } from 'lucide-react'
 
-type TypeAddAnswerFields = {
+type TypeAddAnswerFieldsProps = {
 	url: string
 	setUrl: (value: string) => void
 }
 
-const AddAnswerFields: FC<TypeAddAnswerFields> = ({ url, setUrl }) => (
+const AddAnswerFields: FC<TypeAddAnswerFieldsProps> = ({ url, setUrl }) => (
 	<div className='flex flex-col'>
 		<p className='mt-4 text-sm font-medium text-gray-900'>Ссылка на репозиторий GitHub *</p>
 		<div className='flex items-center border border-gray-400 rounded-md max-w-[380px] shadow-sm bg-white'>

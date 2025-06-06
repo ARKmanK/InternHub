@@ -8,9 +8,8 @@ import AddTaskFormTags from './AddTaskFormTags'
 import AddTaskFormArchive from './AddTaskFormArchive'
 import AddTaskPreview from './AddTaskPreview'
 import Notification from '@UI/Notification/Notification'
-
 import { TypeTask } from '@/src/types/TypeTask'
-import { formatDate } from '@/src/data/formateDate'
+import { formatDate } from '@data/formateDate'
 
 const AddTaskForm = () => {
 	const navigate = useNavigate()
@@ -43,7 +42,6 @@ const AddTaskForm = () => {
 		handleSubmit,
 	} = useAddTaskForm(navigate)
 
-	// Создаем previewTask
 	const [previewTask, setPreviewTask] = useState<TypeTask | null>(null)
 
 	useEffect(() => {

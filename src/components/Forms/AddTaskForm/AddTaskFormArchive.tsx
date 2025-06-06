@@ -2,12 +2,12 @@ import { memo } from 'react'
 import { motion } from 'framer-motion'
 import { FileArchive, Check } from 'lucide-react'
 
-type AddTaskFormArchiveProps = {
+type TypeAddTaskFormArchiveProps = {
 	zipAdded: boolean
 	handleZipChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
-const AddTaskFormArchive: React.FC<AddTaskFormArchiveProps> = memo(
+const AddTaskFormArchive: React.FC<TypeAddTaskFormArchiveProps> = memo(
 	({ zipAdded, handleZipChange }) => {
 		return (
 			<div className='flex flex-col'>

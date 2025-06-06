@@ -6,7 +6,7 @@ import useNotification from '@hooks/useNotification'
 import Notification from '@UI/Notification/Notification'
 import Header from '@UI/Header'
 import NavBar from '@UI/NavBar'
-import AddAnswerForm from '@/src/components/Forms/AddAnswerForm/AddAnswerForm'
+import AddAnswerForm from '@components/Forms/AddAnswerForm/AddAnswerForm'
 import { supabase } from '@/supabaseClient'
 import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
 import AnswerVerifyWindow from '@components/AnswerVerifyWindow'
@@ -43,7 +43,7 @@ type TypeTasksData = {
 	deadline: string
 	tags: string[]
 	employer_id: number
-	zip_file_url?: string | null // Добавляем поле для URL архива
+	zip_file_url?: string | null
 }
 
 const TaskPage: FC = () => {

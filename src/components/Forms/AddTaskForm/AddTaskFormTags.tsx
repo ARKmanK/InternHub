@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { X } from 'lucide-react'
 import { motion } from 'framer-motion'
 
-type AddTaskFormTagsProps = {
+type TypeAddTaskFormTagsProps = {
 	tags: string[]
 	newTag: string
 	commonTags: string[]
@@ -14,7 +14,7 @@ type AddTaskFormTagsProps = {
 	removeCustomTag: (tag: string) => Promise<void>
 }
 
-const AddTaskFormTags: React.FC<AddTaskFormTagsProps> = memo(
+const AddTaskFormTags: React.FC<TypeAddTaskFormTagsProps> = memo(
 	({
 		tags,
 		newTag,

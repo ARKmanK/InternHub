@@ -3,7 +3,7 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { AppWindow } from 'lucide-react'
 
-type AddTaskFormFieldsProps = {
+type TypeAddTaskFormFieldsProps = {
 	title: string
 	description: string
 	difficulty: number
@@ -16,7 +16,7 @@ type AddTaskFormFieldsProps = {
 	handleDeadlineChange: (date: Date | null) => void
 }
 
-const AddTaskFormFields: React.FC<AddTaskFormFieldsProps> = memo(
+const AddTaskFormFields: React.FC<TypeAddTaskFormFieldsProps> = memo(
 	({
 		title,
 		description,
