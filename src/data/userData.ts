@@ -1,4 +1,7 @@
+import { Dispatch, SetStateAction } from 'react'
 import { NavigateFunction } from 'react-router-dom'
+import { TypeTask } from '../types/TypeTask'
+import { supabase } from '@/supabaseClient'
 
 type TypeUserTasks = {
 	favoriteTasks: { id: number[] }
@@ -40,90 +43,6 @@ export type TypePages = {
 	currentPage: string
 }
 
-/*
-export const setPage = (page: string): void => {
-	// Получаем текущие данные из localStorage
-	const data = localStorage.getItem('pageHistory')
-	let pageData: TypePages
-
-	if (!data) {
-		// Если истории нет, инициализируем с пустой prevPage
-		pageData = {
-			prevPage: '',
-			currentPage: page,
-		}
-	} else {
-		try {
-			const parsedData: TypePages = JSON.parse(data)
-			// Обновляем pageData: текущая страница становится prevPage, новая — currentPage
-			pageData = {
-				prevPage: parsedData.currentPage || '',
-				currentPage: page,
-			}
-		} catch (error) {
-			console.error('Ошибка при разборе pageHistory из localStorage:', error)
-			// В случае ошибки используем значения по умолчанию
-			pageData = {
-				prevPage: '',
-				currentPage: page,
-			}
-		}
-	}
-
-	// Сохраняем обновленные данные в localStorage
-	localStorage.setItem('pageHistory', JSON.stringify(pageData))
-} */
-
-/* export const setRole = (role: 'employer' | 'user') => {
-	const newData: UserData = {}
-	if (role === 'user') {
-		newData.user = {
-			favoriteTasks: { id: [] },
-			startedTasks: { id: [] },
-			finishedTasks: { id: [] },
-		}
-	} else if (role === 'employer') {
-		newData.employer = {
-			tasks: [],
-		}
-	}
-	syncWithLocalStorage(newData)
-} */
-
-/* export const getRole = (): 'employer' | 'user' | '' => {
-	const jsonData = initUserData()
-	if (jsonData.user) {
-		return 'user'
-	} else if (jsonData.employer) {
-		return 'employer'
-	}
-	console.warn('No user or employer found in userData:', jsonData)
-	return ''
-} */
-
-// USER
-/* export const addToFavorite = (id: number) => {
-	if (!jsonData.user) {
-		jsonData.user = {
-			favoriteTasks: { id: [] },
-			startedTasks: { id: [] },
-			finishedTasks: { id: [] },
-		}
-	}
-	if (!jsonData.user.favoriteTasks.id.includes(id)) {
-		jsonData.user.favoriteTasks.id.push(id)
-		syncWithLocalStorage(jsonData)
-	}
-} */
-
-/* export const removeTaskFromFavorite = (id: number) => {
-	if (!jsonData.user) {
-		return
-	}
-	jsonData.user.favoriteTasks.id = jsonData.user.favoriteTasks.id.filter(taskId => taskId !== id)
-	syncWithLocalStorage(jsonData)
-} */
-
 export const addToStarted = (id: number) => {
 	if (!jsonData.user) {
 		jsonData.user = {
@@ -137,55 +56,6 @@ export const addToStarted = (id: number) => {
 		syncWithLocalStorage(jsonData)
 	}
 }
-
-/* export const removeTaskFromStarted = (id: number) => {
-	if (!jsonData.user) {
-		return
-	}
-	jsonData.user.startedTasks.id = jsonData.user.startedTasks.id.filter(taskId => taskId !== id)
-	syncWithLocalStorage(jsonData)
-} */
-
-/* export const addToFinished = (id: number) => {
-	if (!jsonData.user) {
-		jsonData.user = {
-			favoriteTasks: { id: [] },
-			startedTasks: { id: [] },
-			finishedTasks: { id: [] },
-		}
-	}
-	if (!jsonData.user.finishedTasks.id.includes(id)) {
-		jsonData.user.finishedTasks.id.push(id)
-		syncWithLocalStorage(jsonData)
-	}
-} */
-/* 
-export const removeTaskFromFinished = (id: number) => {
-	if (!jsonData.user) {
-		return
-	}
-	jsonData.user.finishedTasks.id = jsonData.user.finishedTasks.id.filter(taskId => taskId !== id)
-	syncWithLocalStorage(jsonData)
-} */
-
-// EMPLOYER
-/* export const addTaskToEmployer = (taskId: number) => {
-	if (!jsonData.employer) {
-		jsonData.employer = { tasks: [] }
-	}
-	if (!jsonData.employer.tasks.includes(taskId)) {
-		jsonData.employer.tasks.push(taskId)
-		syncWithLocalStorage(jsonData)
-	}
-} */
-
-/* export const removeTaskFromEmployer = (taskId: number) => {
-	if (!jsonData.employer) {
-		return
-	}
-	jsonData.employer.tasks = jsonData.employer.tasks.filter(id => id !== taskId)
-	syncWithLocalStorage(jsonData)
-} */
 
 export type PageHistory = string[]
 
@@ -249,3 +119,103 @@ export const goBack = (navigate: NavigateFunction): (() => void) => {
 		}
 	}
 }
+
+export const clearSessionData = () => {
+	localStorage.removeItem('supabaseSession')
+	localStorage.removeItem('sessionExpiry')
+	localStorage.removeItem('rememberMe')
+	localStorage.removeItem('email')
+	localStorage.removeItem('userId')
+	localStorage.removeItem('role')
+}
+
+export const updateFavoriteTasks = (
+  newFavorites: number[],
+  setFavoriteTasks: Dispatch<SetStateAction<number[]>>
+): void => {
+  setFavoriteTasks(prev => {
+    if (JSON.stringify(prev) !== JSON.stringify(newFavorites)) {
+      return newFavorites;
+    }
+    return prev;
+  });
+};
+
+
+export const updateStartedTasks = (
+  newStarted: number[],
+  setStartedTasks: Dispatch<SetStateAction<number[]>>
+): void => {
+  setStartedTasks(prev => {
+    if (JSON.stringify(prev) !== JSON.stringify(newStarted)) {
+      return newStarted;
+    }
+    return prev;
+  });
+};
+
+export const updateFinishedTasks = (
+  newFinished: number[],
+  setFinishedTasks: Dispatch<SetStateAction<number[]>>
+): void => {
+  setFinishedTasks(prev => {
+    if (JSON.stringify(prev) !== JSON.stringify(newFinished)) {
+      return newFinished;
+    }
+    return prev;
+  });
+};
+
+export const getVisibleTasks = (
+  allTasks: TypeTask[],
+  role: 'employer' | 'user' | 'admin' | null,
+  userId: number | null,
+  category: 'favorite' | 'started' | 'finished',
+  favoriteTasks: number[],
+  startedTasks: number[],
+  finishedTasks: number[]
+): TypeTask[] => {
+  if (!role || !userId || role === 'admin') return [];
+  if (role === 'employer') {
+    return allTasks.filter(task => task.employer_id === userId);
+  }
+  let taskIds: number[] = [];
+  switch (category) {
+    case 'favorite':
+      taskIds = favoriteTasks;
+      break;
+    case 'started':
+      taskIds = startedTasks;
+      break;
+    case 'finished':
+      taskIds = finishedTasks;
+      break;
+  }
+  return allTasks.filter(task => taskIds.includes(task.id));
+};
+
+export const handleLogout = async (
+  navigate: NavigateFunction,
+  addNotification: (type: string, title: string, message: string) => void
+): Promise<void> => {
+  try {
+    await supabase.auth.signOut();
+    localStorage.removeItem('userHistory');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('sessionExpiry');
+    addNotification('success', 'Успех!', 'Вы вышли из системы');
+  } catch (error: any) {
+    addNotification('error', 'Ошибка!', `Не удалось выйти из системы: ${error.message}`);
+  } finally {
+    navigate('/login');
+  }
+};
+
+export const handleCategoryChange = (
+  type: 'favorite' | 'started' | 'finished',
+  setCategory: Dispatch<SetStateAction<'favorite' | 'started' | 'finished'>>,
+  setActiveCategory: Dispatch<SetStateAction<'favorite' | 'started' | 'finished'>>
+): void => {
+  setCategory(type);
+  setActiveCategory(type);
+};

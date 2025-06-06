@@ -1,11 +1,11 @@
-import { setPage, TypePages } from '@/src/data/userData'
-import Header from '@components/Header'
-import NavBar from '@components/NavBar'
+import { setPage, TypePages } from '@data/userData'
+import Header from '@UI/Header'
+import NavBar from '@UI/NavBar'
 import { useNavigate } from 'react-router-dom'
-import { Undo2 } from 'lucide-react'
 import { useEffect } from 'react'
-import AddTaskForm from '../AddTaskForm'
-import Message from '../Message'
+import AddTaskForm from '@components/Forms/AddTaskForm/AddTaskForm'
+import Message from '@UI/Message'
+import BackButton from '@UI/Buttons/BackButton'
 
 const CreateTaskPage = () => {
 	const navigate = useNavigate()
@@ -32,13 +32,7 @@ const CreateTaskPage = () => {
 				<div className='md:min-h-[1200px] md:w-[980px]'>
 					<div className='md:flex md:flex-col'>
 						<div className='md:py-4 md:flex md:justify-end items-center'>
-							<button
-								className='md:p-1 hover:bg-gray-300'
-								onClick={goBack}
-								aria-label='Вернуться к задачам'
-							>
-								<Undo2 size={30} />
-							</button>
+							<BackButton goBack={goBack} />
 						</div>
 						<div className='md:flex mt-7'>
 							<div className='md:w-[80%]'>

@@ -18,7 +18,8 @@
 			"@services/*": ["./src/services/*"],
 			"@public/*": ["./public/*"],
 			"@pages/*": ["./src/components/pages/*"],
-			"@types/*": ["./src/types/*"]
+			"@lib/*": ["./src/lib/*"],
+			"@UI/*": ["./src/components/UI/*"]
 		},
 
 		/* Bundler mode */

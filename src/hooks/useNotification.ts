@@ -1,30 +1,43 @@
 import { useState } from 'react';
 
-export default function useNotification(maxNotifications = 4, timeout = 4000) {
-	const [notifications, setNotifications] = useState([]);
+type TypeNotification = {
+  type: string;
+  title: string;
+  message: string;
+};
 
-	const addNotification = (type, title, message) => {
-		setNotifications((prevNotifications) => {
-			const newNotification = { type, title, message };
+const useNotification = (
+  maxNotifications = 4,
+  timeout = 4000
+): {
+  notifications: TypeNotification[];
+  addNotification: (type: string, title: string, message: string) => void;
+  removeNotification: (index: number) => void;
+} => {
+  const [notifications, setNotifications] = useState<TypeNotification[]>([]);
 
-			// Ограничиваем количество уведомлений
-			const updatedNotifications = [...prevNotifications, newNotification];
-			if (updatedNotifications.length > maxNotifications) {
-				updatedNotifications.shift();
-			}
+  const addNotification = (type: string, title: string, message: string) => {
+    setNotifications((prevNotifications) => {
+      const newNotification: TypeNotification = { type, title, message };
+      const updatedNotifications = [...prevNotifications, newNotification];
+      if (updatedNotifications.length > maxNotifications) {
+        updatedNotifications.shift();
+      }
+      return updatedNotifications;
+    });
 
-			return updatedNotifications;
-		});
+    setTimeout(() => {
+      setNotifications((prevNotifications) => prevNotifications.slice(1));
+    }, timeout);
+  };
 
-		// Автоматическое удаление уведомления после таймаута
-		setTimeout(() => {
-			setNotifications((prevNotifications) => prevNotifications.slice(1));
-		}, timeout);
-	};
+  const removeNotification = (index: number) => {
+    setNotifications((prevNotifications) =>
+      prevNotifications.filter((_, i) => i !== index)
+    );
+  };
 
-	const removeNotification = (index) => {
-		setNotifications((prevNotifications) => prevNotifications.filter((_, i) => i !== index));
-	};
+  return { notifications, addNotification, removeNotification };
+};
 
-	return { notifications, addNotification, removeNotification };
-}
+export default useNotification;

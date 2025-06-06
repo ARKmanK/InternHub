@@ -2,8 +2,8 @@ import { FC, MouseEvent, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart, BadgeCheck, Star, Delete, Settings, BookmarkCheck } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { Button } from '@components/UI/Button/Button'
-import { setPage } from '../data/userData'
+import { Button } from '@UI/Buttons/Button'
+import { setPage } from '@data/userData'
 
 type TaskCardProps = {
 	id: number
@@ -20,7 +20,7 @@ type TaskCardProps = {
 	tags: string[]
 	role?: 'user' | 'employer' | 'admin' | null
 	isMine?: boolean
-	onDelete?: (id: number) => void // Обновлено
+	onDelete?: (id: number) => void
 	showControls?: boolean
 	onClick?: () => void
 	showFavoriteButton?: boolean
