@@ -1,7 +1,6 @@
 import { supabase } from '@/supabaseClient';
 import { TypeUser } from '@/src/types/TypeUser';
 
-
 export type TypeUserData = {
 	email: string
 	role: 'user' | 'employer' | 'admin'
@@ -83,4 +82,61 @@ export const clearAuthData = () => {
   localStorage.removeItem('role');
   localStorage.removeItem('rememberMe');
   localStorage.removeItem('email');
+};
+
+export const signInWithPassword = async (email: string, password: string) => {
+  const {
+    data: { user, session },
+    error,
+  } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) throw new Error(`Ошибка входа: ${error.message}`);
+  if (!user || !session) throw new Error('Не удалось войти: пользователь или сессия отсутствуют');
+
+  return { user, session };
+};
+
+// Регистрация пользователя через Supabase
+export const signUp = async (email: string, password: string) => {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.signUp({ email, password });
+
+  if (error) throw new Error(`Ошибка регистрации: ${error.message}`);
+  if (!user) throw new Error('Не удалось зарегистрировать пользователя');
+
+  return user;
+};
+
+// Установка сессии в Supabase
+export const setSession = async (accessToken: string, refreshToken: string) => {
+  const { error } = await supabase.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+
+  if (error) throw new Error(`Ошибка восстановления сессии: ${error.message}`);
+};
+
+// Получение текущего пользователя из Supabase
+export const getCurrentUser = async () => {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) throw new Error(`Ошибка получения пользователя: ${error.message}`);
+  return user;
+};
+
+// Получение текущей сессии из Supabase
+export const getCurrentSession = async () => {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error) throw new Error(`Ошибка получения сессии: ${error.message}`);
+  return session;
 };

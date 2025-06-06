@@ -1,15 +1,26 @@
-import Header from '@components/UI/Header'
-import NavBar from '@components/UI/NavBar'
+import Header from '@UI/Header'
+import NavBar from '@UI/NavBar'
 import { FC, FormEvent, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useNotification from '@hooks/useNotification'
 import Notification from '@UI/Notification/Notification'
-import LoginForm from '@components/LoginForm'
-import RegisterForm from '@components/RegisterForm'
-import { supabase } from '@/supabaseClient'
+import LoginForm from '@/src/components/Forms/LoginForm'
+import RegisterForm from '@/src/components/Forms/RegisterForm'
 import { debounce } from 'lodash'
-import { setPage } from '@data/userData'
-import { createUser, getUserByEmail } from '@lib/API/supabase/userAPI'
+import { clearSessionData, setPage } from '@data/userData'
+import {
+	signInWithPassword,
+	setSession,
+	getCurrentUser,
+	getCurrentSession,
+	createUser,
+	getUserByEmail,
+	TypeUserData,
+} from '@lib/API/supabase/userAPI'
+
+type TypeRegisterFormData = TypeUserData & {
+	password: string
+}
 
 const LoginPage: FC = () => {
 	const navigate = useNavigate()
@@ -18,7 +29,7 @@ const LoginPage: FC = () => {
 	const [rememberMe, setRememberMe] = useState(false)
 	const [savedEmail, setSavedEmail] = useState<string>('')
 
-	// Проверяем сохраненную сессию при загрузке страницы
+	// Проверяет сохраненную сессию при рендере компонента
 	useEffect(() => {
 		const checkSavedSession = async () => {
 			const savedSession = localStorage.getItem('supabaseSession')
@@ -31,21 +42,13 @@ const LoginPage: FC = () => {
 				const currentTime = Date.now()
 
 				if (currentTime < expiryTime) {
-					// Сессия еще действительна, восстанавливаем её
 					try {
 						const session = JSON.parse(savedSession)
-						const { error } = await supabase.auth.setSession({
-							access_token: session.access_token,
-							refresh_token: session.refresh_token,
-						})
-						if (error) throw error
+						await setSession(session.access_token, session.refresh_token)
 
-						// Получаем данные пользователя
-						const {
-							data: { user },
-						} = await supabase.auth.getUser()
-						if (user) {
-							const userFromDb = await getUserByEmail(user.email!)
+						const user = await getCurrentUser()
+						if (user && user.email) {
+							const userFromDb = await getUserByEmail(user.email)
 							if (userFromDb) {
 								localStorage.setItem('userId', userFromDb.id.toString())
 								localStorage.setItem('role', userFromDb.role)
@@ -53,34 +56,23 @@ const LoginPage: FC = () => {
 								navigate('/tasks')
 							}
 						}
-					} catch (error: any) {
-						console.error('Ошибка восстановления сессии:', error.message)
+					} catch (error: unknown) {
+						const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
+						console.error('Ошибка восстановления сессии:', errorMessage)
 						clearSessionData()
 					}
 				} else {
-					// Сессия истекла, очищаем данные
 					clearSessionData()
 				}
 			}
 
-			// Устанавливаем сохраненный email, если он есть
 			if (savedEmail && savedRememberMe === 'true') {
 				setSavedEmail(savedEmail)
 				setRememberMe(true)
 			}
 		}
-
 		checkSavedSession()
 	}, [navigate])
-
-	const clearSessionData = () => {
-		localStorage.removeItem('supabaseSession')
-		localStorage.removeItem('sessionExpiry')
-		localStorage.removeItem('rememberMe')
-		localStorage.removeItem('email')
-		localStorage.removeItem('userId')
-		localStorage.removeItem('role')
-	}
 
 	const handleLogin = async (e: FormEvent) => {
 		e.preventDefault()
@@ -92,35 +84,18 @@ const LoginPage: FC = () => {
 			addNotification('warning', 'Ошибка', 'Заполните все поля')
 			return
 		}
-
 		try {
-			const {
-				data: { user, session },
-				error,
-			} = await supabase.auth.signInWithPassword({
-				email,
-				password,
-			})
-			if (error) throw error
-			if (!user || !session) {
-				addNotification('error', 'Ошибка', 'Не удалось войти')
-				return
-			}
-
-			// Получаем данные пользователя из таблицы users
+			const { session } = await signInWithPassword(email, password)
 			const userFromDb = await getUserByEmail(email)
+
 			if (!userFromDb) {
 				addNotification('error', 'Ошибка', 'Пользователь не найден в базе данных')
 				return
 			}
-
-			// Сохраняем userId и role в localStorage
 			localStorage.setItem('userId', userFromDb.id.toString())
 			localStorage.setItem('role', userFromDb.role)
 
-			// Сохранение сессии и данных "Запомнить меня"
 			if (rememberMe) {
-				// Сохраняем сессию и время истечения (6 часов = 6 * 60 * 60 * 1000 мс)
 				const expiryTime = Date.now() + 6 * 60 * 60 * 1000
 				localStorage.setItem('supabaseSession', JSON.stringify(session))
 				localStorage.setItem('sessionExpiry', expiryTime.toString())
@@ -128,7 +103,6 @@ const LoginPage: FC = () => {
 				localStorage.setItem('email', email)
 			} else {
 				clearSessionData()
-				// Сохраняем только userId и role, так как они нужны для работы приложения
 				localStorage.setItem('userId', userFromDb.id.toString())
 				localStorage.setItem('role', userFromDb.role)
 			}
@@ -136,27 +110,16 @@ const LoginPage: FC = () => {
 			addNotification('success', 'Успешно', 'Вход выполнен')
 			setPage('/tasks')
 			navigate('/tasks')
-		} catch (error: any) {
-			addNotification('error', 'Ошибка', 'Не удалось войти: неверный логин или пароль')
+		} catch (error: unknown) {
+			const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
+			addNotification('error', 'Ошибка', `Не удалось войти: ${errorMessage}`)
 		}
 	}
 
-	const handleRegister = debounce(async (data: any) => {
+	// Обработчик регистрации
+	const handleRegister = debounce(async (data: TypeRegisterFormData) => {
 		try {
-			const {
-				data: { user },
-				error,
-			} = await supabase.auth.signUp({
-				email: data.email,
-				password: data.password,
-			})
-			if (error) throw error
-			if (!user) {
-				addNotification('error', 'Ошибка', 'Не удалось зарегистрировать пользователя')
-				return
-			}
-
-			const userData = {
+			const userData: TypeUserData = {
 				email: data.email,
 				role: data.role,
 				first_name: data.first_name,
@@ -164,14 +127,11 @@ const LoginPage: FC = () => {
 				student_group: data.student_group,
 				course: data.course,
 				company_name: data.company_name,
-				password: data.password,
 			}
 
-			// Создаем запись в таблице users
 			await createUser(userData)
-
-			// Получаем данные пользователя из таблицы users
 			const userFromDb = await getUserByEmail(data.email)
+
 			if (!userFromDb) {
 				addNotification(
 					'error',
@@ -181,15 +141,11 @@ const LoginPage: FC = () => {
 				return
 			}
 
-			// Сохраняем userId и role в localStorage
 			localStorage.setItem('userId', userFromDb.id.toString())
 			localStorage.setItem('role', userFromDb.role)
 
-			// Сохранение сессии, если rememberMe включено
 			if (rememberMe) {
-				const {
-					data: { session },
-				} = await supabase.auth.getSession()
+				const session = await getCurrentSession()
 				if (session) {
 					const expiryTime = Date.now() + 6 * 60 * 60 * 1000
 					localStorage.setItem('supabaseSession', JSON.stringify(session))
@@ -202,8 +158,9 @@ const LoginPage: FC = () => {
 			addNotification('success', 'Успешно', 'Регистрация завершена')
 			setPage('/tasks')
 			navigate('/tasks')
-		} catch (error: any) {
-			addNotification('error', 'Ошибка', `Не удалось зарегистрироваться: ${error.message}`)
+		} catch (error: unknown) {
+			const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
+			addNotification('error', 'Ошибка', `Не удалось зарегистрироваться: ${errorMessage}`)
 		}
 	}, 2000)
 

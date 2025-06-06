@@ -7,7 +7,7 @@ type TypeLoadingSpinnerProps = {
 }
 
 // Компонент спиннера с анимацией магического кристалла
-const LoadingAnimation: FC<TypeLoadingSpinnerProps> = ({ loading }) => {
+const ScreenLoadingAnimation: FC<TypeLoadingSpinnerProps> = ({ loading }) => {
 	const [isVisible, setIsVisible] = useState(false)
 	const [animationComplete, setAnimationComplete] = useState(false)
 
@@ -125,4 +125,4 @@ const LoadingAnimation: FC<TypeLoadingSpinnerProps> = ({ loading }) => {
 	)
 }
 
-export default LoadingAnimation
+export default ScreenLoadingAnimation

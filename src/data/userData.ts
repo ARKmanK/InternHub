@@ -116,3 +116,12 @@ export const goBack = (navigate: NavigateFunction): (() => void) => {
 		}
 	}
 }
+
+export const clearSessionData = () => {
+	localStorage.removeItem('supabaseSession')
+	localStorage.removeItem('sessionExpiry')
+	localStorage.removeItem('rememberMe')
+	localStorage.removeItem('email')
+	localStorage.removeItem('userId')
+	localStorage.removeItem('role')
+}

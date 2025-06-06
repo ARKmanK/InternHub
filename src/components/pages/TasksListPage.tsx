@@ -11,7 +11,7 @@ import useNotification from '@hooks/useNotification'
 import Notification from '@UI/Notification/Notification'
 import { setPage } from '@data/userData'
 import Message from '@UI/Message'
-import LoadingAnimation from '@UI/LoadingAnimation'
+import ScreenLoadingAnimation from '@/src/components/UI/ScreenLoadingAnimation'
 import { getTaskSubmissionsCount } from '@lib/API/supabase/adminAPI'
 import { getRole, getUserByEmail, getUserId } from '@lib/API/supabase/userAPI'
 import {
@@ -346,7 +346,7 @@ const TasksListPage: FC = () => {
 	}, [visibleTasks, listType, role, favoriteTasks, employerTaskIds])
 
 	if (loading) {
-		return <LoadingAnimation loading={true} />
+		return <ScreenLoadingAnimation loading={true} />
 	}
 
 	if (!role) {

@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
 import Notification from '@UI/Notification/Notification'
 import { TypeTaskSubmission } from '@/src/types/TypeTaskSubmission'
-import { Undo2, LogOut } from 'lucide-react'
 import { NavigateFunction } from 'react-router-dom'
 import { addMessage } from '@lib/API/supabase/messagesAPI'
+import BackButton from '@UI/Buttons/BackButton'
+import LogoutButton from '@UI/Buttons/LogoutButton'
 import {
 	approveTaskSubmission,
 	getPendingTaskSubmissions,
@@ -18,7 +19,7 @@ type TypeAdminProfileProps = {
 	handleLogout: () => void
 }
 
-const AdminProfile: FC<TypeAdminProfileProps> = ({ navigate, goBack, handleLogout }) => {
+const AdminProfile: FC<TypeAdminProfileProps> = ({ goBack, handleLogout }) => {
 	const { notifications, addNotification } = useNotification()
 	const [pendingTasks, setPendingTasks] = useState<TypeTaskSubmission[]>([])
 	const [isLoading, setIsLoading] = useState<boolean>(true)
@@ -54,7 +55,6 @@ const AdminProfile: FC<TypeAdminProfileProps> = ({ navigate, goBack, handleLogou
 			await approveTaskSubmission(submissionId)
 			setPendingTasks(prev => prev.filter(task => task.id !== submissionId))
 
-			// Send message to the task owner
 			if (submission.employer_id) {
 				await addMessage(
 					submission.employer_id,
@@ -66,6 +66,7 @@ const AdminProfile: FC<TypeAdminProfileProps> = ({ navigate, goBack, handleLogou
 			addNotification('error', 'Ошибка', `Не удалось одобрить задачу: ${error.message}`)
 		}
 	}
+
 	const handleReject = async (submissionId: number) => {
 		try {
 			const submission = pendingTasks.find(task => task.id === submissionId)
@@ -77,7 +78,6 @@ const AdminProfile: FC<TypeAdminProfileProps> = ({ navigate, goBack, handleLogou
 			await rejectTaskSubmission(submissionId)
 			setPendingTasks(prev => prev.filter(task => task.id !== submissionId))
 
-			// Send message to the task owner
 			if (submission.employer_id) {
 				await addMessage(
 					submission.employer_id,
@@ -92,7 +92,7 @@ const AdminProfile: FC<TypeAdminProfileProps> = ({ navigate, goBack, handleLogou
 	}
 
 	if (isLoading) {
-		return <div className='text-center text-gray-500'>Загрузка...</div>
+		return <></>
 	}
 
 	return (
@@ -100,26 +100,8 @@ const AdminProfile: FC<TypeAdminProfileProps> = ({ navigate, goBack, handleLogou
 			<div className='md:min-h-[730px] md:w-[980px]'>
 				<div className='md:flex md:flex-col'>
 					<div className='md:py-4 md:flex md:justify-end items-center'>
-						<motion.button
-							whileHover={{ scale: 1.1 }}
-							whileTap={{ scale: 0.9 }}
-							className='md:mr-4 p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2'
-							onClick={goBack}
-							aria-label='Вернуться назад'
-						>
-							<Undo2 size={24} />
-							<span className='text-sm font-semibold'>Назад</span>
-						</motion.button>
-						<motion.button
-							whileHover={{ scale: 1.1 }}
-							whileTap={{ scale: 0.9 }}
-							className='p-2 bg-gradient-to-br from-blue-200 to-blue-400 text-gray-800 rounded-lg shadow-md hover:from-blue-300 hover:to-blue-500 transition-all flex items-center space-x-2'
-							onClick={handleLogout}
-							aria-label='Выйти из аккаунта'
-						>
-							<LogOut size={24} />
-							<span className='text-sm font-semibold'>Выйти</span>
-						</motion.button>
+						<BackButton goBack={goBack} />
+						<LogoutButton handleLogout={handleLogout} />
 					</div>
 					<h1 className='text-2xl font-bold mb-14'>Панель администратора</h1>
 					<div className='md:mb-10'>
