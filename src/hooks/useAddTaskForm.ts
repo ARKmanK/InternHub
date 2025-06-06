@@ -5,12 +5,11 @@ import { supabase } from '@/supabaseClient';
 import { getRole, getUserId } from '@lib/API/supabase/userAPI';
 import { deleteUserTag, getAllTags, getUserTags } from '@lib/API/supabase/tagsAPI';
 import getRandomNumber from '@data/getRandomNumber';
-import { formatDate } from '../data/formateDate';
+import { formatDate } from '@data/formateDate';
 
 
 export const useAddTaskForm = (navigate: NavigateFunction) => {
   const { notifications, addNotification } = useNotification();
-
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [difficulty, setDifficulty] = useState<number>(0);
@@ -57,17 +56,12 @@ export const useAddTaskForm = (navigate: NavigateFunction) => {
           .select('company_name')
           .eq('id', userId)
           .single();
-
         if (userError) throw new Error(`Не удалось получить данные компании: ${userError.message}`);
-
         setCompanyName(user.company_name || 'Неизвестная компания');
-
         const commonTagsData = await getAllTags();
         setCommonTags(commonTagsData.map(tag => tag.name));
-
         const userTagsData = await getUserTags(userId);
         setUserTags(userTagsData);
-
         setHasFetched(true);
       } catch (error: any) {
         addNotification('error', 'Ошибка', error.message);
@@ -75,7 +69,6 @@ export const useAddTaskForm = (navigate: NavigateFunction) => {
         setHasFetched(true);
       }
     };
-
     fetchData();
   }, [role, userId, navigate, addNotification]);
 

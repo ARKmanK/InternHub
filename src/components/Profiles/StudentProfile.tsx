@@ -1,17 +1,17 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import BackButton from '@components/UI/Buttons/BackButton'
-import LogoutButton from '@components/UI/Buttons/LogoutButton'
-import ListViewButton from '@components/UI/Buttons/ListViewButton'
-import CardViewButton from '@components/UI/Buttons/CardViewButton'
+import BackButton from '@UI/Buttons/BackButton'
+import LogoutButton from '@UI/Buttons/LogoutButton'
+import ListViewButton from '@UI/Buttons/ListViewButton'
+import CardViewButton from '@UI/Buttons/CardViewButton'
 import TaskCard from '@components/TaskCard'
 import EmptyCard from '@components/EmptyCard'
-import LoadingSpinner from '@components/UI/LoadingSpinner'
+import LoadingSpinner from '@UI/LoadingSpinner'
 import { NavigateFunction } from 'react-router-dom'
 import { TypeTask } from '@/src/types/TypeTask'
 import { setPage } from '@data/userData'
 import { MouseEventHandler } from 'react'
 
-type UserProfileProps = {
+type TypeUserProfileProps = {
 	listType: 'list' | 'card'
 	setListType: (type: 'list' | 'card') => void
 	visibleTasks: TypeTask[]
@@ -41,7 +41,7 @@ const StudentProfile = ({
 	handleLogout,
 	goBack,
 	isLoading,
-}: UserProfileProps) => {
+}: TypeUserProfileProps) => {
 	const taskCards = visibleTasks.map(task => (
 		<motion.div
 			key={task.id}

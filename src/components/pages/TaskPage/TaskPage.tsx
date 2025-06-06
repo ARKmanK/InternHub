@@ -16,6 +16,8 @@ import NavBar from '@UI/NavBar'
 import AddAnswerForm from '@components/Forms/AddAnswerForm/AddAnswerForm'
 import Message from '@UI/Message'
 import { TypeTask } from '@/src/types/TypeTask'
+import TaskInfo from './TaskInfo'
+import TaskActivityTable from './TaskActivityTable'
 import {
 	addTaskToFavorites,
 	addTaskToFinished,
@@ -23,8 +25,6 @@ import {
 	getUserFavorites,
 	removeTaskFromFavorite,
 } from '@/src/lib/API/supabase/taskAPI'
-import TaskInfo from './TaskInfo'
-import TaskActivityTable from './TaskActivityTable'
 
 const TaskPage: FC = () => {
 	const { taskId } = useParams<{ taskId?: string }>()
@@ -50,16 +50,13 @@ const TaskPage: FC = () => {
 				navigate('/auth/login')
 				return
 			}
-
 			if (!taskId || isNaN(Number(taskId))) {
 				addNotification('error', 'Ошибка', 'Некорректный идентификатор задачи')
 				navigate('/tasks')
 				return
 			}
-
 			const taskIdNum = Number(taskId)
 			const foundTask = await getTaskById(taskIdNum)
-
 			if (!foundTask) {
 				addNotification('error', 'Ошибка', 'Задача не найдена')
 				navigate('/tasks')
@@ -81,7 +78,6 @@ const TaskPage: FC = () => {
 
 			const favorites = await getUserFavorites(userId)
 			setFavoriteTasks(favorites)
-
 			const taskActivity = await getTaskActivity(taskIdNum)
 			setActivityData(taskActivity)
 		} catch (error: any) {
@@ -115,7 +111,6 @@ const TaskPage: FC = () => {
 
 	const handleFavorite = async () => {
 		if (!task || !userId) return
-
 		if (favoriteTasks.includes(task.id)) {
 			try {
 				await removeTaskFromFavorite(userId, task.id)
@@ -124,19 +119,14 @@ const TaskPage: FC = () => {
 					.select('tracking_number')
 					.eq('id', task.id)
 					.single()
-
 				if (fetchError) throw fetchError
 				if (!taskData) throw new Error('Задача не найдена')
-
 				const newTrackingNumber = Math.max(taskData.tracking_number - 1, 0)
-
 				const { error: updateTrackingError } = await supabase
 					.from('tasks')
 					.update({ tracking_number: newTrackingNumber })
 					.eq('id', task.id)
-
 				if (updateTrackingError) throw updateTrackingError
-
 				setFavoriteTasks(favoriteTasks.filter(id => id !== task.id))
 				setTask(prev => (prev ? { ...prev, tracking_number: newTrackingNumber } : null))
 				addNotification('warning', 'Внимание', 'Задача убрана из избранного')
@@ -155,19 +145,14 @@ const TaskPage: FC = () => {
 					.select('tracking_number')
 					.eq('id', task.id)
 					.single()
-
 				if (fetchError) throw fetchError
 				if (!taskData) throw new Error('Задача не найдена')
-
 				const newTrackingNumber = taskData.tracking_number + 1
-
 				const { error: updateError } = await supabase
 					.from('tasks')
 					.update({ tracking_number: newTrackingNumber })
 					.eq('id', task.id)
-
 				if (updateError) throw updateError
-
 				setFavoriteTasks([...favoriteTasks, task.id])
 				setTask(prev => (prev ? { ...prev, tracking_number: newTrackingNumber } : null))
 				addNotification('success', 'Успешно', 'Задача добавлена в избранное')

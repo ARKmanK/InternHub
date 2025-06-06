@@ -6,11 +6,7 @@ type TypeEmployerRegisterFormProps = {
 	addNotification: (type: string, title: string, message: string) => void
 }
 
-const EmployerRegisterForm: FC<TypeEmployerRegisterFormProps> = ({
-	onSubmit,
-	onBack,
-	addNotification,
-}) => {
+const EmployerRegisterForm: FC<TypeEmployerRegisterFormProps> = ({ onBack, addNotification }) => {
 	const verifyEmployerInputs = (data: {
 		company_name: FormDataEntryValue | null
 		email: FormDataEntryValue | null

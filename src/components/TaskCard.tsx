@@ -2,7 +2,7 @@ import { FC, MouseEvent, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart, BadgeCheck, Star, Delete, Settings, BookmarkCheck } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { Button } from '@/src/components/UI/Buttons/Button'
+import { Button } from '@UI/Buttons/Button'
 import { setPage } from '@data/userData'
 
 type TaskCardProps = {

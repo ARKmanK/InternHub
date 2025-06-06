@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import useNotification from '@hooks/useNotification'
 import Notification from '@UI/Notification/Notification'
 import LoginForm from '@components/Forms/LoginForm/LoginForm'
-import RegisterForm from '@components/Forms/RegisterForm'
+import RegisterForm from '@components/Forms/LoginForm/RegisterForm'
 import { debounce } from 'lodash'
 import { clearSessionData, setPage } from '@data/userData'
 import {

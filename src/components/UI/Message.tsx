@@ -136,7 +136,7 @@ const Message: FC = () => {
 						filter: `task_id=in.(${taskIds.join(',')})`,
 					},
 					payload => {
-						fetchData() // Обновляем данные при изменении
+						fetchData()
 					}
 				)
 				.subscribe(status => {
@@ -158,7 +158,6 @@ const Message: FC = () => {
 		})
 
 		return () => {
-			// Очистка подписки при размонтировании
 			subscriptionPromise.then(channel => {
 				if (channel) supabase.removeChannel(channel)
 			})

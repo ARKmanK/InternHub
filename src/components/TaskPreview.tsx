@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react'
 import TaskCard from '@components/TaskCard'
 import { TypeTask } from '@/src/types/TypeTask'
-import { formatDate, truncateDescription } from '../data/formateDate'
+import { formatDate, truncateDescription } from '@data/formateDate'
 
 type TypeTaskPreviewProps = {
 	formData: {

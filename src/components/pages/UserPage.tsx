@@ -2,13 +2,18 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
-import Header from '@/src/components/UI/Header'
-import NavBar from '@/src/components/UI/NavBar'
-import StudentProfile from '@/src/components/Profiles/StudentProfile'
-import EmployerProfile from '@/src/components/Profiles/EmployerProfile'
-import AdminProfile from '@/src/components/Profiles/AdminProfile'
-import Message from '../UI/Message'
+import Notification from '@UI/Notification/Notification'
+import Header from '@UI/Header'
+import NavBar from '@UI/NavBar'
+import StudentProfile from '@components/Profiles/StudentProfile'
+import EmployerProfile from '@components/Profiles/EmployerProfile'
+import AdminProfile from '@components/Profiles/AdminProfile'
+import Message from '@UI/Message'
+import { deleteTask } from '@lib/API/supabase/employerAPI'
+import useSupabaseSubscriptions from '@hooks/useSupabaseSubscriptions'
+import { TypeTask } from '@/src/types/TypeTask'
+import { MouseEventHandler } from 'react'
+import { fetchUser } from '@lib/API/supabase/userAPI'
 import {
 	getAllTasks,
 	getUserFavorites,
@@ -27,11 +32,6 @@ import {
 	handleLogout,
 	handleCategoryChange,
 } from '@data/userData'
-import { deleteTask } from '@/src/lib/API/supabase/employerAPI'
-import useSupabaseSubscriptions from '@hooks/useSupabaseSubscriptions'
-import { TypeTask } from '@/src/types/TypeTask'
-import { MouseEventHandler } from 'react'
-import { fetchUser } from '@/src/lib/API/supabase/userAPI'
 
 const UserPage = () => {
 	const queryClient = useQueryClient()
@@ -71,7 +71,6 @@ const UserPage = () => {
 		staleTime: 0,
 		gcTime: 0,
 	})
-
 	const { data: favoriteTaskIds = [], isLoading: isLoadingFavorites } = useQuery<number[], Error>({
 		queryKey: ['favorites', userId],
 		queryFn: () => getUserFavorites(userId!),
@@ -79,7 +78,6 @@ const UserPage = () => {
 		staleTime: 0,
 		gcTime: 0,
 	})
-
 	const { data: startedTaskIds = [], isLoading: isLoadingStarted } = useQuery<number[], Error>({
 		queryKey: ['started', userId],
 		queryFn: () => getStartedTasks(userId!),
@@ -87,7 +85,6 @@ const UserPage = () => {
 		staleTime: 0,
 		gcTime: 0,
 	})
-
 	const { data: finishedTaskIds = [], isLoading: isLoadingFinished } = useQuery<number[], Error>({
 		queryKey: ['finished', userId],
 		queryFn: () => getFinishedTasks(userId!),

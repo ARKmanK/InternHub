@@ -134,7 +134,6 @@ const TaskFilter: FC<TypeTaskFilterProps> = ({ filter, setFilter, companies }) =
 
 	return (
 		<div className='w-full max-w-md mx-auto bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg shadow-lg p-2 mr-10'>
-			{/* Секция "Компания" */}
 			<div className='border-b border-gray-300 mb-2'>
 				<button
 					className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 font-semibold hover:bg-blue-300 rounded-lg transition-colors mb-2'
@@ -175,8 +174,6 @@ const TaskFilter: FC<TypeTaskFilterProps> = ({ filter, setFilter, companies }) =
 					)}
 				</AnimatePresence>
 			</div>
-
-			{/* Секция "Сложность" */}
 			<div className='border-b border-gray-300 mb-2'>
 				<button
 					className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 font-semibold hover:bg-blue-300 rounded-lg transition-colors mb-2'
@@ -219,8 +216,6 @@ const TaskFilter: FC<TypeTaskFilterProps> = ({ filter, setFilter, companies }) =
 					)}
 				</AnimatePresence>
 			</div>
-
-			{/* Секция "Отслеживают" */}
 			<div className='border-b border-gray-300 mb-2'>
 				<button
 					className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 font-semibold hover:bg-blue-300 rounded-lg transition-colors mb-2'
@@ -261,8 +256,6 @@ const TaskFilter: FC<TypeTaskFilterProps> = ({ filter, setFilter, companies }) =
 					)}
 				</AnimatePresence>
 			</div>
-
-			{/* Секция "Теги" */}
 			<div className='border-b border-gray-300 mb-2'>
 				<button
 					className='flex items-center justify-between w-full py-3 px-4 text-left text-gray-800 font-semibold hover:bg-blue-300 rounded-lg transition-colors mb-2'
@@ -302,7 +295,6 @@ const TaskFilter: FC<TypeTaskFilterProps> = ({ filter, setFilter, companies }) =
 					)}
 				</AnimatePresence>
 			</div>
-
 			<div className='p-2'>
 				<button
 					onClick={() => resetFilters()}

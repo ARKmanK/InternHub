@@ -3,12 +3,12 @@ import { motion } from 'framer-motion'
 import { Star, BadgeCheck, FileArchive } from 'lucide-react'
 import { TypeTask } from '@/src/types/TypeTask'
 
-type TaskInfoProps = {
+type TypeTaskInfoProps = {
 	task: TypeTask
 	handleDownloadArchive: () => void
 }
 
-const TaskInfo: FC<TaskInfoProps> = ({ task, handleDownloadArchive }) => {
+const TaskInfo: FC<TypeTaskInfoProps> = ({ task, handleDownloadArchive }) => {
 	const renderDifficultyStars = (difficulty: number) => {
 		const starsCount = difficulty >= 1 && difficulty <= 3 ? difficulty : 1
 		const starColorClass =

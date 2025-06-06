@@ -1,12 +1,12 @@
 import { List } from 'lucide-react'
 import { motion } from 'framer-motion'
 
-type ListViewButtonProps = {
+type TypeListViewButtonProps = {
 	onClick: () => void
 	isActive: boolean
 }
 
-const ListViewButton = ({ onClick, isActive }: ListViewButtonProps) => (
+const ListViewButton = ({ onClick, isActive }: TypeListViewButtonProps) => (
 	<motion.button
 		whileHover={{ scale: 1.1 }}
 		whileTap={{ scale: 0.9 }}

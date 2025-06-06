@@ -6,14 +6,14 @@ import { useQueryClient } from '@tanstack/react-query'
 import { getUserId } from '@lib/API/supabase/userAPI'
 import { deleteTask } from '@lib/API/supabase/employerAPI'
 
-type DeleteConfirmationProps = {
+type TypeDeleteConfirmationProps = {
 	taskId: number
 	taskTitle: string
 	onConfirm: () => void
 	onCancel: MouseEventHandler<HTMLButtonElement>
 }
 
-const DeleteConfirmation: FC<DeleteConfirmationProps> = ({
+const DeleteConfirmation: FC<TypeDeleteConfirmationProps> = ({
 	taskId,
 	taskTitle,
 	onConfirm,
@@ -22,7 +22,7 @@ const DeleteConfirmation: FC<DeleteConfirmationProps> = ({
 	const [inputText, setInputText] = useState('')
 	const { notifications, addNotification } = useNotification()
 	const userId = getUserId()
-	const queryClient = useQueryClient() // Получаем экземпляр queryClient
+	const queryClient = useQueryClient()
 
 	const words = taskTitle.trim().split(/\s+/)
 	const firstTwoWordsLength = words.slice(0, 2).map(word => word.length)
@@ -46,7 +46,6 @@ const DeleteConfirmation: FC<DeleteConfirmationProps> = ({
 			try {
 				await deleteTask(taskId, userId)
 				addNotification('success', 'Успешно', 'Задача успешно удалена!')
-				// Инвалидация кэша для запроса allTasks
 				await queryClient.invalidateQueries({ queryKey: ['allTasks'] })
 				onConfirm()
 			} catch (error: any) {

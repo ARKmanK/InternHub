@@ -2,11 +2,11 @@ import { Undo2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { MouseEventHandler } from 'react'
 
-type BackButtonProps = {
+type TypeBackButtonProps = {
 	goBack: MouseEventHandler<HTMLButtonElement>
 }
 
-const BackButton = ({ goBack }: BackButtonProps) => (
+const BackButton = ({ goBack }: TypeBackButtonProps) => (
 	<motion.button
 		whileHover={{ scale: 1.1 }}
 		whileTap={{ scale: 0.9 }}

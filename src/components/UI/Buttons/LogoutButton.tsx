@@ -1,11 +1,11 @@
 import { LogOut } from 'lucide-react'
 import { motion } from 'framer-motion'
 
-type LogoutButtonProps = {
+type TypeLogoutButtonProps = {
 	handleLogout: () => void
 }
 
-const LogoutButton = ({ handleLogout }: LogoutButtonProps) => (
+const LogoutButton = ({ handleLogout }: TypeLogoutButtonProps) => (
 	<motion.button
 		whileHover={{ scale: 1.1 }}
 		whileTap={{ scale: 0.9 }}

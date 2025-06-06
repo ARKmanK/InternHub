@@ -1,12 +1,12 @@
 import { FC, MouseEventHandler, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
+import Notification from '@UI/Notification/Notification'
 import { TypeTaskSubmission } from '@/src/types/TypeTaskSubmission'
 import { NavigateFunction } from 'react-router-dom'
 import { addMessage } from '@lib/API/supabase/messagesAPI'
-import BackButton from '@components/UI/Buttons/BackButton'
-import LogoutButton from '@components/UI/Buttons/LogoutButton'
+import BackButton from '@UI/Buttons/BackButton'
+import LogoutButton from '@UI/Buttons/LogoutButton'
 import {
 	approveTaskSubmission,
 	getPendingTaskSubmissions,

@@ -8,7 +8,7 @@ import { deleteUserTag } from '@lib/API/supabase/tagsAPI'
 import EditTaskFormFields from './EditTaskFormFields'
 import EditTaskFormTags from './EditTaskFormTags'
 import EditTaskFormArchive from './EditTaskFormArchive'
-import TaskPreview from '../../TaskPreview'
+import TaskPreview from '@components/TaskPreview'
 
 type TypeEditTaskFormProps = {
 	taskData: TypeTask

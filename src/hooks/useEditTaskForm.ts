@@ -5,7 +5,7 @@ import { NavigateFunction } from 'react-router-dom';
 import { QueryClient } from '@tanstack/react-query';
 import { updateTask } from '@lib/API/supabase/employerAPI';
 import { supabase } from '@/supabaseClient';
-import { formatDate } from '../data/formateDate';
+import { formatDate } from '@data/formateDate';
 
 
 type FormData = {
@@ -16,7 +16,7 @@ type FormData = {
   tags: string[];
 };
 
-type UseTaskFormProps = {
+type TypeUseTaskFormProps = {
   taskData: TypeTask;
   userId: number;
   companyName: string;
@@ -36,7 +36,7 @@ export const useTaskForm = ({
   setUserTags,
   queryClient,
   navigate,
-}: UseTaskFormProps) => {
+}: TypeUseTaskFormProps) => {
   const { addNotification } = useNotification();
 
   const [formData, setFormData] = useState<FormData>({

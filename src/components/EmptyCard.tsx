@@ -11,7 +11,6 @@ const EmptyCard: FC<TypeEmptyCardProps> = ({ listType, role }) => {
 	return (
 		<div className='md:min-w-[300px] md:h-[250px] rounded-xl md:mb-10 border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg'>
 			<div className='flex flex-col items-center justify-center h-full'>
-				{/* Иконка с анимацией */}
 				<motion.div
 					initial={{ scale: 0, opacity: 0 }}
 					animate={{ scale: 1, opacity: 1 }}
@@ -19,8 +18,6 @@ const EmptyCard: FC<TypeEmptyCardProps> = ({ listType, role }) => {
 				>
 					<Inbox size={48} className='text-gray-500 mb-4' />
 				</motion.div>
-
-				{/* Заголовок с анимацией */}
 				<motion.p
 					initial={{ y: 20, opacity: 0 }}
 					animate={{ y: 0, opacity: 1 }}
@@ -29,8 +26,6 @@ const EmptyCard: FC<TypeEmptyCardProps> = ({ listType, role }) => {
 				>
 					{role === 'user' ? listType : 'Ваши задачи'}
 				</motion.p>
-
-				{/* Текст "Список пуст" с анимацией */}
 				<motion.p
 					initial={{ y: 20, opacity: 0 }}
 					animate={{ y: 0, opacity: 1 }}

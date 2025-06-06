@@ -1,7 +1,7 @@
 import { FC, MouseEvent } from 'react'
 
 type TypeButtonProps = {
-	onClick?: (event: MouseEvent<HTMLButtonElement>) => void // Made optional with ?
+	onClick?: (event: MouseEvent<HTMLButtonElement>) => void
 	children?: React.ReactNode
 	className?: string
 	disabled?: boolean

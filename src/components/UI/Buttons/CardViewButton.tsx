@@ -1,12 +1,12 @@
 import { BookCopy } from 'lucide-react'
 import { motion } from 'framer-motion'
 
-type CardViewButtonProps = {
+type TypeCardViewButtonProps = {
 	onClick: () => void
 	isActive: boolean
 }
 
-const CardViewButton = ({ onClick, isActive }: CardViewButtonProps) => (
+const CardViewButton = ({ onClick, isActive }: TypeCardViewButtonProps) => (
 	<motion.button
 		whileHover={{ scale: 1.1 }}
 		whileTap={{ scale: 0.9 }}

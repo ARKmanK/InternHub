@@ -4,7 +4,7 @@ import AnswerVerifyWindow from '@components/AnswerVerifyWindow'
 import { CircleCheckBig, Hourglass } from 'lucide-react'
 import { TypeTask } from '@/src/types/TypeTask'
 
-type TaskActivityTableProps = {
+type TypeTaskActivityTableProps = {
 	activityData: TypeTaskActivity[] | null
 	task: TypeTask
 	isEmployerTaskOwner: boolean
@@ -16,7 +16,7 @@ type TaskActivityTableProps = {
 	handleReject: (activityId: number) => void
 }
 
-const TaskActivityTable: FC<TaskActivityTableProps> = ({
+const TaskActivityTable: FC<TypeTaskActivityTableProps> = ({
 	activityData,
 	isEmployerTaskOwner,
 	selectedActivity,
