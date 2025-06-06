@@ -3,7 +3,7 @@ import Header from '@UI/Header'
 import NavBar from '@UI/NavBar'
 import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
-import AddTaskForm from '@/src/components/Forms/AddTaskForm/AddTaskForm'
+import AddTaskForm from '@components/Forms/AddTaskForm/AddTaskForm'
 import Message from '@UI/Message'
 import BackButton from '@UI/Buttons/BackButton'
 

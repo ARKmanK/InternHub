@@ -1,7 +1,7 @@
 import { FC, useEffect } from 'react'
 import { createBrowserRouter, RouterProvider, useNavigate } from 'react-router-dom'
 import TasksListPage from '@/src/components/pages/TasksListPage'
-import TaskPage from '@/src/components/pages/TaskPage'
+import TaskPage from '@/src/components/pages/TaskPage/TaskPage'
 import UserPage from '@/src/components/pages/UserPage'
 import { MantineProvider } from '@mantine/core'
 import CreateTaskPage from '@/src/components/pages/CreateTaskPage'
