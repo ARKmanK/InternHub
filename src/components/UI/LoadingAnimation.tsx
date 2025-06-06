@@ -2,12 +2,12 @@ import { FC, useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // Интерфейс для пропсов компонента
-interface LoadingSpinnerProps {
+type TypeLoadingSpinnerProps = {
 	loading: boolean
 }
 
 // Компонент спиннера с анимацией магического кристалла
-const LoadingAnimation: FC<LoadingSpinnerProps> = ({ loading }) => {
+const LoadingAnimation: FC<TypeLoadingSpinnerProps> = ({ loading }) => {
 	const [isVisible, setIsVisible] = useState(false)
 	const [animationComplete, setAnimationComplete] = useState(false)
 

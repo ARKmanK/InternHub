@@ -1,17 +1,17 @@
 import { FC, useState, useEffect, useRef } from 'react'
 import { MessageCircle, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { supabase } from '@/supabaseClient'
+import { getRole, getUserId } from '@lib/API/supabase/userAPI'
+import { getEmployerTaskReport } from '@lib/API/supabase/employerAPI'
 import {
+	deleteMessage,
 	getMessagesByUserId,
 	getUnreadMessagesCount,
 	markMessageAsRead,
-	deleteMessage,
-	getEmployerTaskReport,
-} from '@/src/lib/API/supabaseAPI'
-import { getUserId, getRole } from '@/src/lib/API/supabaseAPI'
-import { supabase } from '@/supabaseClient'
+} from '@lib/API/supabase/messagesAPI'
 
-interface Message {
+type TypeMessage = {
 	id: number
 	text: string
 	timestamp: string
@@ -19,7 +19,7 @@ interface Message {
 	is_read: boolean
 }
 
-interface TaskReport {
+type TypeTaskReport = {
 	taskTitle: string
 	newActivitiesCount: number
 }
@@ -41,9 +41,9 @@ const LoadingSpinner = () => (
 
 const Message: FC = () => {
 	const [isOpen, setIsOpen] = useState(false)
-	const [messages, setMessages] = useState<Message[]>([])
+	const [messages, setMessages] = useState<TypeMessage[]>([])
 	const [unreadCount, setUnreadCount] = useState<number>(0)
-	const [taskReport, setTaskReport] = useState<TaskReport[]>([])
+	const [taskReport, setTaskReport] = useState<TypeTaskReport[]>([])
 	const [isLoading, setIsLoading] = useState(true)
 	const messageRef = useRef<HTMLDivElement>(null)
 	const buttonRef = useRef<HTMLButtonElement>(null)
@@ -62,7 +62,6 @@ const Message: FC = () => {
 			const role = getRole()
 
 			if (!userId) {
-				console.warn('User ID is not available')
 				setMessages([])
 				setUnreadCount(0)
 				setTaskReport([])
@@ -74,9 +73,7 @@ const Message: FC = () => {
 			} = await supabase.auth.getSession()
 			if (session) {
 				supabase.realtime.setAuth(session.access_token)
-				console.log('JWT set for Realtime')
 			} else {
-				console.warn('No session found for Realtime auth')
 			}
 
 			const [countResult, messagesResult, reportResult] = await Promise.all([
@@ -84,10 +81,6 @@ const Message: FC = () => {
 				getMessagesByUserId(userId, 10, 0),
 				role === 'employer' ? getEmployerTaskReport(userId) : Promise.resolve([]),
 			])
-
-			console.log('Fetched task report:', reportResult)
-			console.log('Unread count:', countResult)
-			console.log('Messages:', messagesResult)
 
 			setUnreadCount(countResult)
 			setMessages(
@@ -101,7 +94,6 @@ const Message: FC = () => {
 			)
 			setTaskReport(reportResult)
 		} catch (error) {
-			console.error('Error fetching data:', error)
 			setMessages([])
 			setUnreadCount(0)
 			setTaskReport([])
@@ -125,13 +117,11 @@ const Message: FC = () => {
 				.eq('employer_id', userId)
 
 			if (error) {
-				console.error('Error fetching tasks for subscription:', error)
 				return
 			}
 
 			const taskIds = tasks?.map(task => task.id) || []
 			if (taskIds.length === 0) {
-				console.log('No tasks found for employer_id:', userId)
 				return
 			}
 
@@ -146,18 +136,12 @@ const Message: FC = () => {
 						filter: `task_id=in.(${taskIds.join(',')})`,
 					},
 					payload => {
-						console.log('Realtime change detected in task_activity:', payload)
 						fetchData() // Обновляем данные при изменении
 					}
 				)
 				.subscribe(status => {
-					console.log('Realtime subscription status:', status)
 					if (status === 'SUBSCRIBED') {
-						console.log('Successfully subscribed to task_activity changes for task_ids:', taskIds)
 					} else if (status === 'CHANNEL_ERROR') {
-						console.error(
-							'Subscription error: Check Realtime settings, RLS policies, or table changes'
-						)
 					}
 				})
 
@@ -169,7 +153,6 @@ const Message: FC = () => {
 			if (channel) {
 				return () => {
 					supabase.removeChannel(channel)
-					console.log('Realtime subscription unsubscribed')
 				}
 			}
 		})
@@ -236,9 +219,7 @@ const Message: FC = () => {
 			if (wasUnread) {
 				setUnreadCount(prev => Math.max(0, prev - 1))
 			}
-		} catch (error) {
-			console.error('Error deleting message:', error)
-		}
+		} catch (error) {}
 	}
 
 	const handleDeleteReport = () => {

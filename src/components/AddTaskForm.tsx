@@ -4,14 +4,14 @@ import { AppWindow, X, FileArchive, Check } from 'lucide-react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
-import { deleteUserTag, getAllTags, getUserTags } from '@/src/lib/API/supabaseAPI'
-import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
+import Notification from '@UI/Notification/Notification'
 import { supabase } from '@/supabaseClient'
 import TaskCard from '@components/TaskCard'
 import { TypeTask } from '@/src/types/TypeTask'
 import { motion } from 'framer-motion'
-import getRandomNumber from '../data/getRandomNumber'
+import getRandomNumber from '@data/getRandomNumber'
+import { getRole, getUserId } from '@lib/API/supabase/userAPI'
+import { deleteUserTag, getAllTags, getUserTags } from '@lib/API/supabase/tagsAPI'
 
 const AddTaskForm = () => {
 	const navigate = useNavigate()

@@ -1,14 +1,14 @@
 import { FC, FormEvent } from 'react'
 import { motion } from 'framer-motion'
 
-interface LoginFormProps {
+type TypeLoginFormProps = {
 	onSubmit: (e: FormEvent) => void
 	rememberMe: boolean
 	setRememberMe: (value: boolean) => void
 	savedEmail: string
 }
 
-const LoginForm: FC<LoginFormProps> = ({ onSubmit, rememberMe, setRememberMe, savedEmail }) => {
+const LoginForm: FC<TypeLoginFormProps> = ({ onSubmit, rememberMe, setRememberMe, savedEmail }) => {
 	return (
 		<form onSubmit={onSubmit} className='space-y-4'>
 			<div>

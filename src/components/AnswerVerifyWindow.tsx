@@ -2,7 +2,7 @@ import { FC, useEffect } from 'react'
 import { X, FileDown, Eye, Github, Download, Image } from 'lucide-react'
 import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
 
-interface ActivityModalProps {
+type TypeActivityModalProps = {
 	activity: TypeTaskActivity
 	isOpen: boolean
 	onClose: () => void
@@ -10,7 +10,7 @@ interface ActivityModalProps {
 	onReject: (activityId: number) => void
 }
 
-const AnswerVerifyWindow: FC<ActivityModalProps> = ({
+const AnswerVerifyWindow: FC<TypeActivityModalProps> = ({
 	activity,
 	isOpen,
 	onClose,

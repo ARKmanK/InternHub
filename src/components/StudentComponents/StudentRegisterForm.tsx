@@ -1,12 +1,16 @@
 import { FC, FormEvent } from 'react'
 
-interface UserRegisterFormProps {
+type TypeUserRegisterFormProps = {
 	onSubmit: (data: any) => void
 	onBack: () => void
 	addNotification: (type: string, title: string, message: string) => void
 }
 
-const StudentRegisterForm: FC<UserRegisterFormProps> = ({ onSubmit, onBack, addNotification }) => {
+const StudentRegisterForm: FC<TypeUserRegisterFormProps> = ({
+	onSubmit,
+	onBack,
+	addNotification,
+}) => {
 	const verifyUserInputs = (data: {
 		firstName: FormDataEntryValue | null
 		lastName: FormDataEntryValue | null

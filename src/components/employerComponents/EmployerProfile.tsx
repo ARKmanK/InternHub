@@ -4,9 +4,8 @@ import TaskCard from '@components/TaskCard'
 import EmptyCard from '@components/EmptyCard'
 import DeleteConfirmation from '@components/DeleteConfirmation'
 import { NavigateFunction } from 'react-router-dom'
-import { useState, useEffect, memo } from 'react'
-import { supabase } from '@/supabaseClient'
-import { setPage } from '@/src/data/userData'
+import { setPage } from '@data/userData'
+import { memo } from 'react'
 
 type TypeTask = {
 	id: number

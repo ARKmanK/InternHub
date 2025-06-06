@@ -1,11 +1,11 @@
-import { setPage, TypePages } from '@/src/data/userData'
-import Header from '@components/Header'
-import NavBar from '@components/NavBar'
+import { setPage, TypePages } from '@data/userData'
+import Header from '@components/UI/Header'
+import NavBar from '@components/UI/NavBar'
 import { useNavigate } from 'react-router-dom'
 import { Undo2 } from 'lucide-react'
 import { useEffect } from 'react'
-import AddTaskForm from '../AddTaskForm'
-import Message from '../Message'
+import AddTaskForm from '@components//AddTaskForm'
+import Message from '@UI/Message'
 
 const CreateTaskPage = () => {
 	const navigate = useNavigate()

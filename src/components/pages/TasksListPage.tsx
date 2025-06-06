@@ -1,27 +1,26 @@
 import { FC, useState, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import Header from '@components/Header'
-import NavBar from '@components/NavBar'
+import Header from '@UI/Header'
+import NavBar from '@UI/NavBar'
 import TaskCard from '@components/TaskCard'
 import TaskFilter from '@components/TaskFilter'
-import {
-	getAllTasks,
-	getUserByEmail,
-	getUserFavorites,
-	addTaskToFavorites,
-	removeTaskFromFavorite,
-	getUniqueCompanies,
-	getTaskSubmissionsCount,
-} from '@/src/lib/API/supabaseAPI'
 import { supabase } from '@/supabaseClient'
 import { List, BookCopy, CircleUserRound, Plus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
-import { getRole, getUserId } from '@/src/lib/API/supabaseAPI'
-import { setPage } from '@/src/data/userData'
-import Message from '../Message'
-import LoadingAnimation from '../LoadingAnimation'
+import Notification from '@UI/Notification/Notification'
+import { setPage } from '@data/userData'
+import Message from '@UI/Message'
+import LoadingAnimation from '@UI/LoadingAnimation'
+import { getTaskSubmissionsCount } from '@lib/API/supabase/adminAPI'
+import { getRole, getUserByEmail, getUserId } from '@lib/API/supabase/userAPI'
+import {
+	addTaskToFavorites,
+	getAllTasks,
+	getUniqueCompanies,
+	getUserFavorites,
+	removeTaskFromFavorite,
+} from '@lib/API/supabase/taskAPI'
 
 type TypeTask = {
 	id: number

@@ -6,7 +6,7 @@ import { setPage } from '@data/userData'
 import { NavigateFunction, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
+import Notification from '@UI/Notification/Notification'
 
 type TypeTask = {
 	id: number

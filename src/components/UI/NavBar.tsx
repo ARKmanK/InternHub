@@ -1,5 +1,4 @@
 import { FC, useState } from 'react'
-
 import { ExtraPages, MainPages } from '@data/pages'
 import arrow from '/arrow-down.png'
 
@@ -11,7 +10,6 @@ const NavBar: FC = () => {
 	}
 
 	return (
-
 		<nav className='bg-[#0c426f] md:w-full md:h-[52px] md:border-t-1 border-[#09355a]'>
 			<div className='md:border-t-1 border-[#1f537e] md:h-full'>
 				<div className='md:flex md:justify-center md:h-full md:pr-2'>
@@ -123,7 +121,6 @@ const NavBar: FC = () => {
 				</div>
 			</div>
 		</nav>
-
 	)
 }
 

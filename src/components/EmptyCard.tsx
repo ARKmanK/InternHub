@@ -1,6 +1,6 @@
 import { FC } from 'react'
-import { Inbox } from 'lucide-react' // Новая иконка
-import { motion } from 'framer-motion' // Для анимации
+import { Inbox } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 type TypeEmptyCardProps = {
 	listType: string

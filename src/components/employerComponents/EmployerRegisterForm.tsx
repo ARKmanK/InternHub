@@ -1,12 +1,12 @@
 import { FC, FormEvent } from 'react'
 
-interface EmployerRegisterFormProps {
+type TypeEmployerRegisterFormProps = {
 	onSubmit: (data: any) => void
 	onBack: () => void
 	addNotification: (type: string, title: string, message: string) => void
 }
 
-const EmployerRegisterForm: FC<EmployerRegisterFormProps> = ({
+const EmployerRegisterForm: FC<TypeEmployerRegisterFormProps> = ({
 	onSubmit,
 	onBack,
 	addNotification,

@@ -1,28 +1,24 @@
-import Header from '@components/Header'
-import NavBar from '@components/NavBar'
+import Header from '@components/UI/Header'
+import NavBar from '@components/UI/NavBar'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Undo2, AppWindow, X, FileArchive, Check } from 'lucide-react'
-import { setPage, goBack } from '@/src/data/userData'
+import { setPage, goBack } from '@data/userData'
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { TypeTask } from '@/src/types/TypeTask'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
+import Notification from '@UI/Notification/Notification'
 import TaskCard from '@components/TaskCard'
 import { supabase } from '@/supabaseClient'
-import {
-	getTaskById,
-	updateTask,
-	getUserByEmail,
-	getAllTags,
-	getUserTags,
-	deleteUserTag,
-} from '@/src/lib/API/supabaseAPI'
-import Message from '../Message'
+import Message from '@UI/Message'
 import { motion } from 'framer-motion'
-import LoadingAnimation from '../LoadingAnimation'
+import LoadingAnimation from '@UI/LoadingAnimation'
 import { useQueryClient } from '@tanstack/react-query'
+import { getUserByEmail } from '@lib/API/supabase/userAPI'
+import { getTaskById } from '@lib/API/supabase/taskAPI'
+import { deleteUserTag, getAllTags, getUserTags } from '@lib/API/supabase/tagsAPI'
+import { updateTask } from '@lib/API/supabase/employerAPI'
 
 const EditTaskPage = () => {
 	const { id } = useParams<{ id: string }>()

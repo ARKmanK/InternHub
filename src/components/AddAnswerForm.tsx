@@ -2,12 +2,13 @@ import { CircleX, FileArchive, Link, SendHorizontal, FileImage, Check } from 'lu
 import { FC, MouseEventHandler, useState } from 'react'
 import { motion } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
-import { getUserId, uploadFileAndCreateRecord } from '@/src/lib/API/supabaseAPI'
+import Notification from '@UI/Notification/Notification'
 import { addToStarted } from '@data/userData'
 import { useNavigate } from 'react-router-dom'
 import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
 import { supabase } from '@/supabaseClient'
+import { getUserId } from '@lib/API/supabase/userAPI'
+import { uploadFileAndCreateRecord } from '@lib/API/supabase/filesAPI'
 
 type TypeAddAnswerForm = {
 	onClose: MouseEventHandler<HTMLButtonElement>

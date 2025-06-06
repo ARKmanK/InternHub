@@ -1,9 +1,9 @@
 import { FC, useState, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { supabase } from '@/supabaseClient'
-import { getAllTags, getUserTags } from '../lib/API/supabaseAPI'
 import useNotification from '@hooks/useNotification'
 import { motion, AnimatePresence } from 'framer-motion'
+import { getAllTags, getUserTags } from '@lib/API/supabase/tagsAPI'
 
 type TypeFilter = {
 	companies: string | null
@@ -12,13 +12,13 @@ type TypeFilter = {
 	tags: string[] | null
 }
 
-interface TaskFilterProps {
+type TypeTaskFilterProps = {
 	filter: TypeFilter
 	setFilter: React.Dispatch<React.SetStateAction<TypeFilter>>
 	companies: string[]
 }
 
-const TaskFilter: FC<TaskFilterProps> = ({ filter, setFilter, companies }) => {
+const TaskFilter: FC<TypeTaskFilterProps> = ({ filter, setFilter, companies }) => {
 	const [openSection, setOpenSection] = useState({
 		companies: false,
 		difficulty: false,

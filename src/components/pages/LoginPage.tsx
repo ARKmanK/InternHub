@@ -1,15 +1,15 @@
-import Header from '@components/Header'
-import NavBar from '@components/NavBar'
+import Header from '@components/UI/Header'
+import NavBar from '@components/UI/NavBar'
 import { FC, FormEvent, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
+import Notification from '@UI/Notification/Notification'
 import LoginForm from '@components/LoginForm'
 import RegisterForm from '@components/RegisterForm'
 import { supabase } from '@/supabaseClient'
-import { createUser, getUserByEmail } from '@/src/lib/API/supabaseAPI'
 import { debounce } from 'lodash'
 import { setPage } from '@data/userData'
+import { createUser, getUserByEmail } from '@lib/API/supabase/userAPI'
 
 const LoginPage: FC = () => {
 	const navigate = useNavigate()

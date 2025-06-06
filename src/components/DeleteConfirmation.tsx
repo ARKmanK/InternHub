@@ -1,10 +1,10 @@
 import { FC, useState, MouseEventHandler } from 'react'
-import { deleteTask } from '@/src/lib/API/supabaseAPI'
-import { getUserId } from '@/src/lib/API/supabaseAPI'
 import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
+import Notification from '@UI/Notification/Notification'
 import { motion } from 'framer-motion'
-import { useQueryClient } from '@tanstack/react-query' // Импортируем useQueryClient
+import { useQueryClient } from '@tanstack/react-query'
+import { getUserId } from '@lib/API/supabase/userAPI'
+import { deleteTask } from '@lib/API/supabase/employerAPI'
 
 type DeleteConfirmationProps = {
 	taskId: number

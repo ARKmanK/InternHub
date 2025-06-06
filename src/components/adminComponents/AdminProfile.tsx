@@ -1,24 +1,24 @@
 import { FC, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
+import Notification from '@UI/Notification/Notification'
 import { TypeTaskSubmission } from '@/src/types/TypeTaskSubmission'
-import {
-	getPendingTaskSubmissions,
-	approveTaskSubmission,
-	rejectTaskSubmission,
-	addMessage,
-} from '@/src/lib/API/supabaseAPI'
 import { Undo2, LogOut } from 'lucide-react'
 import { NavigateFunction } from 'react-router-dom'
+import { addMessage } from '@lib/API/supabase/messagesAPI'
+import {
+	approveTaskSubmission,
+	getPendingTaskSubmissions,
+	rejectTaskSubmission,
+} from '@lib/API/supabase/adminAPI'
 
-interface AdminProfileProps {
+type TypeAdminProfileProps = {
 	navigate: NavigateFunction
 	goBack: () => void
 	handleLogout: () => void
 }
 
-const AdminProfile: FC<AdminProfileProps> = ({ navigate, goBack, handleLogout }) => {
+const AdminProfile: FC<TypeAdminProfileProps> = ({ navigate, goBack, handleLogout }) => {
 	const { notifications, addNotification } = useNotification()
 	const [pendingTasks, setPendingTasks] = useState<TypeTaskSubmission[]>([])
 	const [isLoading, setIsLoading] = useState<boolean>(true)

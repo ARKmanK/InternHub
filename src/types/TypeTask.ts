@@ -8,5 +8,5 @@ export type TypeTask = {
 	deadline: string
 	employer_id: number
 	tags?: string[]
-	zip_file_url?: string | null // Добавляем поле для URL архива
+	zip_file_url?: string | null
 }

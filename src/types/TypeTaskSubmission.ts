@@ -1,10 +1,10 @@
 export type TypeTaskSubmission = {
 	id: number
 	user_id: number
-	submission_url?: string // Опционально, так как может быть null
-	zip_file_url?: string // Опционально
-	comment?: string // Опционально
-	photos?: string[] // Массив URL-ов фотографий
+	submission_url?: string
+	zip_file_url?: string
+	comment?: string
+	photos?: string[]
 	submitted_at: string
 	title: string
 	description: string

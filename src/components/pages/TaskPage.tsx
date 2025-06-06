@@ -1,18 +1,21 @@
 import { FC, useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import {
-	getTaskById,
-	getTaskActivity,
-	getUserFavorites,
-	getUserId,
-	addTaskToFavorites,
-	removeTaskFromFavorite,
-	getRole,
-	addTaskToFinished,
-	addMessage,
-	getUserUuidById,
-} from '@/src/lib/API/supabaseAPI'
 import { setPage, goBack } from '@data/userData'
+import { motion } from 'framer-motion'
+import useNotification from '@hooks/useNotification'
+import Notification from '@UI/Notification/Notification'
+import Header from '@UI/Header'
+import NavBar from '@UI/NavBar'
+import AddAnswerForm from '@components/AddAnswerForm'
+import { supabase } from '@/supabaseClient'
+import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
+import AnswerVerifyWindow from '@components/AnswerVerifyWindow'
+import Message from '@UI/Message'
+import LoadingAnimation from '@UI/LoadingAnimation'
+import TaskNotFound from '@components/TaskNotFound'
+import { getRole, getUserId } from '@lib/API/supabase/userAPI'
+import { getTaskActivity } from '@lib/API/supabase/taskActivityAPI'
+import { addMessage } from '@lib/API/supabase/messagesAPI'
 import {
 	BadgeCheck,
 	Star,
@@ -22,18 +25,13 @@ import {
 	Undo2,
 	FileArchive,
 } from 'lucide-react'
-import { motion } from 'framer-motion'
-import useNotification from '@hooks/useNotification'
-import Notification from '@components/UI/Notification/Notification'
-import Header from '@components/Header'
-import NavBar from '@components/NavBar'
-import AddAnswerForm from '@components/AddAnswerForm'
-import { supabase } from '@/supabaseClient'
-import { TypeTaskActivity } from '@/src/types/TypeTaskActivity'
-import AnswerVerifyWindow from '@components/AnswerVerifyWindow'
-import Message from '../Message'
-import LoadingAnimation from '../LoadingAnimation'
-import TaskNotFound from '../TaskNotFound'
+import {
+	addTaskToFavorites,
+	addTaskToFinished,
+	getTaskById,
+	getUserFavorites,
+	removeTaskFromFavorite,
+} from '@lib/API/supabase/taskAPI'
 
 type TypeTasksData = {
 	id: number

@@ -1,23 +1,23 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/supabaseClient'
-import {
-	clearAuthData,
-	getAllTasks,
-	getUserByEmail,
-	getUserFavorites,
-	removeTaskFromFavorite,
-} from '@/src/lib/API/supabaseAPI'
+
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
 import { setPage, goBack } from '@data/userData'
-import Header from '@components/Header'
-import NavBar from '@components/NavBar'
+import Header from '@/src/components/UI/Header'
+import NavBar from '@/src/components/UI/NavBar'
 import StudentProfile from '@/src/components/StudentComponents/StudentProfile'
 import EmployerProfile from '@components/employerComponents/EmployerProfile'
 import AdminProfile from '@components/adminComponents/AdminProfile'
-import Message from '../Message'
+import Message from '../UI/Message'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { clearAuthData, getUserByEmail } from '@/src/lib/API/supabase/userAPI'
+import {
+	getAllTasks,
+	getUserFavorites,
+	removeTaskFromFavorite,
+} from '@/src/lib/API/supabase/taskAPI'
 
 type TypeTask = {
 	id: number

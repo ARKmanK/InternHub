@@ -1,10 +1,10 @@
 import { FC, FormEvent, useState } from 'react'
 
-interface RegisterFormProps {
+type TypeRegisterFormProps = {
 	onSubmit: (data: any) => void
 }
 
-const RegisterForm: FC<RegisterFormProps> = ({ onSubmit }) => {
+const RegisterForm: FC<TypeRegisterFormProps> = ({ onSubmit }) => {
 	const [selectedRole, setSelectedRole] = useState<'user' | 'employer' | null>(null)
 
 	const handleSubmit = (e: FormEvent) => {
