@@ -1,4 +1,7 @@
+import { Dispatch, SetStateAction } from 'react'
 import { NavigateFunction } from 'react-router-dom'
+import { TypeTask } from '../types/TypeTask'
+import { supabase } from '@/supabaseClient'
 
 type TypeUserTasks = {
 	favoriteTasks: { id: number[] }
@@ -125,3 +128,94 @@ export const clearSessionData = () => {
 	localStorage.removeItem('userId')
 	localStorage.removeItem('role')
 }
+
+export const updateFavoriteTasks = (
+  newFavorites: number[],
+  setFavoriteTasks: Dispatch<SetStateAction<number[]>>
+): void => {
+  setFavoriteTasks(prev => {
+    if (JSON.stringify(prev) !== JSON.stringify(newFavorites)) {
+      return newFavorites;
+    }
+    return prev;
+  });
+};
+
+
+export const updateStartedTasks = (
+  newStarted: number[],
+  setStartedTasks: Dispatch<SetStateAction<number[]>>
+): void => {
+  setStartedTasks(prev => {
+    if (JSON.stringify(prev) !== JSON.stringify(newStarted)) {
+      return newStarted;
+    }
+    return prev;
+  });
+};
+
+export const updateFinishedTasks = (
+  newFinished: number[],
+  setFinishedTasks: Dispatch<SetStateAction<number[]>>
+): void => {
+  setFinishedTasks(prev => {
+    if (JSON.stringify(prev) !== JSON.stringify(newFinished)) {
+      return newFinished;
+    }
+    return prev;
+  });
+};
+
+export const getVisibleTasks = (
+  allTasks: TypeTask[],
+  role: 'employer' | 'user' | 'admin' | null,
+  userId: number | null,
+  category: 'favorite' | 'started' | 'finished',
+  favoriteTasks: number[],
+  startedTasks: number[],
+  finishedTasks: number[]
+): TypeTask[] => {
+  if (!role || !userId || role === 'admin') return [];
+  if (role === 'employer') {
+    return allTasks.filter(task => task.employer_id === userId);
+  }
+  let taskIds: number[] = [];
+  switch (category) {
+    case 'favorite':
+      taskIds = favoriteTasks;
+      break;
+    case 'started':
+      taskIds = startedTasks;
+      break;
+    case 'finished':
+      taskIds = finishedTasks;
+      break;
+  }
+  return allTasks.filter(task => taskIds.includes(task.id));
+};
+
+export const handleLogout = async (
+  navigate: NavigateFunction,
+  addNotification: (type: string, title: string, message: string) => void
+): Promise<void> => {
+  try {
+    await supabase.auth.signOut();
+    localStorage.removeItem('userHistory');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('sessionExpiry');
+    addNotification('success', 'Успех!', 'Вы вышли из системы');
+  } catch (error: any) {
+    addNotification('error', 'Ошибка!', `Не удалось выйти из системы: ${error.message}`);
+  } finally {
+    navigate('/login');
+  }
+};
+
+export const handleCategoryChange = (
+  type: 'favorite' | 'started' | 'finished',
+  setCategory: Dispatch<SetStateAction<'favorite' | 'started' | 'finished'>>,
+  setActiveCategory: Dispatch<SetStateAction<'favorite' | 'started' | 'finished'>>
+): void => {
+  setCategory(type);
+  setActiveCategory(type);
+};

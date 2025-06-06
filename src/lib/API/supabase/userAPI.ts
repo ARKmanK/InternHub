@@ -140,3 +140,19 @@ export const getCurrentSession = async () => {
   if (error) throw new Error(`Ошибка получения сессии: ${error.message}`);
   return session;
 };
+
+export const fetchUser = async (
+  setUserId: (id: number | null) => void,
+  setRole: (role: 'employer' | 'user' | 'admin' | null) => void
+): Promise<void> => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (session?.user) {
+    const user = await getUserByEmail(session.user.email!);
+    if (user) {
+      setUserId(user.id);
+      setRole(user.role);
+    }
+  }
+};

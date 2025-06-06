@@ -1,8 +1,9 @@
 import { Undo2 } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { MouseEventHandler } from 'react'
 
 type BackButtonProps = {
-	goBack: () => void
+	goBack: MouseEventHandler<HTMLButtonElement>
 }
 
 const BackButton = ({ goBack }: BackButtonProps) => (

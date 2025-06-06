@@ -9,6 +9,7 @@ import LoadingSpinner from '@components/UI/LoadingSpinner'
 import { NavigateFunction } from 'react-router-dom'
 import { TypeTask } from '@/src/types/TypeTask'
 import { setPage } from '@data/userData'
+import { MouseEventHandler } from 'react'
 
 type UserProfileProps = {
 	listType: 'list' | 'card'
@@ -22,7 +23,7 @@ type UserProfileProps = {
 	removeFromFavorite: (id: number) => void
 	navigate: NavigateFunction
 	handleLogout: () => void
-	goBack: () => void
+	goBack: MouseEventHandler<HTMLButtonElement>
 	isLoading: boolean
 }
 
@@ -46,7 +47,7 @@ const StudentProfile = ({
 			key={task.id}
 			initial={{ opacity: 0, y: -20 }}
 			animate={{ opacity: 1, y: 0 }}
-			exit={{ opacity: 0, y: -20 }}
+			exit={{ opacity: 0 }}
 			transition={{ duration: 0.5 }}
 			className='max-w-full'
 		>

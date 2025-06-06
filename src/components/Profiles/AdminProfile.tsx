@@ -1,12 +1,12 @@
-import { FC, useEffect, useState } from 'react'
+import { FC, MouseEventHandler, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useNotification from '@hooks/useNotification'
-import Notification from '@UI/Notification/Notification'
+import Notification from '@components/UI/Notification/Notification'
 import { TypeTaskSubmission } from '@/src/types/TypeTaskSubmission'
 import { NavigateFunction } from 'react-router-dom'
 import { addMessage } from '@lib/API/supabase/messagesAPI'
-import BackButton from '@UI/Buttons/BackButton'
-import LogoutButton from '@UI/Buttons/LogoutButton'
+import BackButton from '@components/UI/Buttons/BackButton'
+import LogoutButton from '@components/UI/Buttons/LogoutButton'
 import {
 	approveTaskSubmission,
 	getPendingTaskSubmissions,
@@ -15,7 +15,7 @@ import {
 
 type TypeAdminProfileProps = {
 	navigate: NavigateFunction
-	goBack: () => void
+	goBack: MouseEventHandler<HTMLButtonElement>
 	handleLogout: () => void
 }
 
@@ -69,6 +69,11 @@ const AdminProfile: FC<TypeAdminProfileProps> = ({ goBack, handleLogout }) => {
 
 	const handleReject = async (submissionId: number) => {
 		try {
+			if (!submissionId || isNaN(submissionId)) {
+				addNotification('error', 'Ошибка', 'Недопустимый идентификатор задачи')
+				return
+			}
+
 			const submission = pendingTasks.find(task => task.id === submissionId)
 			if (!submission) {
 				addNotification('error', 'Ошибка', 'Задача не найдена')
@@ -116,7 +121,7 @@ const AdminProfile: FC<TypeAdminProfileProps> = ({ goBack, handleLogout }) => {
 									<motion.div
 										initial={{ opacity: 0, y: -20 }}
 										animate={{ opacity: 1, y: 0 }}
-										exit={{ opacity: 0, y: -20 }}
+										exit={{ opacity: 0 }}
 										transition={{ duration: 0.5 }}
 										className='md:flex md:items-center md:justify-between md:min-w-[300px] md:min-h-[100px] rounded-xl md:mb-4 border-2 border-blue-200 bg-gradient-to-br from-blue-100 to-blue-200 p-4 shadow-md'
 									>

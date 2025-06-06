@@ -2,13 +2,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import TaskCard from '@components/TaskCard'
 import EmptyCard from '@components/EmptyCard'
 import DeleteConfirmation from '@components/DeleteConfirmation'
-import BackButton from '@UI/Buttons/BackButton'
-import LogoutButton from '@UI/Buttons/LogoutButton'
+import BackButton from '@components/UI/Buttons/BackButton'
+import LogoutButton from '@components/UI/Buttons/LogoutButton'
 import { NavigateFunction } from 'react-router-dom'
 import { setPage } from '@data/userData'
-import { memo } from 'react'
+import { memo, MouseEventHandler } from 'react'
 import { TypeTask } from '@/src/types/TypeTask'
-import LoadingSpinner from '@UI/LoadingSpinner'
+import LoadingSpinner from '@components/UI/LoadingSpinner'
 
 type EmployerProfileProps = {
 	listType: 'list'
@@ -20,7 +20,7 @@ type EmployerProfileProps = {
 	cancelDelete: () => void
 	navigate: NavigateFunction
 	handleLogout: () => void
-	goBack: () => void
+	goBack: MouseEventHandler<HTMLButtonElement>
 	isLoading: boolean
 }
 

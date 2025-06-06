@@ -1,41 +1,42 @@
-import { useNavigate, useLocation } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '@/supabaseClient'
-
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import useNotification from '@hooks/useNotification'
 import Notification from '@components/UI/Notification/Notification'
-import { setPage, goBack } from '@data/userData'
 import Header from '@/src/components/UI/Header'
 import NavBar from '@/src/components/UI/NavBar'
-import StudentProfile from '@/src/components/StudentComponents/StudentProfile'
-import EmployerProfile from '@components/employerComponents/EmployerProfile'
-import AdminProfile from '@components/adminComponents/AdminProfile'
+import StudentProfile from '@/src/components/Profiles/StudentProfile'
+import EmployerProfile from '@/src/components/Profiles/EmployerProfile'
+import AdminProfile from '@/src/components/Profiles/AdminProfile'
 import Message from '../UI/Message'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { clearAuthData, getUserByEmail } from '@/src/lib/API/supabase/userAPI'
 import {
 	getAllTasks,
 	getUserFavorites,
-	removeTaskFromFavorite,
+	getStartedTasks,
+	getFinishedTasks,
+	removeFromFavorite,
+	addToFavorite,
 } from '@/src/lib/API/supabase/taskAPI'
-
-type TypeTask = {
-	id: number
-	tracking_number: number
-	title: string
-	description: string
-	difficulty: number
-	company_name: string
-	deadline: string
-	tags?: string[]
-	employer_id: number
-}
+import {
+	setPage,
+	goBack,
+	getVisibleTasks,
+	updateFavoriteTasks,
+	updateStartedTasks,
+	updateFinishedTasks,
+	handleLogout,
+	handleCategoryChange,
+} from '@data/userData'
+import { deleteTask } from '@/src/lib/API/supabase/employerAPI'
+import useSupabaseSubscriptions from '@hooks/useSupabaseSubscriptions'
+import { TypeTask } from '@/src/types/TypeTask'
+import { MouseEventHandler } from 'react'
+import { fetchUser } from '@/src/lib/API/supabase/userAPI'
 
 const UserPage = () => {
 	const queryClient = useQueryClient()
 	const location = useLocation()
 	const [role, setRole] = useState<'employer' | 'user' | 'admin' | null>(null)
-	const [listType] = useState<'list'>('list') // Фиксируем как 'list'
 	const [favoriteTasks, setFavoriteTasks] = useState<number[]>([])
 	const [startedTasks, setStartedTasks] = useState<number[]>([])
 	const [finishedTasks, setFinishedTasks] = useState<number[]>([])
@@ -44,121 +45,26 @@ const UserPage = () => {
 	const [studentListType, setStudentListType] = useState<'list' | 'card'>('list')
 	const { notifications, addNotification } = useNotification()
 	const [category, setCategory] = useState<'favorite' | 'started' | 'finished'>('favorite')
-	const [activeCategory, setActiveCategory] = useState('favorite')
+	const [activeCategory, setActiveCategory] = useState<'favorite' | 'started' | 'finished'>(
+		'favorite'
+	)
 	const [userId, setUserId] = useState<number | null>(null)
-
 	const employerListType = 'list'
 	const navigate = useNavigate()
-	const handleGoBack = goBack(navigate)
+	const handleGoBack: MouseEventHandler<HTMLButtonElement> = goBack(navigate)
 
 	useEffect(() => {
 		setPage('/user')
-		const fetchUser = async () => {
-			const {
-				data: { session },
-			} = await supabase.auth.getSession()
-			if (session?.user) {
-				const user = await getUserByEmail(session.user.email!)
-				if (user) {
-					setUserId(user.id)
-					setRole(user.role)
-				}
-			}
-		}
-		fetchUser()
+		fetchUser(setUserId, setRole)
 	}, [])
 
-	// Подписка на изменения в реальном времени для таблицы tasks
-	useEffect(() => {
-		const tasksChannel = supabase.channel('tasks-changes')
-		tasksChannel
-			.on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, payload => {
-				queryClient.invalidateQueries({ queryKey: ['allTasks'] })
-			})
-			.subscribe(status => {
-				if (status === 'SUBSCRIBED') {
-				}
-			})
-
-		return () => {
-			tasksChannel.unsubscribe()
-			supabase.removeChannel(tasksChannel)
-		}
-	}, [queryClient])
-
-	// Подписка на изменения в реальном времени для user_tasks
-	useEffect(() => {
-		if (!userId) return
-
-		const channel = supabase.channel('user-tasks-changes')
-		channel
-			.on(
-				'postgres_changes',
-				{ event: 'INSERT', schema: 'public', table: 'user_tasks', filter: `user_id=eq.${userId}` },
-				payload => {
-					if (payload.new.is_favorite) {
-						queryClient.invalidateQueries({ queryKey: ['favorites', userId] })
-					}
-					if (payload.new.is_started) {
-						queryClient.invalidateQueries({ queryKey: ['started', userId] })
-					}
-					if (payload.new.is_finished) {
-						queryClient.invalidateQueries({ queryKey: ['finished', userId] })
-					}
-				}
-			)
-			.on(
-				'postgres_changes',
-				{ event: 'UPDATE', schema: 'public', table: 'user_tasks', filter: `user_id=eq.${userId}` },
-				payload => {
-					if (payload.new.is_favorite !== payload.old.is_favorite) {
-						queryClient.invalidateQueries({ queryKey: ['favorites', userId] })
-					}
-					if (payload.new.is_started !== payload.old.is_started) {
-						queryClient.invalidateQueries({ queryKey: ['started', userId] })
-					}
-					if (payload.new.is_finished !== payload.old.is_finished) {
-						queryClient.invalidateQueries({ queryKey: ['finished', userId] })
-					}
-				}
-			)
-			.on(
-				'postgres_changes',
-				{ event: 'DELETE', schema: 'public', table: 'user_tasks', filter: `user_id=eq.${userId}` },
-				payload => {
-					if (payload.old.is_favorite) {
-						queryClient.invalidateQueries({ queryKey: ['favorites', userId] })
-					}
-					if (payload.old.is_started) {
-						queryClient.invalidateQueries({ queryKey: ['started', userId] })
-					}
-					if (payload.old.is_finished) {
-						queryClient.invalidateQueries({ queryKey: ['finished', userId] })
-					}
-				}
-			)
-			.subscribe(status => {})
-
-		return () => {
-			channel.unsubscribe()
-			supabase.removeChannel(channel)
-		}
-	}, [userId, queryClient])
-
-	// Обработка favoriteTasks из location.state
 	useEffect(() => {
 		if (location.state?.favoriteTasks) {
-			setFavoriteTasks(prev => {
-				const newFavorites = [...new Set([...prev, ...(location.state.favoriteTasks || [])])]
-				if (JSON.stringify(newFavorites) !== JSON.stringify(prev)) {
-					return newFavorites
-				}
-				return prev
-			})
+			updateFavoriteTasks(location.state.favoriteTasks, setFavoriteTasks)
 		}
 	}, [location.state?.favoriteTasks])
+	useSupabaseSubscriptions(userId, queryClient)
 
-	// Запрос всех задач
 	const { data: allTasks = [], isLoading: isLoadingTasks } = useQuery<TypeTask[], Error>({
 		queryKey: ['allTasks'],
 		queryFn: getAllTasks,
@@ -166,185 +72,53 @@ const UserPage = () => {
 		gcTime: 0,
 	})
 
-	// Запрос избранных задач
 	const { data: favoriteTaskIds = [], isLoading: isLoadingFavorites } = useQuery<number[], Error>({
 		queryKey: ['favorites', userId],
-		queryFn: () => {
-			return userId ? getUserFavorites(userId) : Promise.resolve([])
-		},
+		queryFn: () => getUserFavorites(userId!),
 		enabled: !!userId,
 		staleTime: 0,
 		gcTime: 0,
 	})
 
-	// Запрос начатых задач
 	const { data: startedTaskIds = [], isLoading: isLoadingStarted } = useQuery<number[], Error>({
 		queryKey: ['started', userId],
-		queryFn: async () => {
-			if (!userId) return []
-
-			const { data, error } = await supabase
-				.from('user_tasks')
-				.select('task_id')
-				.eq('user_id', userId)
-				.eq('is_started', true)
-			if (error) throw error
-			return data.map(item => item.task_id)
-		},
+		queryFn: () => getStartedTasks(userId!),
 		enabled: !!userId,
 		staleTime: 0,
 		gcTime: 0,
 	})
 
-	// Запрос завершённых задач
 	const { data: finishedTaskIds = [], isLoading: isLoadingFinished } = useQuery<number[], Error>({
 		queryKey: ['finished', userId],
-		queryFn: async () => {
-			if (!userId) return []
-
-			const { data, error } = await supabase
-				.from('user_tasks')
-				.select('task_id')
-				.eq('user_id', userId)
-				.eq('is_finished', true)
-			if (error) throw error
-			return data.map(item => item.task_id)
-		},
+		queryFn: () => getFinishedTasks(userId!),
 		enabled: !!userId,
 		staleTime: 0,
 		gcTime: 0,
 	})
 
-	// Общее состояние загрузки
-	const isLoading = isLoadingTasks || isLoadingFavorites || isLoadingStarted || isLoadingFinished
-
-	// Обновление состояний
 	useEffect(() => {
-		setFavoriteTasks(prev => {
-			if (JSON.stringify(prev) !== JSON.stringify(favoriteTaskIds)) {
-				return favoriteTaskIds
-			}
-			return prev
-		})
+		updateFavoriteTasks(favoriteTaskIds, setFavoriteTasks)
 	}, [favoriteTaskIds])
 
 	useEffect(() => {
-		setStartedTasks(prev => {
-			if (JSON.stringify(prev) !== JSON.stringify(startedTaskIds)) {
-				return startedTaskIds
-			}
-			return prev
-		})
+		updateStartedTasks(startedTaskIds, setStartedTasks)
 	}, [startedTaskIds])
 
 	useEffect(() => {
-		setFinishedTasks(prev => {
-			if (JSON.stringify(prev) !== JSON.stringify(finishedTaskIds)) {
-				return finishedTaskIds
-			}
-			return prev
-		})
+		updateFinishedTasks(finishedTaskIds, setFinishedTasks)
 	}, [finishedTaskIds])
 
-	// Фильтрация visibleTasks
-	const visibleTasksMemo = useMemo(() => {
-		if (!role || !userId || role === 'admin') return []
-		if (role === 'employer') {
-			const filtered = allTasks.filter(task => task.employer_id === userId)
-			return filtered
-		}
-		let taskIds: number[] = []
-		switch (category) {
-			case 'favorite':
-				taskIds = favoriteTasks
-				break
-			case 'started':
-				taskIds = startedTasks
-				break
-			case 'finished':
-				taskIds = finishedTasks
-				break
-		}
-		const filteredTasks = allTasks.filter(task => taskIds.includes(task.id))
-		return filteredTasks
-	}, [allTasks, role, userId, category, favoriteTasks, startedTasks, finishedTasks])
+	const visibleTasks = getVisibleTasks(
+		allTasks,
+		role,
+		userId,
+		category,
+		favoriteTasks,
+		startedTasks,
+		finishedTasks
+	)
 
-	const removeFromFavorite = async (id: number) => {
-		if (role === 'user' && favoriteTasks.includes(id)) {
-			try {
-				await removeTaskFromFavorite(userId!, id)
-				const { data: taskData, error: taskError } = await supabase
-					.from('tasks')
-					.select('tracking_number')
-					.eq('id', id)
-					.single()
-				if (taskError) throw taskError
-				const newTrackingNumber = Math.max(taskData.tracking_number - 1, 0)
-				const { error: updateError } = await supabase
-					.from('tasks')
-					.update({ tracking_number: newTrackingNumber })
-					.eq('id', id)
-				if (updateError) throw updateError
-				setFavoriteTasks(prev => {
-					const newFavorites = prev.filter(taskId => taskId !== id)
-					return newFavorites
-				})
-				queryClient.setQueryData(['favorites', userId], (old: number[] | undefined) =>
-					old ? old.filter(taskId => taskId !== id) : []
-				)
-				queryClient.invalidateQueries({ queryKey: ['favorites', userId] })
-				addNotification('warning', 'Внимание!', 'Задача убрана из избранного')
-			} catch (error: any) {
-				addNotification(
-					'error',
-					'Ошибка!',
-					`Не удалось убрать задачу из избранного: ${error.message}`
-				)
-			}
-		}
-	}
-
-	const addToFavorite = async (id: number) => {
-		if (role === 'user' && !favoriteTasks.includes(id)) {
-			try {
-				const { error: upsertError } = await supabase
-					.from('user_tasks')
-					.upsert(
-						{ user_id: userId!, task_id: id, is_favorite: true },
-						{ onConflict: 'user_id,task_id' }
-					)
-				if (upsertError) throw upsertError
-				const { data: taskData, error: taskError } = await supabase
-					.from('tasks')
-					.select('tracking_number')
-					.eq('id', id)
-					.single()
-				if (taskError) throw taskError
-				const newTrackingNumber = taskData.tracking_number + 1
-				const { error: updateError } = await supabase
-					.from('tasks')
-					.update({ tracking_number: newTrackingNumber })
-					.eq('id', id)
-				if (updateError) throw updateError
-				setFavoriteTasks(prev => {
-					const newFavorites = [...prev, id]
-					return newFavorites
-				})
-				queryClient.setQueryData(['favorites', userId], (old: number[] | undefined) =>
-					old ? [...old, id] : [id]
-				)
-				queryClient.invalidateQueries({ queryKey: ['favorites', userId] })
-				addNotification('success', 'Успех!', 'Задача добавлена в избранное')
-			} catch (error: any) {
-				addNotification(
-					'error',
-					'Ошибка!',
-					`Не удалось добавить задачу в избранное: ${error.message}`
-				)
-			}
-		}
-	}
-
+	const isLoading = isLoadingTasks || isLoadingFavorites || isLoadingStarted || isLoadingFinished
 	const handleDelete = (id: number) => {
 		if (role === 'employer') {
 			setTaskToDelete(id)
@@ -355,12 +129,7 @@ const UserPage = () => {
 	const confirmDelete = async () => {
 		if (taskToDelete !== null && role === 'employer' && userId) {
 			try {
-				const { error: deleteError } = await supabase
-					.from('tasks')
-					.delete()
-					.eq('id', taskToDelete)
-					.eq('employer_id', userId)
-				if (deleteError) throw deleteError
+				await deleteTask(taskToDelete, userId)
 				addNotification('success', 'Успех!', 'Задача удалена')
 				setShowDeleteForm(false)
 				setTaskToDelete(null)
@@ -376,26 +145,6 @@ const UserPage = () => {
 		setTaskToDelete(null)
 	}
 
-	const handleLogout = async () => {
-		try {
-			await supabase.auth.signOut()
-			clearAuthData()
-			localStorage.removeItem('userHistory')
-			localStorage.removeItem('userId')
-			localStorage.removeItem('sessionExpiry')
-			addNotification('success', 'Успех!', 'Вы вышли из системы')
-		} catch (error: any) {
-			addNotification('error', 'Ошибка!', `Не удалось выйти из системы: ${error.message}`)
-		} finally {
-			navigate('/login')
-		}
-	}
-
-	const handleCategoryChange = (type: 'favorite' | 'started' | 'finished') => {
-		setCategory(type)
-		setActiveCategory(type)
-	}
-
 	return (
 		<>
 			<Header />
@@ -403,18 +152,37 @@ const UserPage = () => {
 			<div className='container mx-auto'>
 				{role === 'user' && (
 					<StudentProfile
-						userId={userId}
 						listType={studentListType}
-						visibleTasks={visibleTasksMemo}
+						visibleTasks={visibleTasks}
 						setListType={setStudentListType}
 						favoriteTasks={favoriteTasks}
 						category={category}
 						activeCategory={activeCategory}
-						handleCategoryChange={handleCategoryChange}
-						addToFavorite={addToFavorite}
-						removeFromFavorite={removeFromFavorite}
+						handleCategoryChange={type =>
+							handleCategoryChange(type, setCategory, setActiveCategory)
+						}
+						addToFavorite={id =>
+							addToFavorite(
+								id,
+								userId,
+								favoriteTasks,
+								setFavoriteTasks,
+								queryClient,
+								addNotification
+							)
+						}
+						removeFromFavorite={id =>
+							removeFromFavorite(
+								id,
+								userId,
+								favoriteTasks,
+								setFavoriteTasks,
+								queryClient,
+								addNotification
+							)
+						}
 						navigate={navigate}
-						handleLogout={handleLogout}
+						handleLogout={() => handleLogout(navigate, addNotification)}
 						goBack={handleGoBack}
 						isLoading={isLoading}
 					/>
@@ -422,20 +190,24 @@ const UserPage = () => {
 				{role === 'employer' && (
 					<EmployerProfile
 						listType={employerListType}
-						tasks={visibleTasksMemo}
+						tasks={visibleTasks}
 						handleDelete={handleDelete}
 						taskToDelete={taskToDelete}
 						showDeleteForm={showDeleteForm}
 						confirmDelete={confirmDelete}
 						cancelDelete={cancelDelete}
 						navigate={navigate}
-						handleLogout={handleLogout}
+						handleLogout={() => handleLogout(navigate, addNotification)}
 						goBack={handleGoBack}
 						isLoading={isLoading}
 					/>
 				)}
 				{role === 'admin' && (
-					<AdminProfile navigate={navigate} handleLogout={handleLogout} goBack={handleGoBack} />
+					<AdminProfile
+						navigate={navigate}
+						handleLogout={() => handleLogout(navigate, addNotification)}
+						goBack={handleGoBack}
+					/>
 				)}
 				<Notification notifications={notifications} />
 				<Message />
