@@ -25,17 +25,17 @@ export const uploadFileAndCreateRecord = async (
     const fullFileName = `${fileName}.${fileExt}`;
     const filePath = `${fileType}s/${fullFileName}`;
 
-    const { data, error: uploadError } = await supabase.storage
-      .from('task-files')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-        contentType: file.type,
-      });
+    const { error: uploadError } = await supabase.storage
+    .from('task-files')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type,
+  });
 
-    if (uploadError) {
-      throw new Error(`Не удалось загрузить файл: ${uploadError.message}`);
-    }
+if (uploadError) {
+  throw new Error(`Не удалось загрузить файл: ${uploadError.message}`);
+}
 
     const { data: urlData } = supabase.storage.from('task-files').getPublicUrl(filePath);
     const fileUrl = urlData.publicUrl;

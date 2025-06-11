@@ -42,6 +42,7 @@ const LoadingSpinner = () => (
 const Message: FC = () => {
 	const [isOpen, setIsOpen] = useState(false)
 	const [messages, setMessages] = useState<TypeMessage[]>([])
+	// @ts-ignore
 	const [unreadCount, setUnreadCount] = useState<number>(0)
 	const [taskReport, setTaskReport] = useState<TypeTaskReport[]>([])
 	const [isLoading, setIsLoading] = useState(true)
@@ -135,7 +136,7 @@ const Message: FC = () => {
 						table: 'task_activity',
 						filter: `task_id=in.(${taskIds.join(',')})`,
 					},
-					payload => {
+					() => {
 						fetchData()
 					}
 				)

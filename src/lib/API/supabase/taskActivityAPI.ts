@@ -138,13 +138,12 @@ export const submitTaskActivity = async (
       throw new Error(`Не удалось обновить запись: ${updateError.message}`);
     }
 
-    // Update user_tasks
-    const { data: existing, error: fetchError } = await supabase
-      .from('user_tasks')
-      .select('is_favorite')
-      .eq('user_id', currentUserId)
-      .eq('task_id', Number(taskId))
-      .single();
+    const { data: existing } = await supabase
+    .from('user_tasks')
+    .select('is_favorite')
+    .eq('user_id', currentUserId)
+    .eq('task_id', Number(taskId))
+    .single();
 
     const isFavorite = existing ? existing.is_favorite : false;
 
