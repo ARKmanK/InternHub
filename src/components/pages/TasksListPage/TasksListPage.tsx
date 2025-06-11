@@ -121,9 +121,7 @@ const TasksListPage: FC = () => {
 	}
 
 	useEffect(() => {
-		if (hasFetched) {
-			return
-		}
+		if (hasFetched) return
 
 		setPage('/tasks')
 		fetchUserAndTasks(
@@ -147,7 +145,6 @@ const TasksListPage: FC = () => {
 		)
 
 		const channel = supabase.channel('tasks-changes')
-
 		channel
 			.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, payload => {
 				setTasks(prev =>
@@ -164,7 +161,7 @@ const TasksListPage: FC = () => {
 			channel.unsubscribe()
 			supabase.removeChannel(channel)
 		}
-	}, [])
+	}, [hasFetched])
 
 	useEffect(() => {
 		if (userId && role) {

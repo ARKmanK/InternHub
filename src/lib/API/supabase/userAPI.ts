@@ -45,13 +45,22 @@ export const createUser = async (userData: TypeUserData) => {
 };
 
 export const getUserByEmail = async (email: string): Promise<TypeUser | null> => {
-  const { data, error } = await supabase.from('users').select('*').eq('email', email).single();
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, role, first_name, last_name')
+      .eq('email', email)
+      .single();
 
-  if (error) {
-    throw new Error(`Failed to fetch user: ${error.message}`);
+    if (error) {
+      console.warn(`Не удалось получить пользователя по email: ${error.message}`);
+      return null;
+    }
+    return data;
+  } catch (error) {
+    console.warn(`Неожиданная ошибка в getUserByEmail: ${error}`);
+    return null;
   }
-
-  return data;
 };
 
 export const getUserUuidById = async (userId: number): Promise<string | null> => {
@@ -98,11 +107,13 @@ export const signInWithPassword = async (email: string, password: string) => {
 
 // Регистрация пользователя через Supabase
 export const signUp = async (email: string, password: string) => {
+  console.log('Starting signUp with email:', email);
   const {
     data: { user },
     error,
   } = await supabase.auth.signUp({ email, password });
 
+  console.log('signUp response:', { user, error });
   if (error) throw new Error(`Ошибка регистрации: ${error.message}`);
   if (!user) throw new Error('Не удалось зарегистрировать пользователя');
 
@@ -145,14 +156,27 @@ export const fetchUser = async (
   setUserId: (id: number | null) => void,
   setRole: (role: 'employer' | 'user' | 'admin' | null) => void
 ): Promise<void> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (session?.user) {
-    const user = await getUserByEmail(session.user.email!);
+  try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.warn(`Не удалось получить сессию: ${sessionError.message}`);
+      return;
+    }
+    if (!session?.user?.email) {
+      console.warn('Нет авторизованного пользователя или email');
+      return;
+    }
+    const user = await getUserByEmail(session.user.email);
     if (user) {
       setUserId(user.id);
       setRole(user.role);
+    } else {
+      console.warn('Пользователь не найден в базе данных');
     }
+  } catch (error) {
+    console.warn(`Неожиданная ошибка в fetchUser: ${error}`);
   }
 };

@@ -62,3 +62,4 @@ export const markMessageAsRead = async (messageId: number) => {
   if (error) throw error;
   return data;
 };
+
